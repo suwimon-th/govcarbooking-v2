@@ -17,11 +17,8 @@ type BookingRow = {
   start_at: string;
   end_at: string | null;
   purpose: string | null;
-  pickup_location?: string | null;
-  dropoff_location?: string | null;
 };
 
-// สร้าง token สำหรับ driver-accept (ปลอดภัย)
 function createSecureToken(): string {
   return crypto.randomBytes(32).toString("hex");
 }
@@ -46,9 +43,9 @@ export async function POST(req: Request) {
     // --------------------------------------------
     // 2) โหลดรายละเอียด booking
     // --------------------------------------------
-    const { data: booking, error: bookingErr } = await supabase
+    const { data: bookingRaw, error: bookingErr } = await supabase
       .from("bookings")
-      .select<BookingRow>(
+      .select(
         `
         id,
         requester_id,
@@ -61,19 +58,21 @@ export async function POST(req: Request) {
       .eq("id", bookingId)
       .single();
 
-    if (bookingErr || !booking) {
+    if (bookingErr || !bookingRaw) {
       return NextResponse.json(
         { error: "Booking not found" },
         { status: 404 }
       );
     }
 
+    const booking = bookingRaw as BookingRow;
+
     // --------------------------------------------
-    // 3) โหลดคิวคนขับ (เรียงลำดับ queue_order)
+    // 3) โหลดคิวคนขับ (เรียงคิว)
     // --------------------------------------------
-    const { data: drivers, error: driverErr } = await supabase
+    const { data: driversRaw, error: driverErr } = await supabase
       .from("drivers")
-      .select<DriverRow>(
+      .select(
         `
         id,
         full_name,
@@ -85,13 +84,14 @@ export async function POST(req: Request) {
       .eq("active", true)
       .order("queue_order", { ascending: true });
 
-    if (driverErr || !drivers || drivers.length === 0) {
+    if (driverErr || !driversRaw || driversRaw.length === 0) {
       return NextResponse.json(
         { error: "No drivers available" },
         { status: 500 }
       );
     }
 
+    const drivers = driversRaw as DriverRow[];
     const driver = drivers[0];
 
     // --------------------------------------------
@@ -119,7 +119,7 @@ export async function POST(req: Request) {
     // 5) สร้าง token ให้ driver-accept
     // --------------------------------------------
     const token = createSecureToken();
-    const expireAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 ชม.
+    const expireAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
 
     await supabase.from("booking_tokens").insert({
       token,
@@ -151,6 +151,7 @@ export async function POST(req: Request) {
       success: true,
       driverAssigned: driver.full_name,
     });
+
   } catch (err) {
     console.error("AUTO_ASSIGN_ERROR:", err);
     return NextResponse.json(
@@ -161,7 +162,7 @@ export async function POST(req: Request) {
 }
 
 // =====================================================
-// 7) Flex Message (แจ้งงานใหม่ + ปุ่มรับงาน)
+// 7) Flex Message
 // =====================================================
 function createFlexAssignMessage(
   booking: BookingRow,
@@ -221,16 +222,8 @@ function createFlexAssignMessage(
             action: {
               type: "uri",
               label: "รับงาน",
-              uri: `https://yourapp.com/api/driver-accept?token=${token}`,
-            },
-          },
-          {
-            type: "button",
-            style: "secondary",
-            action: {
-              type: "uri",
-              label: "ปฏิเสธงาน",
-              uri: "https://line.me",
+             uri: `https://govcarbooking-v2.vercel.app/api/driver-accept?token=${token}`,
+
             },
           },
         ],
