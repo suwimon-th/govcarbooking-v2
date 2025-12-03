@@ -1,36 +1,79 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: #f5f7fb;
+  --foreground: #1a1a1a;
+  --primary: #0d47a1;       /* กรมท่า */
+  --primary-light: #1565c0;
+  --secondary: #ffc107;     /* เหลืองราชการ */
+  --card-bg: #ffffff;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-}
-/* แสดงปฏิทินในทุก browser, แก้ dark mode ปิด icon date-picker */
-input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(1);
-  cursor: pointer;
+  font-family: var(--font-prompt), sans-serif;
 }
 
+/* Card ราชการ */
+.card {
+  background: var(--card-bg);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+
+/* ปุ่มหลัก */
+.btn-primary {
+  background: var(--primary);
+  color: white;
+  font-weight: 600;
+  padding: 10px 16px;
+  border-radius: 8px;
+  transition: 0.2s;
+}
+.btn-primary:hover {
+  background: var(--primary-light);
+}
+
+/* Input แบบราชการ */
+input, select, textarea {
+  background: #ffffff;
+  border: 1px solid #d0d3da;
+  padding: 8px 12px;
+  border-radius: 8px;
+  width: 100%;
+  margin-top: 4px;
+  margin-bottom: 14px;
+}
+label {
+  font-weight: 600;
+}
+
+/* Fix calendar icon */
+input[type="date"]::-webkit-calendar-picker-indicator,
 input[type="time"]::-webkit-calendar-picker-indicator {
-  filter: invert(1);
+  filter: invert(0);
   cursor: pointer;
+}
+/* FullCalendar modern UI */
+.fc .fc-toolbar-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.fc-event {
+  border-radius: 8px !important;
+  padding: 3px 6px !important;
+  font-size: 0.85rem;
+}
+
+.fc-day-today {
+  background-color: #e9f2ff !important;
+}
+.table-text {
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.4;
 }
