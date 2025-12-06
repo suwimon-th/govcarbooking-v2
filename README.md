@@ -34,3 +34,7 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Database cleanup endpoint
+
+For staging or demo environments you can clear booking history without touching the codebase. Set `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and a secret `DATABASE_CLEAN_SECRET` in the environment, then send a `POST` request to `/api/admin/clean-database` with the header `x-clean-secret: <DATABASE_CLEAN_SECRET>`. The endpoint removes rows from `mileage_logs` and `bookings`, and resets every driver status to `AVAILABLE` using the Supabase service key.
