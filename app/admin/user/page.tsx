@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Header from "../../components/Header";
 
 // ----------------------------
 // TYPE USER
@@ -43,7 +42,6 @@ export default function AdminUsers() {
 
   return (
     <>
-      <Header />
 
       <div className="p-6">
         <div className="card">

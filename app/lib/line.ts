@@ -28,6 +28,26 @@ export async function sendLinePush(to: string, messages: any[]) {
 }
 
 // ======================================================
+// HELPER: parse เวลาไทยจาก DB (❌ ไม่ใช้ Date)
+// ======================================================
+function parseThaiDateTime(dt: string) {
+  // dt = "2025-12-15T21:52:00"
+  return {
+    date: dt.slice(0, 10),     // 2025-12-15
+    time: dt.slice(11, 16),    // 21:52
+  };
+}
+
+function formatThaiDate(date: string) {
+  const [y, m, d] = date.split("-").map(Number);
+  const months = [
+    "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
+    "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."
+  ];
+  return `${d} ${months[m - 1]} ${y + 543}`;
+}
+
+// ======================================================
 // FLEX: หลังคนขับกด "รับงานสำเร็จ"
 // ======================================================
 export function flexDriverAcceptSuccess(bookingId: string) {
@@ -71,30 +91,17 @@ export function flexDriverAcceptSuccess(bookingId: string) {
 }
 
 // ======================================================
-// FLEX: แจ้งงานใหม่ให้คนขับ
+// FLEX: แจ้งงานใหม่ให้คนขับ (✅ เวลาไม่เพี้ยน)
 // ======================================================
 export function flexAssignDriver(booking: any, vehicle: any, driver: any) {
-  const startDate = new Date(booking.start_at);
-  const endDate = booking.end_at ? new Date(booking.end_at) : null;
+  const { date, time } = parseThaiDateTime(booking.start_at);
+  const thaiDate = formatThaiDate(date);
 
-  const thaiDate = startDate.toLocaleDateString("th-TH", {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-  });
+  let timeDisplay = `${time} น.`;
 
-  const startTime = startDate.toLocaleTimeString("th-TH", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
-  let timeDisplay = `${startTime} น.`;
-  if (endDate) {
-    const endTime = endDate.toLocaleTimeString("th-TH", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    timeDisplay = `${startTime}–${endTime} น.`;
+  if (booking.end_at) {
+    const end = parseThaiDateTime(booking.end_at);
+    timeDisplay = `${time}–${end.time} น.`;
   }
 
   return {
@@ -136,99 +143,57 @@ export function flexAssignDriver(booking: any, vehicle: any, driver: any) {
 
           { type: "separator", margin: "lg" },
 
-          // รถ
           {
             type: "box",
             layout: "baseline",
             contents: [
-              { type: "text", text: "🚗 รถ:", size: "md", flex: 2 },
-              {
-                type: "text",
-                text: vehicle?.plate_number ?? "-",
-                size: "md",
-                wrap: true,
-                flex: 5,
-              },
+              { type: "text", text: "🚗 รถ:", flex: 2 },
+              { type: "text", text: vehicle?.plate_number ?? "-", flex: 5 },
             ],
           },
 
-          // วันที่
           {
             type: "box",
             layout: "baseline",
             contents: [
-              { type: "text", text: "📅 วันที่:", size: "md", flex: 2 },
-              {
-                type: "text",
-                text: thaiDate,
-                size: "md",
-                wrap: true,
-                flex: 5,
-              },
+              { type: "text", text: "📅 วันที่:", flex: 2 },
+              { type: "text", text: thaiDate, flex: 5 },
             ],
           },
 
-          // เวลา
           {
             type: "box",
             layout: "baseline",
             contents: [
-              { type: "text", text: "⏰ เวลา:", size: "md", flex: 2 },
-              {
-                type: "text",
-                text: timeDisplay,
-                size: "md",
-                wrap: true,
-                flex: 5,
-              },
+              { type: "text", text: "⏰ เวลา:", flex: 2 },
+              { type: "text", text: timeDisplay, flex: 5 },
             ],
           },
 
-          // ผู้ขอ
           {
             type: "box",
             layout: "baseline",
             contents: [
-              { type: "text", text: "👤 ผู้ขอ:", size: "md", flex: 2 },
-              {
-                type: "text",
-                text: booking.requester_name ?? "-",
-                size: "md",
-                wrap: true,
-                flex: 5,
-              },
+              { type: "text", text: "👤 ผู้ขอ:", flex: 2 },
+              { type: "text", text: booking.requester_name ?? "-", flex: 5 },
             ],
           },
 
-          // คนขับ
           {
             type: "box",
             layout: "baseline",
             contents: [
-              { type: "text", text: "🧑‍✈️ คนขับ:", size: "md", flex: 2 },
-              {
-                type: "text",
-                text: driver.full_name ?? "-",
-                size: "md",
-                wrap: true,
-                flex: 5,
-              },
+              { type: "text", text: "🧑‍✈️ คนขับ:", flex: 2 },
+              { type: "text", text: driver.full_name ?? "-", flex: 5 },
             ],
           },
 
-          // วัตถุประสงค์
           {
             type: "box",
             layout: "baseline",
             contents: [
-              { type: "text", text: "📝 วัตถุประสงค์:", size: "md", flex: 2 },
-              {
-                type: "text",
-                text: booking.purpose ?? "-",
-                size: "md",
-                wrap: true,
-                flex: 5,
-              },
+              { type: "text", text: "📝 วัตถุประสงค์:", flex: 2 },
+              { type: "text", text: booking.purpose ?? "-", flex: 5, wrap: true },
             ],
           },
         ],
@@ -269,43 +234,6 @@ export function flexAssignDriver(booking: any, vehicle: any, driver: any) {
 // ======================================================
 // FLEX: แจ้งงานเสร็จ
 // ======================================================
-export function flexJobFinished(booking: any) {
-  return {
-    type: "flex",
-    altText: "จบงานเรียบร้อยแล้ว",
-    contents: {
-      type: "bubble",
-      size: "mega",
-      body: {
-        type: "box",
-        layout: "vertical",
-        spacing: "md",
-        contents: [
-          {
-            type: "text",
-            text: "🎉 งานเสร็จเรียบร้อย!",
-            weight: "bold",
-            size: "xl",
-            color: "#1DB446",
-          },
-          {
-            type: "text",
-            wrap: true,
-            color: "#333333",
-            text: `รหัสงาน: ${booking.request_code}`,
-          },
-          {
-            type: "text",
-            wrap: true,
-            color: "#444444",
-            text: "ขอบคุณสำหรับการปฏิบัติงานครับ",
-          },
-        ],
-      },
-    },
-  };
-}
-
 export function flexJobCompleted(booking: any) {
   return {
     type: "flex",

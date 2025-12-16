@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 
 // ใช้ Service Role เพราะเป็นงานแก้ไขข้อมูลสำคัญ
 const supabase = createClient(
-  process.env.SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,   // ✅ แก้ตรงนี้
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
@@ -18,7 +18,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // ลบข้อมูลผู้ใช้
     const { error } = await supabase
       .from("profiles")
       .delete()

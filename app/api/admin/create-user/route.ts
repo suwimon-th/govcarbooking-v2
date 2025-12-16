@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-// ใช้ URL + SERVICE_ROLE หรือ ANON ก็ได้ แต่อันนี้ใช้ SERVICE_ROLE เพื่อความชัวร์
 const supabase = createClient(
-  process.env.SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
@@ -11,7 +10,6 @@ export async function POST(req: Request) {
   try {
     const { full_name, username, password, role } = await req.json();
 
-    // ตรวจว่ากรอกครบไหม
     if (!full_name || !username || !password || !role) {
       return NextResponse.json(
         { error: "กรุณากรอกข้อมูลให้ครบ" },
@@ -19,7 +17,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // 1) เช็คว่า username ซ้ำหรือยัง
+    // เช็ค username ซ้ำ
     const { data: existed } = await supabase
       .from("profiles")
       .select("id")
@@ -33,29 +31,26 @@ export async function POST(req: Request) {
       );
     }
 
-    // 2) Insert ลง profiles (ไม่ต้องส่ง id ให้ DB gen ให้เอง)
-    const { error: insertError } = await supabase.from("profiles").insert([
-      {
-        full_name,
-        username,
-        password,      // ตอนนี้เก็บ plaintext ไปก่อน ตามระบบเดิม
-        role,
-        department_id: 1,
-      },
-    ]);
+    // Insert ตรง ๆ (ไม่ hash)
+    const { error } = await supabase.from("profiles").insert({
+      full_name,
+      username,
+      password,
+      role,
+      department_id: 1,
+    });
 
-    if (insertError) {
+    if (error) {
       return NextResponse.json(
-        { error: "เพิ่มข้อมูลโปรไฟล์ล้มเหลว: " + insertError.message },
+        { error: error.message },
         { status: 400 }
       );
     }
 
-    // 3) เสร็จ
     return NextResponse.json({ success: true });
 
   } catch (e) {
-    console.error("SERVER ERROR /create-user:", e);
+    console.error("SERVER ERROR create-user:", e);
     return NextResponse.json(
       { error: "Server error" },
       { status: 500 }

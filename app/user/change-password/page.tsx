@@ -3,34 +3,22 @@
 import { useState } from "react";
 
 export default function ChangePasswordPage() {
-  const [old_pw, setOldPw] = useState("");
-  const [new_pw, setNewPw] = useState("");
-  const [new_pw2, setNewPw2] = useState("");
-
-  const userId =
-    typeof window !== "undefined"
-      ? localStorage.getItem("user_id")
-      : null;
+  const [newPw, setNewPw] = useState("");
+  const [newPw2, setNewPw2] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    if (!userId) {
-      alert("ไม่พบข้อมูลผู้ใช้งาน (user_id)");
-      return;
-    }
-
-    if (new_pw !== new_pw2) {
+    if (newPw !== newPw2) {
       alert("รหัสผ่านใหม่ทั้งสองช่องไม่ตรงกัน");
       return;
     }
 
     const res = await fetch("/api/user/change-password", {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        id: userId,
-        old_password: old_pw,
-        new_password: new_pw,
+        new_password: newPw,
       }),
     });
 
@@ -53,18 +41,9 @@ export default function ChangePasswordPage() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <input
           type="password"
-          placeholder="รหัสผ่านเดิม"
-          className="border p-2 w-full rounded"
-          value={old_pw}
-          onChange={(e) => setOldPw(e.target.value)}
-          required
-        />
-
-        <input
-          type="password"
           placeholder="รหัสผ่านใหม่"
           className="border p-2 w-full rounded"
-          value={new_pw}
+          value={newPw}
           onChange={(e) => setNewPw(e.target.value)}
           required
         />
@@ -73,7 +52,7 @@ export default function ChangePasswordPage() {
           type="password"
           placeholder="ยืนยันรหัสผ่านใหม่"
           className="border p-2 w-full rounded"
-          value={new_pw2}
+          value={newPw2}
           onChange={(e) => setNewPw2(e.target.value)}
           required
         />

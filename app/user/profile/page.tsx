@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Header from "../../components/Header";
 
 type UserProfile = {
   id: string;
@@ -55,7 +54,6 @@ export default function ProfilePage() {
 
   return (
     <>
-      <Header />
 
       <div className="max-w-xl mx-auto p-6">
         <h1 className="text-2xl font-bold text-blue-700 mb-6">ข้อมูลผู้ใช้งาน</h1>

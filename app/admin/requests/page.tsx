@@ -5,39 +5,45 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import EditBookingModal from "./EditBookingModal";
 
-// ------------ Interfaces ------------ //
+/* ================= Interfaces ================= */
 
-interface RequesterInfo { full_name: string | null; }
-interface DriverInfo { full_name: string | null; }
+interface RequesterInfo {
+  full_name: string | null;
+}
+
+interface DriverInfo {
+  full_name: string | null;
+}
+
 interface VehicleInfo {
   plate_number: string | null;
   brand: string | null;
   model: string | null;
 }
-interface MileageInfo {
-  start_mileage: number | null;
-  end_mileage: number | null;
-  distance: number | null;
-}
 
 export interface BookingRow {
   id: string;
   request_code: string;
-  requester_id: string;
-  driver_id: string | null;
-  vehicle_id: string | null;
   purpose: string | null;
   start_at: string | null;
   end_at: string | null;
   status: string;
 
+  requester_id: string;        // ✅ เพิ่ม
+  driver_id: string | null;    // ✅ เพิ่ม
+  vehicle_id: string | null;   // ✅ เพิ่ม
+
+
+  start_mileage: number | null;
+  end_mileage: number | null;
+  distance: number | null;
+
   requester: RequesterInfo | null;
   driver: DriverInfo | null;
   vehicle: VehicleInfo | null;
-  mileage: MileageInfo[] | null;
 }
 
-// ------------ Utility Functions ------------ //
+/* ================= Utils ================= */
 
 const formatThaiDateTime = (value: string | null): string => {
   if (!value) return "-";
@@ -59,38 +65,58 @@ const vehicleDisplay = (v: VehicleInfo | null): string => {
   return `${v.plate_number} (${v.brand ?? ""} ${v.model ?? ""})`;
 };
 
-const getStartMileage = (m: MileageInfo[] | null) =>
-  m?.find((x) => x.start_mileage !== null)?.start_mileage ?? "-";
+const statusColor = (status: string) => {
+  switch (status) {
+    case "COMPLETED":
+      return "bg-purple-600";
+    case "APPROVED":
+      return "bg-green-600";
+    case "ASSIGNED":
+      return "bg-blue-600";
+    case "REJECTED":
+      return "bg-red-600";
+    default:
+      return "bg-gray-600";
+  }
+};
 
-const getEndMileage = (m: MileageInfo[] | null) =>
-  m?.find((x) => x.end_mileage !== null)?.end_mileage ?? "-";
-
-const getDistance = (m: MileageInfo[] | null) =>
-  m?.find((x) => x.distance !== null)?.distance ?? "-";
-
-// ------------ Component ------------ //
+/* ================= Component ================= */
 
 export default function AdminRequestsPage() {
   const [rows, setRows] = useState<BookingRow[]>([]);
   const [editItem, setEditItem] = useState<BookingRow | null>(null);
 
   const loadData = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("bookings")
       .select(`
-        id, request_code, requester_id, driver_id, vehicle_id,
-        purpose, start_at, end_at, status,
+  id,
+  request_code,
+  requester_id,
+  driver_id,
+  vehicle_id,
+  purpose,
+  start_at,
+  end_at,
+  status,
 
-        requester:requester_id(full_name),
-        driver:driver_id(full_name),
+  start_mileage,
+  end_mileage,
+  distance,
 
-        vehicle:vehicle_id(plate_number, brand, model),
+  requester:requester_id(full_name),
+  driver:driver_id(full_name),
+  vehicle:vehicle_id(plate_number, brand, model)
+`)
 
-        mileage:mileage_logs(start_mileage, end_mileage, distance)
-      `)
       .order("created_at", { ascending: false });
 
-    setRows((data ?? []) as unknown as BookingRow[]);
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    setRows(data as unknown as BookingRow[]);
   };
 
   useEffect(() => {
@@ -103,109 +129,111 @@ export default function AdminRequestsPage() {
     loadData();
   };
 
-  const statusColor = (status: string) => {
-    switch (status) {
-      case "COMPLETED": return "bg-purple-600";
-      case "APPROVED": return "bg-green-600";
-      case "REJECTED": return "bg-red-600";
-      default: return "bg-gray-600";
-    }
-  };
-
   return (
     <div className="p-4 md:p-8 max-w-[1400px] mx-auto">
 
       <h1 className="text-2xl font-bold mb-6">จัดการคำขอใช้รถทั้งหมด</h1>
 
-      {/* TABLE */}
-      <div className="overflow-x-auto">
+      {/* ================= TABLE ================= */}
+      <div className="overflow-x-auto bg-white border rounded-lg">
 
-        <table className="w-full table-auto border border-gray-300 text-[15px]">
+        <table className="w-full table-auto text-sm">
 
-          <thead className="bg-gray-100">
+          <thead className="bg-gray-100 text-gray-700">
             <tr>
-              <th className="border p-2 w-[130px]">รหัสคำขอ</th>
-              <th className="border p-2 w-[110px]">ผู้ขอ</th>
-              <th className="border p-2 w-[200px]">วัตถุประสงค์</th>
-              <th className="border p-2 w-[170px]">เริ่มต้น</th>
-              <th className="border p-2 w-[170px]">สิ้นสุด</th>
-              <th className="border p-2 w-[120px]">คนขับรถ</th>
-              <th className="border p-2 w-[190px]">ทะเบียนรถ</th>
-              <th className="border p-2 w-[95px]">ไมล์ก่อนออก</th>
-              <th className="border p-2 w-[95px]">ไมล์หลังออก</th>
-              <th className="border p-2 w-[90px]">ระยะทาง</th>
-              <th className="border p-2 w-[110px]">สถานะ</th>
-              <th className="border p-2 w-[110px]">จัดการ</th>
+              <th className="p-3 text-left w-[260px]">งาน</th>
+              <th className="p-3 text-left w-[210px]">เวลาใช้งาน</th>
+              <th className="p-3 text-left w-[210px]">รถ / คนขับ</th>
+              <th className="p-3 text-center w-[160px]">ไมล์</th>
+              <th className="p-3 text-center w-[120px]">สถานะ</th>
+              <th className="p-3 text-center w-[100px]">จัดการ</th>
             </tr>
           </thead>
 
           <tbody>
             {rows.map((b) => (
-              <tr key={b.id} className="hover:bg-gray-50">
-
-                <td className="border p-2 table-text">{b.request_code}</td>
-
-                <td className="border p-2 table-text">
-                  {b.requester?.full_name || "-"}
+              <tr
+                key={b.id}
+                className="border-t hover:bg-gray-50 align-top"
+              >
+                {/* งาน */}
+                <td className="p-3">
+                  <div className="font-semibold">{b.request_code}</div>
+                  <div className="text-gray-700">
+                    {b.requester?.full_name || "-"}
+                  </div>
+                  <div className="text-gray-500 text-xs">
+                    {b.purpose || "-"}
+                  </div>
                 </td>
 
-                <td className="border p-2 table-text">{b.purpose || "-"}</td>
-
-                <td className="border p-2 table-text">
-                  {formatThaiDateTime(b.start_at)}
+                {/* เวลา */}
+                <td className="p-3">
+                  <div>{formatThaiDateTime(b.start_at)}</div>
+                  <div className="text-gray-400 text-xs">
+                    {b.end_at ? formatThaiDateTime(b.end_at) : "-"}
+                  </div>
                 </td>
 
-                <td className="border p-2 table-text">
-                  {formatThaiDateTime(b.end_at)}
+                {/* รถ */}
+                <td className="p-3">
+                  <div className="font-medium">
+                    {b.driver?.full_name || "-"}
+                  </div>
+                  <div className="text-gray-500 text-xs">
+                    {vehicleDisplay(b.vehicle)}
+                  </div>
                 </td>
 
-                <td className="border p-2 table-text">
-                  {b.driver?.full_name || "-"}
+                {/* ไมล์ */}
+                <td className="p-3 text-center">
+                  <div className="font-medium">
+                    {b.start_mileage && b.start_mileage > 0
+                      ? b.start_mileage
+                      : "-"}{" "}
+                    → {b.end_mileage ?? "-"}
+                  </div>
+                  <div className="text-blue-600 font-semibold">
+                    {b.distance ? `${b.distance} กม.` : "-"}
+                  </div>
                 </td>
 
-                <td className="border p-2 table-text">{vehicleDisplay(b.vehicle)}</td>
-
-                <td className="border p-2 table-text">{getStartMileage(b.mileage)}</td>
-                <td className="border p-2 table-text">{getEndMileage(b.mileage)}</td>
-
-                <td className="border p-2 table-text font-semibold text-blue-700">
-                  {getDistance(b.mileage)}
-                </td>
-
-                <td className="border p-2">
+                {/* สถานะ */}
+                <td className="p-3 text-center">
                   <span
-                    className={`px-3 py-1 text-xs text-white rounded-full ${statusColor(b.status)}`}
+                    className={`px-3 py-1 text-xs text-white rounded-full ${statusColor(
+                      b.status
+                    )}`}
                   >
                     {b.status}
                   </span>
                 </td>
 
-                <td className="border p-2">
+                {/* จัดการ */}
+                <td className="p-3 text-center">
                   <div className="flex justify-center gap-2">
                     <button
                       onClick={() => setEditItem(b)}
-                      className="w-8 h-8 bg-yellow-500 text-white rounded-md flex items-center justify-center"
+                      className="w-8 h-8 bg-yellow-500 text-white rounded-md"
                     >
                       ✏️
                     </button>
                     <button
                       onClick={() => deleteBooking(b.id)}
-                      className="w-8 h-8 bg-red-600 text-white rounded-md flex items-center justify-center"
+                      className="w-8 h-8 bg-red-600 text-white rounded-md"
                     >
                       🗑️
                     </button>
                   </div>
                 </td>
-
               </tr>
             ))}
           </tbody>
 
         </table>
-
       </div>
 
-      {/* MODAL */}
+      {/* ================= MODAL ================= */}
       {editItem && (
         <EditBookingModal
           booking={editItem}

@@ -12,29 +12,38 @@ export async function POST(req: Request) {
       );
     }
 
-    // 1) ดึงคนขับคิวแรก (queue_order ต่ำสุด)
+    // 1) ดึงคนขับคิวแรก ที่ active + available เท่านั้น
     const { data: driver, error: driverErr } = await supabase
       .from("drivers")
       .select("*")
+      .eq("is_active", true)
+      .eq("status", "AVAILABLE")
       .order("queue_order", { ascending: true })
       .limit(1)
       .single();
 
     if (driverErr || !driver) {
       return NextResponse.json(
-        { error: "ไม่พบพนักงานขับรถในคิว" },
+        { error: "ไม่พบพนักงานขับรถที่พร้อมปฏิบัติงาน" },
+        { status: 400 }
+      );
+    }
+
+    // (กันซ้ำชั้น)
+    if (!driver.is_active || driver.status !== "AVAILABLE") {
+      return NextResponse.json(
+        { error: "พนักงานขับรถไม่สามารถรับงานได้" },
         { status: 400 }
       );
     }
 
     const driverId = driver.id;
 
-    // 2) อัปเดต booking → assign คนขับ
+    // 2) assign คนขับให้ booking
     const { error: updateErr } = await supabase
       .from("bookings")
       .update({
         driver_id: driverId,
-        assigned_at: new Date().toISOString(),
         status: "ASSIGNED",
       })
       .eq("id", booking_id);
@@ -46,7 +55,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // 3) วนคิว (ให้คนนี้ไปท้ายสุด)
+    // 3) วนคิว
     const { error: rotateErr } = await supabase.rpc("rotate_driver_queue", {
       selected_driver_id: driverId,
     });

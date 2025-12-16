@@ -77,3 +77,32 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   word-break: break-word;
   line-height: 1.4;
 }
+/* ================================
+   FullCalendar: บังคับตัวหนังสือสีดำ
+================================ */
+
+/* เวลา */
+.fc-event-time {
+  color: #000 !important;
+  font-weight: 500;
+}
+
+/* ชื่อรายการ */
+.fc-event-title {
+  color: #000 !important;
+  font-weight: 600;
+}
+
+/* กรณีเป็น block */
+.fc-event-main {
+  color: #000 !important;
+}
+
+/* กันกรณี FullCalendar ใส่สีซ้อน */
+.fc .fc-event {
+  color: #000 !important;
+}
+.fc-event-title,
+.fc-event-time {
+  text-shadow: none;
+}

@@ -2,7 +2,15 @@ import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseClient";
 
 /* ---------------------------
-   ฟังก์ชันสร้างเลขคำขอ ENV-YYYYMMDD-XXX
+   helper: เติมวินาทีให้เวลา
+   "21:52" -> "21:52:00"
+---------------------------- */
+function padTime(t: string) {
+  return t.length === 5 ? `${t}:00` : t;
+}
+
+/* ---------------------------
+   สร้างเลขคำขอ ENV-YYYYMMDD-XXX
 ---------------------------- */
 async function generateRequestCode() {
   const now = new Date();
@@ -28,33 +36,7 @@ async function generateRequestCode() {
   }
 
   const run3 = String(running).padStart(3, "0");
-
   return `ENV-${dateCode}-${run3}`;
-}
-
-/* ----------------------------------------
-   แปลงวันที่ + เวลา ให้เป็นเวลาไทยแบบถูกต้อง
------------------------------------------ */
-function buildDateTime(date: string, time: string): string {
-  // date = "2025-12-03"
-  // time = "23:00"
-
-  const [h, m] = time.split(":").map(Number);
-
-  const dt = new Date(date);
-  dt.setHours(h, m, 0, 0);
-
-  // แปลงเวลาให้เป็น Asia/Bangkok
-  const tz = new Intl.DateTimeFormat("sv-SE", {
-    timeZone: "Asia/Bangkok",
-    hour12: false,
-    dateStyle: "short",
-    timeStyle: "medium",
-  })
-    .format(dt)
-    .replace(" ", "T"); // → 2025-12-03T23:00:00
-
-  return tz;
 }
 
 export async function POST(req: Request) {
@@ -66,27 +48,38 @@ export async function POST(req: Request) {
       requester_name,
       department_id,
       vehicle_id,
-      date,
-      start_time,
-      end_time,
+      date,        // "2025-12-15"
+      start_time,  // "21:52"
+      end_time,    // "22:30" | null
       purpose,
     } = body;
 
-    if (!requester_id || !requester_name || !vehicle_id || !date || !start_time) {
+    if (
+      !requester_id ||
+      !requester_name ||
+      !department_id ||
+      !vehicle_id ||
+      !date ||
+      !start_time ||
+      !purpose
+    ) {
       return NextResponse.json(
         { error: "กรุณากรอกข้อมูลให้ครบถ้วน" },
         { status: 400 }
       );
     }
 
-    const requestCode = await generateRequestCode();
+    // ✅ สร้างเวลาไทยแบบ string ตรง ๆ (ไม่ใช้ Date)
+    const start_at = `${date}T${padTime(start_time)}`;
+    const end_at = end_time ? `${date}T${padTime(end_time)}` : null;
 
-    const start_at = buildDateTime(date, start_time);
-    const end_at = end_time ? buildDateTime(date, end_time) : null;
+    const request_code = await generateRequestCode();
 
-    /* ---------------------------------
-       1) INSERT booking ลง Supabase
-    --------------------------------- */
+    /* ---------------------------
+       INSERT booking
+       ❌ ไม่ส่ง created_at / assigned_at
+       ✅ ให้ DB ใส่ now() เอง
+    ---------------------------- */
     const { data, error } = await supabase
       .from("bookings")
       .insert([
@@ -98,7 +91,7 @@ export async function POST(req: Request) {
           start_at,
           end_at,
           purpose,
-          request_code: requestCode,
+          request_code,
           status: "REQUESTED",
         },
       ])
@@ -113,29 +106,26 @@ export async function POST(req: Request) {
       );
     }
 
-    const booking = data;
+    /* ---------------------------
+       Auto-assign คนขับ (ถ้ามี)
+    ---------------------------- */
+    const DOMAIN = process.env.PUBLIC_DOMAIN;
 
-    /* ---------------------------------
-       2) เรียก Auto-Assign คนขับ
-    --------------------------------- */
-
-    const DOMAIN = process.env.PUBLIC_DOMAIN!;
-
-    try {
-      await fetch(`${DOMAIN}/api/auto-assign`, {
+    if (DOMAIN) {
+      fetch(`${DOMAIN}/api/auto-assign`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingId: booking.id }),
-      });
-    } catch (err) {
-      console.error("AUTO_ASSIGN_CALL_FAILED:", err);
+        body: JSON.stringify({ bookingId: data.id }),
+      }).catch((err) =>
+        console.error("AUTO_ASSIGN_CALL_FAILED:", err)
+      );
     }
 
     return NextResponse.json(
       {
         success: true,
         message: "บันทึกคำขอใช้รถเรียบร้อยแล้ว",
-        booking,
+        booking: data,
       },
       { status: 200 }
     );

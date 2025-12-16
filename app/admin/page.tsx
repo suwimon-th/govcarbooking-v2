@@ -133,30 +133,6 @@ export default function AdminDashboardPage() {
         Overview of your fleet management system
       </p>
 
-      {/* ACTION MENU */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
-        <button
-          onClick={() => router.push("/admin/requests/new")}
-          className="p-4 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-700 text-lg"
-        >
-          ➕ สร้างคำขอใช้รถ
-        </button>
-
-        <button
-          onClick={() => router.push("/admin/vehicles/add")}
-          className="p-4 bg-green-600 text-white rounded-xl shadow hover:bg-green-700 text-lg"
-        >
-          🚗 เพิ่มรถใหม่
-        </button>
-
-        <button
-          onClick={() => router.push("/admin/drivers/add")}
-          className="p-4 bg-yellow-600 text-white rounded-xl shadow hover:bg-yellow-700 text-lg"
-        >
-          👷 เพิ่มพนักงานขับรถ
-        </button>
-      </section>
-
       {/* KPI BLOCKS */}
       <section className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-10">
 

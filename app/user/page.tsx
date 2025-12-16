@@ -7,14 +7,12 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import type { EventClickArg } from "@fullcalendar/core";
-
-import PageContainer from "../components/PageContainer";
 import EventDetailModal from "../components/EventDetailModal";
 
 /* ----------------------------------------------------
    TYPES
 ---------------------------------------------------- */
-export type CalendarEvent = {
+type CalendarEvent = {
   id: string;
   title: string;
   start: string;
@@ -22,65 +20,66 @@ export type CalendarEvent = {
   color: string;
 };
 
-export type BookingDetail = {
+type BookingDetail = {
   id: string;
   request_code: string;
   requester_name: string;
-
   purpose: string;
   start_at: string;
   end_at: string | null;
-
   driver_name: string;
   driver_phone: string;
-
   vehicle_plate: string;
   vehicle_brand: string;
   vehicle_model: string;
-
   department: string;
-
   start_mileage: number;
   end_mileage: number;
   distance: number;
-
   status: string;
   created_at: string;
 };
 
 /* ----------------------------------------------------
-   MAIN PAGE
+   COLOR MAP: สีตามรถ
 ---------------------------------------------------- */
-export default function UserDashboard() {
+const VEHICLE_COLORS: Record<string, string> = {
+  "07607f9f-225a-4caf-939f-0d73155e68cd": "#93C5FD",
+  "0c2eb051-128f-4552-9f78-619f1039e898": "#FCA5A5",
+  "48aae147-44d1-4d02-9ad5-25db51dbf1fb": "#E9D5FF",
+  "89fcb151-32c4-49e6-aee6-c3fb9eac0665": "#FDE68A",
+};
+
+const DEFAULT_COLOR = "#CBD5E1";
+
+/* ----------------------------------------------------
+   PAGE
+---------------------------------------------------- */
+export default function UserPage() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [selected, setSelected] = useState<BookingDetail | null>(null);
 
-  /* ----------------------------------------------------
-     โหลด booking ทั้งหมด
-  ---------------------------------------------------- */
+  /* โหลด booking */
   const loadBookings = useCallback(async () => {
-    console.log("📌 loadBookings()");
-
     const res = await fetch("/api/get-bookings");
     const raw = await res.json();
 
-    console.log("📌 RAW:", raw);
+    const formatted: CalendarEvent[] = raw.map((item: any) => {
+      const vehicleColor =
+        VEHICLE_COLORS[item.vehicle_id] ?? DEFAULT_COLOR;
 
-    const formatted: CalendarEvent[] = raw.map((item: any) => ({
-      id: item.id,
-      title: item.title || "ใช้งานรถ",
-      start: item.start,
-      end: item.end ?? undefined,
-
-      // ⭐ เปลี่ยนสี COMPLETE เป็นเขียว
-      color:
-        item.status === "COMPLETED"
-          ? "#22C55E" // เขียว
-          : "#0D47A1", // น้ำเงิน
-    }));
-
-    console.log("📌 Parsed:", formatted);
+      return {
+        id: item.id,
+        title: item.title || "ใช้งานรถ",
+        start: item.start,
+        end: item.end ?? undefined,
+        color:
+          item.status === "COMPLETED"
+            ? "#22C55E"
+            : vehicleColor,
+      };
+    });
 
     setEvents(formatted);
   }, []);
@@ -89,46 +88,42 @@ export default function UserDashboard() {
     loadBookings();
   }, [loadBookings]);
 
-  /* ----------------------------------------------------
-     คลิกวันที่ว่าง → ไปหน้า request
-  ---------------------------------------------------- */
+  /* คลิกวันที่ว่าง */
   const onDateClick = (info: { dateStr: string; jsEvent: MouseEvent }) => {
     const target = info.jsEvent.target as HTMLElement;
-
-    // ถ้าคลิกโดน event → ไม่ redirect
     if (target.closest(".fc-event")) return;
-
     window.location.href = `/user/request?date=${info.dateStr}`;
   };
 
-  /* ----------------------------------------------------
-     คลิก event → เปิด modal
-  ---------------------------------------------------- */
+  /* คลิก event */
   const onEventClick = async (info: EventClickArg) => {
     info.jsEvent.preventDefault();
 
-    const id = info.event.id;
-
-    const res = await fetch(`/api/get-booking-detail?id=${id}`);
-    const detail: BookingDetail = await res.json();
-
-    setSelected(detail);
     setModalOpen(true);
+    setSelected(null); // loading state
+
+    try {
+      const res = await fetch(
+        `/api/get-booking-detail?id=${info.event.id}`
+      );
+      const detail: BookingDetail = await res.json();
+      setSelected(detail);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  /* ----------------------------------------------------
-     RENDER
-  ---------------------------------------------------- */
   return (
-    <PageContainer title="ปฏิทินการใช้รถราชการ">
+    <>
       <FullCalendar
         plugins={[dayGridPlugin, interactionPlugin]}
         initialView="dayGridMonth"
         locale="th"
         height="auto"
+        timeZone="local"
         events={events}
         eventDisplay="block"
-        dayMaxEvents={true}
+        dayMaxEvents
         headerToolbar={{
           left: "prev,next today",
           center: "title",
@@ -143,6 +138,6 @@ export default function UserDashboard() {
         onClose={() => setModalOpen(false)}
         detail={selected}
       />
-    </PageContainer>
+    </>
   );
 }

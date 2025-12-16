@@ -1,17 +1,30 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseClient";
 
+/* ----------------------------------------
+   helper: แปลงเป็น string เวลาไทย
+---------------------------------------- */
+function toThaiString(dateString: string | null) {
+  if (!dateString) return null;
+
+  // รองรับทั้ง "YYYY-MM-DD HH:mm:ss" และ ISO
+  return dateString.replace(" ", "T").slice(0, 19);
+}
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");
 
     if (!id) {
-      return NextResponse.json({ error: "Missing ID" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing ID" },
+        { status: 400 }
+      );
     }
 
     /* -------------------------------------
-     * 1) โหลด booking พร้อมข้อมูลเบื้องต้น
+     * 1) โหลด booking
      * ------------------------------------- */
     const { data: booking, error: bookingErr } = await supabase
       .from("bookings")
@@ -54,7 +67,7 @@ export async function GET(req: Request) {
       .maybeSingle();
 
     /* -------------------------------------
-     * 5) ส่งข้อมูลรูปแบบ BookingDetail
+     * 5) ส่งข้อมูล BookingDetail (เวลาไทย)
      * ------------------------------------- */
     return NextResponse.json({
       id: booking.id,
@@ -63,8 +76,11 @@ export async function GET(req: Request) {
       department: dept?.name ?? "-",
       purpose: booking.purpose ?? "-",
 
-      start_at: booking.start_at,
-      end_at: booking.end_at,
+      // ⭐ แก้ตรงนี้
+      start_at: toThaiString(booking.start_at),
+      end_at: toThaiString(booking.end_at),
+      created_at: toThaiString(booking.created_at),
+
       status: booking.status,
 
       vehicle_plate: vehicle?.plate_number ?? "-",
@@ -77,8 +93,6 @@ export async function GET(req: Request) {
       start_mileage: booking.start_mileage ?? 0,
       end_mileage: booking.end_mileage ?? 0,
       distance: booking.distance ?? 0,
-
-      created_at: booking.created_at,
     });
   } catch (err) {
     console.error("Booking detail error:", err);

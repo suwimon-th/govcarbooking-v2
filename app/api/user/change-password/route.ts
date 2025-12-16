@@ -2,32 +2,28 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { supabase } from "@/lib/supabaseClient";
 
-export async function PUT(req: Request) {
+export async function POST(req: Request) {
   try {
-    const cookieStore = await cookies();
-    const userId = cookieStore.get("user_id")?.value;
+    const cookieStore = cookies();
+    const userId = (await cookieStore).get("user_id")?.value;
 
-    if (!userId)
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-
-    const { old_password, new_password } = await req.json();
-
-    // ตรวจสอบรหัสผ่านเดิม
-    const { data: user, error: e1 } = await supabase
-      .from("profiles")
-      .select("password")
-      .eq("id", userId)
-      .single();
-
-    if (e1) throw e1;
-
-    if (user.password !== old_password)
+    if (!userId) {
       return NextResponse.json(
-        { error: "รหัสผ่านเดิมไม่ถูกต้อง" },
+        { error: "Not authenticated" },
+        { status: 401 }
+      );
+    }
+
+    const { new_password } = await req.json();
+
+    if (!new_password) {
+      return NextResponse.json(
+        { error: "กรุณาระบุรหัสผ่านใหม่" },
         { status: 400 }
       );
+    }
 
-    // อัปเดตรหัสผ่านใหม่
+    // ✅ อัปเดตรหัสผ่านใหม่ทันที (ไม่ตรวจของเดิม)
     const { error } = await supabase
       .from("profiles")
       .update({ password: new_password })
@@ -37,6 +33,7 @@ export async function PUT(req: Request) {
 
     return NextResponse.json({ success: true });
   } catch (e) {
+    console.error(e);
     return NextResponse.json(
       { error: "เปลี่ยนรหัสผ่านไม่สำเร็จ" },
       { status: 500 }
