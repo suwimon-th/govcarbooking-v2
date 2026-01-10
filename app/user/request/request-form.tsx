@@ -4,7 +4,7 @@
 import { useEffect, useState, FormEvent } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
-import { Calendar, Clock, MapPin, User, Building, Car, AlertTriangle, CheckCircle2, ChevronRight, Loader2 } from "lucide-react";
+import { Calendar, Clock, MapPin, User, Building, Car, AlertTriangle, CheckCircle2, ChevronRight, Loader2, X } from "lucide-react";
 
 interface Vehicle {
   id: string;
@@ -42,6 +42,7 @@ export default function RequestForm({
   const [purpose, setPurpose] = useState<string>("");
 
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [showVehicleSelector, setShowVehicleSelector] = useState(false);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loadingVehicles, setLoadingVehicles] = useState<boolean>(false);
 
@@ -344,29 +345,27 @@ export default function RequestForm({
         {/* Section: Vehicle & Purpose */}
         <div className="space-y-5 pt-2">
           <div className="bg-gray-50/50 p-5 rounded-2xl border border-gray-100 space-y-5">
-            {/* Car Selection */}
+            {/* Car Selection - Custom UI */}
             <div className="relative">
               <label className={labelClasses}>เลือกรถราชการ</label>
-              <div className="relative">
-                <Car className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-500" />
-                <select
-                  value={vehicleId}
-                  onChange={(e) => setVehicleId(e.target.value)}
-                  className={`${selectInputClasses} bg-white`}
-                >
-                  <option value="">-- กรุณาเลือก --</option>
-                  {loadingVehicles && <option>กำลังโหลดข้อมูล...</option>}
-                  {!loadingVehicles &&
-                    vehicles.map((v) => (
-                      <option key={v.id} value={v.id}>
-                        {v.plate_number ?? "ไม่ระบุ"} — {v.brand} {v.model?.split(" ").slice(0, 2).join(" ")}
-                      </option>
-                    ))}
-                </select>
-                <div className="absolute right-4 top-4 pointer-events-none">
-                  <ChevronRight className="w-4 h-4 text-gray-400 rotate-90" />
-                </div>
-              </div>
+              <button
+                type="button"
+                onClick={() => setShowVehicleSelector(true)}
+                className={`w-full text-left ${textInputClasses} flex items-center justify-between !py-3 bg-white`}
+              >
+                {vehicleId ? (
+                  <span className="font-semibold text-gray-800">
+                    {vehicles.find((v) => v.id === vehicleId)?.plate_number ||
+                      "ไม่ระบุ"}
+                    <span className="font-normal text-gray-400 ml-2 text-sm">
+                      — {vehicles.find((v) => v.id === vehicleId)?.brand}
+                    </span>
+                  </span>
+                ) : (
+                  <span className="text-gray-400">-- กรุณาเลือก --</span>
+                )}
+                <ChevronRight className="w-5 h-5 text-gray-400 rotate-90" />
+              </button>
             </div>
 
             {/* OT Driver Selection */}
@@ -446,6 +445,78 @@ export default function RequestForm({
           </button>
         </div>
 
+        {/* Vehicle Selector Modal */}
+        {showVehicleSelector && (
+          <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center p-0 md:p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+            {/* Dismiss layer */}
+            <div
+              className="absolute inset-0"
+              onClick={() => setShowVehicleSelector(false)}
+            ></div>
+
+            <div className="relative w-full max-w-lg bg-white rounded-t-3xl md:rounded-3xl shadow-2xl max-h-[85vh] flex flex-col animate-in slide-in-from-bottom-10 md:zoom-in-95 duration-300">
+              <div className="p-5 border-b flex items-center justify-between sticky top-0 bg-white rounded-t-3xl z-10">
+                <h3 className="font-bold text-lg text-gray-800 flex items-center gap-2">
+                  <Car className="w-5 h-5 text-blue-600" />
+                  เลือกรถราชการ
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setShowVehicleSelector(false)}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+
+              <div className="overflow-y-auto p-4 space-y-3 pb-safe-area">
+                {loadingVehicles ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2 text-blue-500" />
+                    กำลังโหลดข้อมูล...
+                  </div>
+                ) : (
+                  vehicles.map((v) => (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => {
+                        setVehicleId(v.id);
+                        setShowVehicleSelector(false);
+                      }}
+                      className={`w-full p-4 rounded-xl border-2 flex items-center gap-4 transition-all active:scale-[0.98] ${vehicleId === v.id
+                        ? "border-blue-500 bg-blue-50 ring-2 ring-blue-100"
+                        : "border-gray-100 bg-white hover:border-blue-200 hover:shadow-sm"
+                        }`}
+                    >
+                      <div
+                        className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${vehicleId === v.id
+                          ? "bg-blue-200 text-blue-700"
+                          : "bg-gray-100 text-gray-500"
+                          }`}
+                      >
+                        <Car className="w-6 h-6" />
+                      </div>
+                      <div className="text-left flex-1 min-w-0">
+                        <div className="font-bold text-gray-900 text-lg truncate">
+                          {v.plate_number}
+                        </div>
+                        <div className="text-sm text-gray-500 truncate">
+                          {v.brand} {v.model}
+                        </div>
+                      </div>
+                      {vehicleId === v.id && (
+                        <div className="ml-auto text-blue-600">
+                          <CheckCircle2 className="w-6 h-6" />
+                        </div>
+                      )}
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </form>
     </div>
   );
