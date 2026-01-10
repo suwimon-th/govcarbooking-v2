@@ -276,7 +276,7 @@ export function flexJobCompleted(booking: any, mileage?: { start: number; end: n
     {
       type: "text",
       wrap: true,
-      color: "#444",
+      color: "#444444",
       text: `งานหมายเลข ${booking.request_code}`,
     }
   ];
@@ -294,14 +294,14 @@ export function flexJobCompleted(booking: any, mileage?: { start: number; end: n
           type: "text",
           text: `เลขไมล์: ${mileage.start} → ${mileage.end}`,
           size: "sm",
-          color: "#555"
+          color: "#555555"
         },
         {
           type: "text",
           text: `รวมระยะทาง: ${mileage.distance} กม.`,
           size: "sm",
           weight: "bold",
-          color: "#333",
+          color: "#333333",
           margin: "xs"
         }
       ]
@@ -310,7 +310,7 @@ export function flexJobCompleted(booking: any, mileage?: { start: number; end: n
     contents.push({
       type: "text",
       wrap: true,
-      color: "#666",
+      color: "#666666",
       text: "ขอบคุณสำหรับการปฏิบัติงานครับ 🙏",
       margin: "md"
     });
