@@ -3,6 +3,10 @@
         {
             "path": "/api/cron/remind-pending",
             "schedule": "0 10 * * *"
+        },
+        {
+            "path": "/api/cron/reset-drivers",
+            "schedule": "0 55 0 * * *"
         }
     ]
 }
