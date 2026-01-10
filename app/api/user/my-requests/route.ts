@@ -16,13 +16,23 @@ export async function GET() {
       id,
       request_code,
       purpose,
+      created_at,
+      requester_name,
       start_at,
       end_at,
       status,
+      destination,
+      passenger_count,
       vehicle:vehicles (
         plate_number,
         brand,
         model
+      ),
+      driver:drivers (
+        full_name
+      ),
+      requester:requester_id (
+        position
       )
     `)
     .eq("requester_id", userId)

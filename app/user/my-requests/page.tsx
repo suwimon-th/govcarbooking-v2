@@ -11,9 +11,12 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
-  ChevronRight
+  ChevronRight,
+  Printer,
+  Search
 } from "lucide-react";
 import Link from "next/link";
+import { generateBookingDocument } from "@/lib/documentGenerator";
 
 /* =========================
    TYPES
@@ -22,6 +25,8 @@ type MyRequest = {
   id: string;
   request_code: string;
   purpose: string;
+  created_at: string;
+  requester_name: string;
   start_at: string;
   end_at: string | null;
   status: string;
@@ -31,6 +36,15 @@ type MyRequest = {
     model: string | null;
     color: string | null;
   } | null;
+  driver: {
+    full_name: string;
+  } | null;
+  requester?: {
+    position: string | null;
+  } | null;
+  driver_id?: string; // Optional if needed
+  destination?: string;
+  passenger_count?: number;
 };
 
 /* =========================
@@ -65,9 +79,14 @@ const vehicleFullDisplay = (v: MyRequest['vehicle']) => {
 /* =========================
    PAGE
 ========================= */
+/* =========================
+ PAGE
+ ========================= */
 export default function MyRequestsPage() {
   const [items, setItems] = useState<MyRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState("ทั้งหมด");
 
   useEffect(() => {
     const load = async () => {
@@ -138,6 +157,39 @@ export default function MyRequestsPage() {
     location.reload();
   };
 
+  const handleDownloadDoc = async (item: MyRequest) => {
+    await generateBookingDocument({
+      request_code: item.request_code,
+      created_at: item.created_at,
+      requester_name: item.requester_name,
+      purpose: item.purpose,
+      start_at: item.start_at,
+      end_at: item.end_at,
+      driver_name: item.driver?.full_name || null,
+      plate_number: item.vehicle?.plate_number || null,
+      brand: item.vehicle?.brand || null,
+      destination: item.destination,
+      passenger_count: item.passenger_count,
+      requester_position: item.requester?.position || null,
+    });
+  };
+
+  // Logic: Filter Items
+  const filteredItems = items.filter((it) => {
+    const term = searchTerm.toLowerCase();
+    const code = (it.request_code || "").toLowerCase();
+    const purpose = (it.purpose || "").toLowerCase();
+    const plate = (it.vehicle?.plate_number || "").toLowerCase();
+
+    // Check Search
+    const matchSearch = code.includes(term) || purpose.includes(term) || plate.includes(term);
+
+    // Check Status
+    const matchStatus = filterStatus === "ทั้งหมด" ? true : it.status === filterStatus;
+
+    return matchSearch && matchStatus;
+  });
+
   const stats = {
     total: items.length,
     pending: items.filter(i => i.status === 'REQUESTED').length,
@@ -149,7 +201,7 @@ export default function MyRequestsPage() {
 
       {/* HEADER SECTION */}
       <div className="mb-10">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-200">
               <FileText className="w-8 h-8" />
@@ -158,16 +210,51 @@ export default function MyRequestsPage() {
               <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
                 ประวัติการขอใช้รถ
               </h1>
-              <p className="text-gray-500 font-medium">ติดตามสถานะและตรวจสอบประวัติการจองรถของท่าน</p>
+              <p className="text-gray-500 font-medium">ติดตามสถานะและตรวจสอบประวัติการขอใช้รถของท่าน</p>
             </div>
           </div>
 
-          <Link
-            href="/user"
-            className="inline-flex items-center justify-center px-6 py-3 bg-white border border-gray-200 rounded-xl text-gray-600 font-bold hover:bg-gray-50 transition-all shadow-sm"
-          >
-            กลับหน้าหลัก
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+            {/* SEARCH BOX */}
+            {!loading && items.length > 0 && (
+              <div className="relative grow min-w-[250px]">
+                {/* <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
+                    <Search className="w-5 h-5" />
+                  </div> */}
+                <input
+                  type="text"
+                  placeholder="เลขที่งาน / ชื่อผู้ขอ..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-4 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+                />
+              </div>
+            )}
+
+            {/* FILTER STATUS */}
+            {!loading && items.length > 0 && (
+              <div className="relative min-w-[180px]">
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className="pl-4 pr-8 py-2.5 bg-white border border-gray-200 rounded-xl text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm appearance-none"
+                >
+                  <option value="ทั้งหมด">สถานะ: ทั้งหมด</option>
+                  <option value="REQUESTED">รออนุมัติ</option>
+                  <option value="APPROVED">อนุมัติแล้ว</option>
+                  <option value="ASSIGNED">มอบหมายแล้ว</option>
+                  <option value="ACCEPTED">รับงานแล้ว</option>
+                  <option value="IN_PROGRESS">กำลังเดินทาง</option>
+                  <option value="COMPLETED">เสร็จสิ้น</option>
+                  <option value="CANCELLED">ยกเลิก</option>
+                  <option value="REJECTED">ปฏิเสธ</option>
+                </select>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                  <ChevronRight className="w-4 h-4 rotate-90" />
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* STATS CARDS */}
@@ -217,8 +304,16 @@ export default function MyRequestsPage() {
           <h3 className="text-xl font-bold text-gray-800">ไม่พบประวัติการขอใช้รถ</h3>
           <p className="text-gray-400 mt-2 mb-8 text-center px-6">ดูเหมือนว่าท่านยังไม่ได้เริ่มส่งคำขอใช้รถในระบบของเรา</p>
           <Link href="/user/request" className="bg-blue-600 text-white px-8 py-3 rounded-full font-bold shadow-lg hover:bg-blue-700 transition-all">
-            เริ่มจองรถทันที
+            เริ่มขอใช้รถทันที
           </Link>
+        </div>
+      ) : filteredItems.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 bg-white rounded-3xl border border-dashed border-gray-200">
+          <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4 text-gray-300">
+            <Search className="w-8 h-8" />
+          </div>
+          <h3 className="text-lg font-bold text-gray-800">ไม่พบข้อมูลที่ค้นหา</h3>
+          <p className="text-gray-400 mt-1">ลองเปลี่ยนคำค้นหาใหม่อีกครั้ง</p>
         </div>
       ) : (
         <div className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
@@ -236,7 +331,7 @@ export default function MyRequestsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {items.map((it) => (
+                {filteredItems.map((it) => (
                   <tr key={it.id} className="group hover:bg-blue-50/30 transition-all duration-300">
                     <td className="px-8 py-6">
                       <div className="flex items-start gap-4">
@@ -291,6 +386,13 @@ export default function MyRequestsPage() {
                     </td>
                     <td className="px-8 py-6 text-center">
                       <div className="flex items-center justify-center gap-1">
+                        <button
+                          onClick={() => handleDownloadDoc(it)}
+                          className="p-3 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                          title="พิมพ์คำขอ"
+                        >
+                          <Printer className="w-4 h-4" />
+                        </button>
                         {it.status !== "COMPLETED" && it.status !== "CANCELLED" && (
                           <>
                             <button
@@ -320,7 +422,7 @@ export default function MyRequestsPage() {
 
           {/* MOBILE LIST */}
           <div className="md:hidden divide-y divide-gray-50">
-            {items.map((it) => (
+            {filteredItems.map((it) => (
               <div key={it.id} className="p-5 active:bg-gray-50 transition-all">
                 <div className="flex justify-between items-start gap-3 mb-4">
                   <div className="min-w-0 flex-1">
@@ -357,6 +459,12 @@ export default function MyRequestsPage() {
                 </div>
 
                 <div className="flex gap-2">
+                  <button
+                    onClick={() => handleDownloadDoc(it)}
+                    className="flex-1 py-3 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-600 flex items-center justify-center gap-2 shadow-sm"
+                  >
+                    <Printer className="w-3.5 h-3.5 text-blue-500" /> พิมพ์คำขอ
+                  </button>
                   {it.status !== "COMPLETED" && it.status !== "CANCELLED" && (
                     <>
                       <button

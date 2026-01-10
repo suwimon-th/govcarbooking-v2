@@ -10,6 +10,7 @@ export default function EditUserModal({ user, onClose, onUpdated }: any) {
     full_name: user.full_name,
     username: user.username,
     role: user.role,
+    position: user.position,
   });
 
   const update = (key: string, value: string) =>
@@ -99,6 +100,18 @@ export default function EditUserModal({ user, onClose, onUpdated }: any) {
               <option value="ADMIN">ADMIN</option>
               <option value="USER">USER</option>
             </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5 flex items-center gap-1.5">
+              <CreditCard className="w-4 h-4 text-gray-500" /> ตำแหน่ง (Position)
+            </label>
+            <input
+              value={form.position || ""}
+              onChange={(e) => update("position", e.target.value)}
+              placeholder="ระบุตำแหน่ง"
+              className="w-full border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none border transition-all"
+            />
           </div>
 
         </div>

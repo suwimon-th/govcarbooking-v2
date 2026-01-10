@@ -13,13 +13,16 @@ import {
   Trash2,
   User,
   FileText,
-  Gauge
+  Gauge,
+  Printer
 } from "lucide-react";
+import { generateBookingDocument } from "@/lib/documentGenerator";
 
 /* ================= Interfaces ================= */
 
 interface RequesterInfo {
   full_name: string | null;
+  position: string | null;
 }
 
 interface DriverInfo {
@@ -35,10 +38,13 @@ interface VehicleInfo {
 export interface BookingRow {
   id: string;
   request_code: string;
+  created_at: string;
   purpose: string | null;
   start_at: string | null;
   end_at: string | null;
   status: string;
+  destination: string | null;
+  passenger_count: number | null;
 
   requester_id: string;
   driver_id: string | null;
@@ -110,6 +116,7 @@ function AdminRequestsContent() {
       .select(`
         id,
         request_code,
+        created_at,
         requester_id,
         driver_id,
         vehicle_id,
@@ -117,12 +124,14 @@ function AdminRequestsContent() {
         start_at,
         end_at,
         status,
+        destination,
+        passenger_count,
 
         start_mileage,
         end_mileage,
         distance,
 
-        requester:requester_id(full_name),
+        requester:requester_id(full_name, position),
         driver:driver_id(full_name),
         vehicle:vehicle_id(plate_number, brand, model)
       `)
@@ -154,6 +163,23 @@ function AdminRequestsContent() {
     if (!confirm("ต้องการลบคำขอนี้หรือไม่?")) return;
     await supabase.from("bookings").delete().eq("id", id);
     loadData();
+  };
+
+  const handlePrint = async (booking: BookingRow) => {
+    await generateBookingDocument({
+      request_code: booking.request_code,
+      created_at: booking.created_at,
+      requester_name: booking.requester?.full_name || "-",
+      purpose: booking.purpose || "-",
+      start_at: booking.start_at || "",
+      end_at: booking.end_at,
+      driver_name: booking.driver?.full_name || null,
+      plate_number: booking.vehicle?.plate_number || null,
+      brand: booking.vehicle?.brand || null,
+      destination: booking.destination || "",
+      passenger_count: booking.passenger_count || 1,
+      requester_position: booking.requester?.position || null,
+    });
   };
 
   return (
@@ -268,6 +294,13 @@ function AdminRequestsContent() {
 
                 {/* Action Buttons */}
                 <div className="flex gap-2 pt-2 border-t mt-1">
+                  <button
+                    onClick={() => handlePrint(b)}
+                    className="py-2 px-3 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-600 text-xs font-medium flex items-center justify-center gap-1 hover:bg-indigo-100 shadow-sm transition-colors"
+                  >
+                    <Printer className="w-3.5 h-3.5" /> พิมพ์
+                  </button>
+
                   <button
                     onClick={() => setEditItem(b)}
                     className="flex-1 py-2 rounded-lg bg-white border border-gray-200 text-gray-600 text-xs font-medium flex items-center justify-center gap-1 hover:bg-gray-50 shadow-sm"
@@ -406,6 +439,13 @@ function AdminRequestsContent() {
                         {/* จัดการ */}
                         <td className="px-6 py-4 align-top text-center">
                           <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => handlePrint(b)}
+                              className="p-2 text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors tooltip tooltip-top"
+                              title="พิมพ์ใบขออนุญาต"
+                            >
+                              <Printer className="w-4 h-4" />
+                            </button>
                             <button
                               onClick={() => setEditItem(b)}
                               className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors tooltip tooltip-top"

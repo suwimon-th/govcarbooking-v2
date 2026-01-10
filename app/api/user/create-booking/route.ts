@@ -11,20 +11,23 @@ function padTime(t: string) {
 }
 
 /* ---------------------------
-   สร้างเลขคำขอ ENV-YYYYMMDD-XXX
+   สร้างเลขคำขอ ENV-YY/XXXX
+   YY = ปี พ.ศ. 2 หลัก (เช่น 2569 -> 69)
+   XXXX = รันต่อเนื่องทั้งปี
 ---------------------------- */
 async function generateRequestCode() {
   const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, "0");
-  const d = String(now.getDate()).padStart(2, "0");
+  const yearBE = now.getFullYear() + 543;
+  const shortYear = String(yearBE).slice(-2); // "69"
+  const prefix = `ENV-${shortYear}/`;
 
-  const dateCode = `${y}${m}${d}`;
-
+  // หาเลขล่าสุดของปีนี้
   const { data } = await supabase
     .from("bookings")
     .select("request_code")
-    .like("request_code", `ENV-${dateCode}-%`)
+    .like("request_code", `${prefix}%`)
+    .order("created_at", { ascending: false }) // ควรใช้ created_at หรือ id เพื่อความชัวร์ (หรือ length ของ string)
+    // แต่ถ้า format คงที่ order request_code ก็ได้: ENV-69/0001 < ENV-69/0002
     .order("request_code", { ascending: false })
     .limit(1);
 
@@ -32,12 +35,16 @@ async function generateRequestCode() {
 
   if (data && data.length > 0) {
     const last = data[0].request_code;
-    const numberPart = last.split("-")[2];
-    running = Number(numberPart) + 1;
+    // Format: ENV-69/0001
+    const parts = last.split("/");
+    if (parts.length === 2) {
+      const numPart = parts[1]; // "0001"
+      running = Number(numPart) + 1;
+    }
   }
 
-  const run3 = String(running).padStart(3, "0");
-  return `ENV-${dateCode}-${run3}`;
+  const run4 = String(running).padStart(4, "0");
+  return `${prefix}${run4}`;
 }
 
 export async function POST(req: Request) {
@@ -54,6 +61,9 @@ export async function POST(req: Request) {
       end_time,    // "22:30" | null
       purpose,
       driver_id,
+      passenger_count = 1, // Default 1
+      destination = "",
+      position = "",
     } = body;
 
     if (
@@ -73,10 +83,7 @@ export async function POST(req: Request) {
 
     // --------------------------------------------------------
     // ✅ ตรวจสอบเงื่อนไขพิเศษ: รถตู้ (Van)
-    // ห้ามจอง "วันจันทร์ สัปดาห์ที่ 3 ของปฏิทิน" เวลา 08:00-16:00 (เวรประจำวัน)
-    // Jan 2026 -> Mon 12
-    // Feb 2026 -> Mon 16
-    // Formula: 16 - dayOfFirst (where Sun=0)
+    // ... (logic unchanged) ...
     // --------------------------------------------------------
     const { data: vehicleData } = await supabase
       .from("vehicles")
@@ -85,6 +92,7 @@ export async function POST(req: Request) {
       .single();
 
     if (vehicleData?.type === "รถตู้") {
+      // ... existing van logic ...
       const d = new Date(date);
       const dayOfMonth = d.getDate();
       const currentMonth = d.getMonth();
@@ -127,6 +135,14 @@ export async function POST(req: Request) {
     const start_at = `${date}T${padTime(start_time)}`;
     const end_at = end_time ? `${date}T${padTime(end_time)}` : null;
 
+    // ✅ Update Profile Position if provided
+    if (position) {
+      await supabase
+        .from("profiles")
+        .update({ position })
+        .eq("id", requester_id);
+    }
+
     const request_code = await generateRequestCode();
 
     /* ---------------------------
@@ -149,6 +165,8 @@ export async function POST(req: Request) {
           status: driver_id ? "ASSIGNED" : "REQUESTED",
           driver_id: driver_id || null,
           assigned_at: driver_id ? new Date().toISOString() : null,
+          passenger_count,
+          destination,
         },
       ])
       .select()

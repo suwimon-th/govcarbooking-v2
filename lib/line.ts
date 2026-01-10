@@ -364,7 +364,7 @@ export function flexAdminNotifyNewBooking(booking: any) {
 
   return {
     type: "flex",
-    altText: isFuture ? `🗓️ จองล่วงหน้า: ${booking.request_code}` : `🔔 มีการจองใหม่: ${booking.request_code}`,
+    altText: isFuture ? `🗓️ จองล่วงหน้า: ${booking.request_code}` : `🔔 มีการขอใช้รถใหม่: ${booking.request_code}`,
     contents: {
       type: "bubble",
       size: "mega",

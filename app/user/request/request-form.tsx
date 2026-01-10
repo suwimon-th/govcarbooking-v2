@@ -1,10 +1,10 @@
-// app/user/request/request-form.tsx
 "use client";
 
 import { useEffect, useState, FormEvent } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
-import { Calendar, Clock, MapPin, User, Building, Car, AlertTriangle, CheckCircle2, ChevronRight, Loader2, X } from "lucide-react";
+import { Calendar, Clock, MapPin, User, Building, Car, AlertTriangle, CheckCircle2, ChevronRight, Loader2, X, FileText, List } from "lucide-react";
+import { generateBookingDocument } from "@/lib/documentGenerator";
 
 interface Vehicle {
   id: string;
@@ -41,6 +41,9 @@ export default function RequestForm({
   const [vehicleId, setVehicleId] = useState<string>("");
   const [driverId, setDriverId] = useState<string>("");
   const [purpose, setPurpose] = useState<string>("");
+  const [passengerCount, setPassengerCount] = useState<number>(1);
+  const [destination, setDestination] = useState<string>("");
+  const [position, setPosition] = useState<string>("");
 
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [showVehicleSelector, setShowVehicleSelector] = useState(false);
@@ -49,12 +52,30 @@ export default function RequestForm({
 
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [message, setMessage] = useState<string>("");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [createdBooking, setCreatedBooking] = useState<any>(null);
   const router = useRouter();
 
   // Sync วันที่เมื่อ URL เปลี่ยน
   useEffect(() => {
     setDate(selectedDate || "");
   }, [selectedDate]);
+
+  // Load Profile Position
+  useEffect(() => {
+    if (!requesterId) return;
+    const loadProfile = async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("position")
+        .eq("id", requesterId)
+        .single();
+      if (data?.position) {
+        setPosition(data.position);
+      }
+    };
+    loadProfile();
+  }, [requesterId]);
 
   // โหลดรายการรถจาก Supabase
   useEffect(() => {
@@ -116,6 +137,18 @@ export default function RequestForm({
       return;
     }
 
+    // Check if date is in the past
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selectedDateObj = new Date(date);
+    selectedDateObj.setHours(0, 0, 0, 0);
+
+    if (selectedDateObj < today) {
+      setSubmitState("error");
+      setMessage("ไม่สามารถขอใช้รถย้อนหลังได้");
+      return;
+    }
+
     if (isOffHours() && !driverId) {
       setSubmitState("error");
       setMessage("กรุณาเลือกคนขับรถ (นอกเวลาราชการ)");
@@ -138,6 +171,9 @@ export default function RequestForm({
           end_time: endTime || null,
           purpose,
           driver_id: isOffHours() ? driverId : null,
+          passenger_count: passengerCount,
+          destination: destination,
+          position: position,
         }),
       });
 
@@ -151,11 +187,7 @@ export default function RequestForm({
 
       setSubmitState("success");
       setMessage("บันทึกคำขอใช้รถเรียบร้อยแล้ว");
-
-      setTimeout(() => {
-        router.push("/user");
-      }, 1500);
-
+      setCreatedBooking(json.booking);
 
       // รีเซ็ตฟิลด์บางส่วน
       setStartTime("");
@@ -163,11 +195,34 @@ export default function RequestForm({
       setVehicleId("");
       setDriverId("");
       setPurpose("");
+      setPassengerCount(1);
+      setDestination("");
     } catch (err) {
       console.error(err);
       setSubmitState("error");
       setMessage("เกิดข้อผิดพลาด กรุณาลองใหม่ภายหลัง");
     }
+  };
+
+  const handleDownloadDoc = async () => {
+    if (!createdBooking) return;
+
+    await generateBookingDocument({
+      request_code: createdBooking.request_code,
+      created_at: createdBooking.created_at,
+      requester_name: requesterName,
+      purpose: createdBooking.purpose,
+      start_at: createdBooking.start_at,
+      end_at: createdBooking.end_at,
+      driver_name: createdBooking.driver_id
+        ? drivers.find(d => d.id === createdBooking.driver_id)?.full_name || null
+        : null,
+      plate_number: vehicles.find((v) => v.id === createdBooking.vehicle_id)?.plate_number || null,
+      brand: vehicles.find((v) => v.id === createdBooking.vehicle_id)?.brand || null,
+      passenger_count: createdBooking.passenger_count || 1,
+      destination: createdBooking.destination || "",
+      requester_position: position || "",
+    });
   };
 
   const isSubmitting = submitState === "submitting";
@@ -199,9 +254,6 @@ export default function RequestForm({
       {message && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-300"
-          onClick={() => {
-            if (submitState !== "submitting") setMessage("");
-          }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -240,15 +292,36 @@ export default function RequestForm({
               </h3>
 
               <p className="text-gray-600 font-medium leading-relaxed mb-6">
-                {message}
+                {submitState === "success"
+                  ? `รหัสคำขอ: ${createdBooking?.request_code}`
+                  : message}
               </p>
 
-              <button
-                onClick={() => setMessage("")}
-                className="w-full py-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold transition-colors"
-              >
-                รับทราบ
-              </button>
+              {submitState === "success" ? (
+                <div className="flex flex-col gap-3 w-full">
+                  <button
+                    onClick={handleDownloadDoc}
+                    className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all shadow-md flex items-center justify-center gap-2"
+                  >
+                    <FileText className="w-5 h-5" />
+                    พิมพ์คำขอใช้รถ
+                  </button>
+                  <button
+                    onClick={() => router.push("/user/my-requests")}
+                    className="w-full py-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold transition-all flex items-center justify-center gap-2"
+                  >
+                    <List className="w-5 h-5" />
+                    ดูรายการคำขอ
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setMessage("")}
+                  className="w-full py-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold transition-colors"
+                >
+                  รับทราบ
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -278,14 +351,15 @@ export default function RequestForm({
             </div>
 
             <div className="relative">
-              <label className={labelClasses}>ฝ่าย</label>
+              <label className={labelClasses}>ตำแหน่ง</label>
               <div className="relative">
-                <Building className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
+                <User className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
                 <input
                   type="text"
-                  value={departmentName}
-                  disabled
-                  className={`${textInputClasses} bg-gray-100 text-gray-500 cursor-not-allowed border-transparent`}
+                  value={position}
+                  onChange={(e) => setPosition(e.target.value)}
+                  className={textInputClasses}
+                  placeholder="ระบุตำแหน่ง..."
                 />
               </div>
             </div>
@@ -313,6 +387,7 @@ export default function RequestForm({
               </div>
             </div>
 
+            {/* Start Time */}
             <div className="relative">
               <label className={labelClasses}>เวลาเริ่ม</label>
               <div className="relative">
@@ -355,13 +430,23 @@ export default function RequestForm({
                 className={`w-full text-left ${textInputClasses} flex items-center justify-between !py-3 bg-white`}
               >
                 {vehicleId ? (
-                  <span className="font-semibold text-gray-800">
-                    {vehicles.find((v) => v.id === vehicleId)?.plate_number ||
-                      "ไม่ระบุ"}
-                    <span className="font-normal text-gray-400 ml-2 text-sm">
-                      — {vehicles.find((v) => v.id === vehicleId)?.brand}
-                    </span>
-                  </span>
+                  (() => {
+                    const v = vehicles.find((item) => item.id === vehicleId);
+                    if (!v) return null;
+                    return (
+                      <span className="font-semibold text-gray-800 flex items-center gap-2 truncate">
+                        {v.plate_number}
+                        {v.type && (
+                          <span className="text-sm font-normal text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                            {v.type}
+                          </span>
+                        )}
+                        <span className="font-normal text-gray-400 text-sm truncate">
+                          — {v.brand} {v.model}
+                        </span>
+                      </span>
+                    );
+                  })()
                 ) : (
                   <span className="text-gray-400">-- กรุณาเลือก --</span>
                 )}
@@ -405,11 +490,40 @@ export default function RequestForm({
             )}
           </div>
 
-          {/* Purpose */}
-          <div className="relative">
-            <label className={labelClasses}>วัตถุประสงค์ / สถานที่</label>
+          {/* Purpose & Destination */}
+          <div className="grid md:grid-cols-2 gap-5">
             <div className="relative">
-              <MapPin className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
+              <label className={labelClasses}>สถานที่ไป (Destination)</label>
+              <div className="relative">
+                <MapPin className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  value={destination}
+                  onChange={(e) => setDestination(e.target.value)}
+                  className={textInputClasses}
+                  placeholder="ระบุสถานที่..."
+                />
+              </div>
+            </div>
+            <div className="relative">
+              <label className={labelClasses}>จำนวนผู้โดยสาร (คน)</label>
+              <div className="relative">
+                <User className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
+                <input
+                  type="number"
+                  min="1"
+                  value={passengerCount}
+                  onChange={(e) => setPassengerCount(parseInt(e.target.value) || 1)}
+                  className={textInputClasses}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="relative">
+            <label className={labelClasses}>วัตถุประสงค์ (Purpose)</label>
+            <div className="relative">
+              <FileText className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
               <textarea
                 value={purpose}
                 onChange={(e) => setPurpose(e.target.value)}
@@ -436,7 +550,7 @@ export default function RequestForm({
                 </>
               ) : (
                 <>
-                  ส่งคำขอจองรถ
+                  ส่งคำขอใช้รถ
                   <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </>
               )}

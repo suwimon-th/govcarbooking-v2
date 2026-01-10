@@ -141,7 +141,7 @@ export default function AdminDashboardPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-800">แดชบอร์ดผู้ดูแลระบบ</h1>
         <p className="text-gray-500 mt-1">
-          ภาพรวมสถานะการจองและการใช้งานยานพาหนะ
+          ภาพรวมสถานะการขอใช้รถ
         </p>
       </div>
 
@@ -180,7 +180,7 @@ export default function AdminDashboardPage() {
             </div>
           </div>
           <div>
-            <p className="text-gray-500 text-sm font-medium">การจองทั้งหมด</p>
+            <p className="text-gray-500 text-sm font-medium">การขอใช้รถทั้งหมด</p>
             <h3 className="text-3xl font-bold text-gray-800 mt-1">{totalBookings}</h3>
           </div>
         </div>

@@ -47,13 +47,15 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: error.message }, { status: 400 });
         }
 
-        // 3) ถ้ามีการ Assign Driver ใหม่ (Driver เปลี่ยน หรือ Status เปลี่ยนเป็น ASSIGNED)
-        //    และมี Driver ID -> ให้ส่ง LINE แจ้งเตือน
+        // 3) เงื่อนไขการส่งแจ้งเตือน LINE
+        //    - ถ้าเปลี่ยน Driver หรือสถานะเปลี่ยนเป็น ASSIGNED/REQUESTED/APPROVED
+        //    - แต่ต้องไม่ส่งถ้าเป็น COMPLETED
         const isDriverChanged = driver_id && driver_id !== oldBooking?.driver_id;
-        const isJustAssigned =
-            status === "ASSIGNED" && oldBooking?.status !== "ASSIGNED";
+        const isStatusEligibleForNotify = ["REQUESTED", "APPROVED", "ASSIGNED"].includes(status);
+        const isCompleted = status === "COMPLETED";
 
-        if (driver_id && (isDriverChanged || isJustAssigned)) {
+        // Logic: มี Driver + (Driverเปลี่ยน หรือ สถานะเปลี่ยนเป็นสถานะที่ควรแจ้ง) + ไม่ใช่ Completed
+        if (driver_id && (isDriverChanged || isStatusEligibleForNotify) && !isCompleted) {
             // 3.1) ดึงข้อมูลครบๆ เพื่อสร้าง Flex Message
             const { data: bookingFull } = await supabase
                 .from("bookings")

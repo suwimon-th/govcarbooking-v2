@@ -45,7 +45,7 @@ export default function MileageClient() {
             <AlertCircle className="w-8 h-8" />
           </div>
           <h3 className="text-lg font-bold text-gray-800 mb-2">ไม่พบข้อมูลงาน</h3>
-          <p className="text-gray-500 text-sm">ไม่พบรหัสการจองในระบบ กรุณาตรวจสอบลิงก์อีกครั้ง</p>
+          <p className="text-gray-500 text-sm">ไม่พบรหัสการขอใช้รถในระบบ กรุณาตรวจสอบลิงก์อีกครั้ง</p>
         </div>
       </div>
     );

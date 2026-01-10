@@ -30,6 +30,7 @@ interface UserRow {
   full_name: string | null;
   username: string | null;
   role: string;
+  position: string | null;
 }
 
 type ToastType = "success" | "error" | "warning";
@@ -58,7 +59,7 @@ export default function UsersPage() {
   const loadData = async () => {
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, full_name, username, role")
+      .select("id, full_name, username, role, position")
       .order("created_at", { ascending: false });
 
     if (!error && data) {
@@ -224,6 +225,7 @@ export default function UsersPage() {
                 </div>
                 <div>
                   <div className="font-bold text-gray-900">{u.full_name}</div>
+                  <div className="text-gray-500 text-xs">{u.position || "-"}</div>
                   <div className="text-gray-500 text-xs font-mono">@{u.username}</div>
                 </div>
               </div>
@@ -260,6 +262,7 @@ export default function UsersPage() {
               <tr>
                 <th className="px-6 py-4 text-left font-semibold">ชื่อ - นามสกุล</th>
                 <th className="px-6 py-4 text-left font-semibold">Username</th>
+                <th className="px-6 py-4 text-left font-semibold">ตำแหน่ง</th>
                 <th className="px-6 py-4 text-left font-semibold">Role</th>
                 <th className="px-6 py-4 text-center font-semibold">จัดการ</th>
               </tr>
@@ -278,6 +281,9 @@ export default function UsersPage() {
                   </td>
                   <td className="px-6 py-4 align-top text-gray-600 font-mono">
                     {u.username}
+                  </td>
+                  <td className="px-6 py-4 align-top text-gray-700">
+                    {u.position || "-"}
                   </td>
                   <td className="px-6 py-4 align-top">
                     {getRoleBadge(u.role)}

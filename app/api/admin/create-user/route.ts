@@ -8,7 +8,7 @@ const supabase = createClient(
 
 export async function POST(req: Request) {
   try {
-    const { full_name, username, password, role } = await req.json();
+    const { full_name, username, password, role, position } = await req.json();
 
     if (!full_name || !username || !password || !role) {
       return NextResponse.json(
@@ -38,6 +38,7 @@ export async function POST(req: Request) {
       password,
       role,
       department_id: 1,
+      position: position || null,
     });
 
     if (error) {

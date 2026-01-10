@@ -221,7 +221,7 @@ export default function UserPage() {
                         <CalendarIcon className="w-8 h-8 text-[#1E40AF]" />
                         ตารางการใช้รถ
                     </h1>
-                    <p className="text-gray-500 mt-1">ดูตารางและจองรถราชการ</p>
+                    <p className="text-gray-500 mt-1">ดูตารางและขอใช้รถราชการ</p>
                 </div>
                 <div className="flex items-center gap-4">
                     {/* LEGEND ON DESKTOP HEADER */}

@@ -8,7 +8,7 @@ const supabase = createClient(
 
 export async function POST(req: Request) {
   try {
-    const { id, full_name, username, role } = await req.json();
+    const { id, full_name, username, role, position } = await req.json();
 
     if (!id || !full_name || !username || !role) {
       return NextResponse.json(
@@ -45,6 +45,7 @@ export async function POST(req: Request) {
         full_name,
         username,
         role,
+        position: position || null,
       })
       .eq("id", id);
 

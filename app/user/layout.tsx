@@ -131,7 +131,7 @@ export default function UserLayout({
         <div className="p-4 flex flex-col gap-2 flex-1 overflow-y-auto">
           {[
             { href: "/user", label: "ขอใช้รถใหม่", icon: Car },
-            { href: "/user/my-requests", label: "ประวัติการจอง", icon: FileText },
+            { href: "/user/my-requests", label: "ประวัติการขอใช้รถ", icon: FileText },
             { href: "/user/change-password", label: "เปลี่ยนรหัสผ่าน", icon: Key },
           ].map((item) => (
             <Link

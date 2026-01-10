@@ -219,7 +219,7 @@ export default function PublicCalendarPage() {
                         <CalendarIcon className="w-8 h-8 text-[#1E40AF]" />
                         ตารางการใช้รถ (สาธารณะ)
                     </h1>
-                    <p className="text-gray-500 mt-1">แสดงรายการจองรถราชการทั้งหมด</p>
+                    <p className="text-gray-500 mt-1">แสดงรายการขอใช้รถราชการทั้งหมด</p>
                 </div>
                 <div className="flex items-center gap-4">
                     {/* LEGEND ON DESKTOP HEADER */}
@@ -325,10 +325,7 @@ export default function PublicCalendarPage() {
                             return (
                                 <div className="px-1.5 py-1 overflow-hidden text-white">
                                     <div className="flex items-center gap-1.5 leading-tight">
-                                        <span className="font-bold opacity-80 text-[12px] flex items-center gap-0.5">
-                                            {isOff && <span className="bg-amber-500 text-[10px] px-1 rounded leading-none">OT</span>}
-                                            {formatTime(arg.event.startStr)}
-                                        </span>
+                                        {isOff && <span className="bg-amber-500 text-[10px] px-1 rounded leading-none">OT</span>}
                                         <span className="font-bold truncate text-[12px]">{arg.event.title}</span>
                                     </div>
                                 </div>
@@ -350,7 +347,7 @@ export default function PublicCalendarPage() {
             <div className="hidden md:block max-w-[1200px] mx-auto px-8 mt-10 mb-20">
                 <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
                     <Clock className="w-6 h-6 text-blue-600" />
-                    รายการจองเดือน {currentViewTitle}
+                    รายการขอใช้รถเดือน {currentViewTitle}
                 </h3>
 
                 <div className="bg-white border rounded-xl shadow-sm overflow-hidden">
@@ -360,7 +357,7 @@ export default function PublicCalendarPage() {
                                 <tr>
                                     <th className="px-6 py-4 font-semibold">วันที่</th>
                                     <th className="px-6 py-4 font-semibold">เวลา</th>
-                                    <th className="px-6 py-4 font-semibold">ผู้จอง / จุดหมาย</th>
+                                    <th className="px-6 py-4 font-semibold">ผู้ขอ / จุดหมาย</th>
                                     <th className="px-6 py-4 font-semibold">รถปฏิบัติงาน</th>
                                     <th className="px-6 py-4 font-semibold text-center">สถานะ</th>
                                 </tr>
@@ -374,7 +371,7 @@ export default function PublicCalendarPage() {
                                         return (
                                             <tr>
                                                 <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                                                    ไม่มีรายการจองในเดือนนี้
+                                                    ไม่มีรายการขอใช้รถในเดือนนี้
                                                 </td>
                                             </tr>
                                         );
@@ -425,7 +422,7 @@ export default function PublicCalendarPage() {
                                                 <td className="px-6 py-4 align-top max-w-[300px]">
                                                     <div className="flex flex-col gap-2.5">
                                                         <div className="flex flex-col">
-                                                            <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-0.5">ผู้จอง (Requester)</span>
+                                                            <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-0.5">ผู้ขอ (Requester)</span>
                                                             <span className="font-extrabold text-gray-900 text-lg leading-none">
                                                                 {evt.extendedProps?.requester || "ไม่ระบุชื่อ"}
                                                             </span>
@@ -537,7 +534,7 @@ export default function PublicCalendarPage() {
                                 <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
                                     <Clock className="w-8 h-8 text-gray-300" />
                                 </div>
-                                <p className="text-gray-500 font-medium">ไม่มีรายการจอง</p>
+                                <p className="text-gray-500 font-medium">ไม่มีรายการขอใช้รถ</p>
                                 <p className="text-xs text-gray-400 mt-1 mb-6">รถว่างตลอดวัน</p>
                             </div>
                         )}
