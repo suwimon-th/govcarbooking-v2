@@ -6,7 +6,7 @@
         },
         {
             "path": "/api/cron/reset-drivers",
-            "schedule": "0 55 0 * * *"
+            "schedule": "55 0 * * *"
         }
     ]
 }
