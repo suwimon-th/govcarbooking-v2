@@ -1,9 +1,20 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import {
+  ChevronLeft,
+  Menu,
+  X,
+  Home,
+  Car,
+  Users,
+  FileText,
+  LogOut
+} from "lucide-react";
 
 export default function AdminLayout({
   children,
@@ -30,7 +41,7 @@ export default function AdminLayout({
   const handleLogout = async (): Promise<void> => {
     try {
       setLoggingOut(true);
-      await supabase.auth.signOut().catch(() => {});
+      await supabase.auth.signOut().catch(() => { });
       router.push("/login");
     } finally {
       setLoggingOut(false);
@@ -39,55 +50,68 @@ export default function AdminLayout({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      
-      {/* === HEADER เดิม === */}
-      <header className="w-full bg-white shadow-sm border-b fixed top-0 left-0 z-40">
-        <div className="max-w-[1400px] mx-auto px-4 md:px-6 py-3 flex items-center justify-between gap-4">
-          
-          {/* ปุ่มกลับหน้าแรก */}
-          <button
-            onClick={() => router.push("/admin")}
-            className="px-3 py-1 rounded-md bg-gray-200 hover:bg-gray-300 text-xs md:text-sm whitespace-nowrap"
-          >
-            ⬅️ กลับหน้าแรก
-          </button>
 
-          {/* ชื่อระบบ */}
-          <h1 className="text-sm md:text-lg font-bold text-center flex-1">
-            ระบบบริหารการใช้รถราชการ
-          </h1>
+      {/* === HEADER (Modern) === */}
+      <header className="w-full bg-white/90 backdrop-blur-md shadow-sm border-b fixed top-0 left-0 z-40 transition-all duration-300">
+        <div className="max-w-[1400px] mx-auto px-4 md:px-6 h-16 flex items-center justify-between gap-4">
 
-          {/* เมนู Desktop */}
-          <div className="hidden md:flex items-center gap-3 text-sm">
-            <Link href="/admin/requests" className="hover:underline">
-              คำขอใช้รถ
-            </Link>
-            <Link href="/admin/vehicles" className="hover:underline">
-              รถทั้งหมด
-            </Link>
-            <Link href="/admin/drivers" className="hover:underline">
-              คนขับรถ
-            </Link>
-            <Link href="/admin/users" className="hover:underline">
-              ผู้ใช้งาน
-            </Link>
-
+          {/* Left: Back / Home */}
+          <div className="shrink-0">
             <button
-              onClick={handleLogout}
-              disabled={loggingOut}
-              className="px-3 py-1 rounded-md bg-red-600 hover:bg-red-700 text-white"
+              onClick={() => router.push("/admin")}
+              className="flex items-center gap-2 text-gray-500 hover:text-blue-600 transition-colors p-2 rounded-lg hover:bg-blue-50"
             >
-              {loggingOut ? "กำลังออก..." : "ออกจากระบบ"}
+              <div className="bg-gray-100 p-1.5 rounded-full text-gray-600 group-hover:bg-blue-100 group-hover:text-blue-600 md:hidden">
+                <ChevronLeft className="w-5 h-5" />
+              </div>
+              <span className="hidden md:flex items-center gap-2 font-medium">
+                <ChevronLeft className="w-4 h-4" /> กลับหน้าแรก
+              </span>
             </button>
           </div>
 
-          {/* เมนู Mobile */}
-          <button
-            className="md:hidden px-3 py-1 bg-blue-600 text-white rounded-md"
-            onClick={() => setMobileMenuOpen(true)}
-          >
-            เมนู ☰
-          </button>
+          {/* Center: Title */}
+          <h1 className="text-base md:text-xl font-bold text-gray-800 text-center truncate flex-1 leading-tight">
+            ระบบบริหารการใช้รถราชการ
+          </h1>
+
+          {/* Right: Menu */}
+          <div className="shrink-0 flex items-center">
+            {/* Mobile Menu Toggle */}
+            <button
+              className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              onClick={() => setMobileMenuOpen(true)}
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+
+            {/* Desktop Menu */}
+            <div className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-600">
+              <Link href="/admin/requests" className="hover:text-blue-600 flex items-center gap-1.5 transition-colors">
+                <FileText className="w-4 h-4" /> คำขอใช้รถ
+              </Link>
+              <Link href="/admin/vehicles" className="hover:text-blue-600 flex items-center gap-1.5 transition-colors">
+                <Car className="w-4 h-4" /> ข้อมูลรถ
+              </Link>
+              <Link href="/admin/drivers" className="hover:text-blue-600 flex items-center gap-1.5 transition-colors">
+                <Users className="w-4 h-4" /> คนขับ
+              </Link>
+              <Link href="/admin/users" className="hover:text-blue-600 flex items-center gap-1.5 transition-colors">
+                <Users className="w-4 h-4" /> ผู้ใช้
+              </Link>
+
+              <div className="h-6 w-px bg-gray-200 mx-2"></div>
+
+              <button
+                onClick={handleLogout}
+                disabled={loggingOut}
+                className="flex items-center gap-2 text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                {loggingOut ? "..." : "ออก"}
+              </button>
+            </div>
+          </div>
         </div>
       </header>
 

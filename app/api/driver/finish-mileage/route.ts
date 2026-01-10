@@ -1,7 +1,7 @@
- 
+
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseClient";
-import { sendLinePush, flexJobCompleted } from "@/app/lib/line"; // ✅ สำคัญมาก!
+import { sendLinePush, flexJobCompleted } from "@/lib/line"; // ✅ สำคัญมาก!
 
 export async function POST(req: Request) {
   try {
@@ -49,8 +49,8 @@ export async function POST(req: Request) {
       console.log("📨 Sending JOB COMPLETED to:", driverLineId);
 
       await sendLinePush(driverLineId, [
-  flexJobCompleted(booking)
-]);
+        flexJobCompleted(booking)
+      ]);
 
       console.log("⚠️ No driver LINE ID found.");
     }

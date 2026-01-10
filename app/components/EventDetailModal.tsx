@@ -1,4 +1,5 @@
 import React from "react";
+import { getStatusLabel, getStatusColor } from "@/lib/statusHelper";
 
 export type BookingDetail = {
   id: string;
@@ -44,24 +45,6 @@ function formatDateTime(dt: string | null) {
     hour: "2-digit",
     minute: "2-digit",
   });
-}
-
-/* ----------------------------------------------------
-   helper: สีสถานะ (Badge)
----------------------------------------------------- */
-function statusBadge(status: string) {
-  switch (status) {
-    case "COMPLETED":
-      return "bg-green-100 text-green-700 border border-green-300";
-    case "ASSIGNED":
-      return "bg-blue-100 text-blue-700 border border-blue-300";
-    case "REQUESTED":
-      return "bg-yellow-100 text-yellow-800 border border-yellow-300";
-    case "CANCELLED":
-      return "bg-red-100 text-red-700 border border-red-300";
-    default:
-      return "bg-gray-100 text-gray-700 border border-gray-300";
-  }
 }
 
 export default function EventDetailModal({ open, detail, onClose }: Props) {
@@ -129,15 +112,14 @@ export default function EventDetailModal({ open, detail, onClose }: Props) {
               <strong>ระยะทางรวม:</strong> {detail.distance} กม.
             </p>
 
-            {/* ===== STATUS BADGE ===== */}
             <div className="flex items-center gap-2 pt-1">
               <strong>สถานะงาน:</strong>
               <span
-                className={`px-3 py-1 rounded-full text-xs font-semibold ${statusBadge(
+                className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(
                   detail.status
-                )}`}
+                )} border border-opacity-20`}
               >
-                {detail.status}
+                {getStatusLabel(detail.status)}
               </span>
             </div>
 

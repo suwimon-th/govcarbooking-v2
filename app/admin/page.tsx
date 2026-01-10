@@ -4,6 +4,16 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import {
+  FileText,
+  Car,
+  Users,
+  Activity,
+  Clock,
+  MapPin,
+  ChevronRight,
+  Calendar
+} from "lucide-react";
 
 // =======================
 // TYPES
@@ -125,108 +135,259 @@ export default function AdminDashboardPage() {
   }, []);
 
   return (
-    <div className="px-4 md:px-8 py-6 max-w-[1400px] mx-auto">
+    <div className="px-4 md:px-8 py-6 max-w-[1400px] mx-auto min-h-screen bg-gray-50/50">
 
-      {/* TITLE */}
-      <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-      <p className="text-gray-600 mb-8">
-        Overview of your fleet management system
-      </p>
+      {/* HEADER */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-800">แดชบอร์ดผู้ดูแลระบบ</h1>
+        <p className="text-gray-500 mt-1">
+          ภาพรวมสถานะการจองและการใช้งานยานพาหนะ
+        </p>
+      </div>
 
-      {/* KPI BLOCKS */}
-      <section className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-10">
+      {/* KPI STATS */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
 
+        {/* Pending Requests */}
         <div
-          className="p-6 border rounded-xl shadow hover:bg-gray-50 transition cursor-pointer"
-          onClick={() => router.push("/admin/requests")}
-        >
-          <h3 className="text-gray-600">Total Bookings</h3>
-          <p className="text-4xl font-bold">{totalBookings}</p>
-        </div>
-
-        <div
-          className="p-6 border rounded-xl shadow hover:bg-gray-50 transition cursor-pointer"
           onClick={() => router.push("/admin/requests?status=REQUESTED")}
+          className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md hover:border-blue-200 transition-all cursor-pointer group"
         >
-          <h3 className="text-gray-600">Pending Requests</h3>
-          <p className="text-4xl font-bold">{pendingRequests}</p>
-        </div>
-
-        <div
-          className="p-6 border rounded-xl shadow hover:bg-gray-50 transition cursor-pointer"
-          onClick={() => router.push("/admin/vehicles")}
-        >
-          <h3 className="text-gray-600">Total Vehicles</h3>
-          <p className="text-4xl font-bold">{totalVehicles}</p>
-        </div>
-
-        <div
-          className="p-6 border rounded-xl shadow hover:bg-gray-50 transition cursor-pointer"
-          onClick={() => router.push("/admin/drivers")}
-        >
-          <h3 className="text-gray-600">Total Drivers</h3>
-          <p className="text-4xl font-bold">{totalDrivers}</p>
-        </div>
-      </section>
-
-      {/* TODAY ACTIVITY */}
-      <section className="mb-10">
-        <h2 className="text-xl font-semibold mb-3">กิจกรรมวันนี้</h2>
-
-        {todayTrips.length === 0 ? (
-          <p className="text-gray-500">วันนี้ยังไม่มีการใช้งานรถ</p>
-        ) : (
-          <div className="space-y-3">
-            {todayTrips.map((item) => (
-              <div
-                key={item.id}
-                onClick={() => router.push(`/admin/requests/${item.id}`)}
-                className="p-4 border rounded-xl bg-white shadow-sm hover:bg-gray-50 cursor-pointer"
-              >
-                <p className="font-semibold">{item.purpose}</p>
-                <p className="text-sm text-gray-600">
-                  {item.vehicle?.plate_number} — {item.driver?.full_name}
-                </p>
-                <p className="text-xs text-gray-500">
-                  เวลาเริ่ม:{" "}
-                  {new Date(item.start_at).toLocaleTimeString("th-TH")}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* TODAY DISTANCE */}
-      <section className="mb-10">
-        <h2 className="text-xl font-semibold mb-2">ระยะทางรวมวันนี้</h2>
-        <div className="p-5 border rounded-xl shadow bg-white text-3xl font-bold text-blue-700">
-          {todayDistance} กม.
-        </div>
-      </section>
-
-      {/* RECENT BOOKINGS */}
-      <section>
-        <h2 className="text-xl font-semibold mb-3">Recent Booking Requests</h2>
-
-        <div className="space-y-3">
-          {recentRequests.map((item) => (
-            <div
-              key={item.id}
-              onClick={() => router.push(`/admin/requests/${item.id}`)}
-              className="p-4 border rounded-xl shadow-sm bg-white hover:bg-gray-50 cursor-pointer"
-            >
-              <p className="font-bold">{item.purpose}</p>
-              <p className="text-sm text-gray-600">
-                {item.requester?.full_name}
-              </p>
-              <p className="text-xs text-green-600 font-semibold mt-1">
-                {item.status}
-              </p>
+          <div className="flex justify-between items-start mb-4">
+            <div className={`p-3 rounded-xl bg-orange-50 text-orange-600 group-hover:bg-orange-100 transition-colors`}>
+              <Clock className="w-6 h-6" />
             </div>
-          ))}
+            {pendingRequests > 0 && (
+              <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded-full animate-pulse">
+                รออนุมัติ {pendingRequests}
+              </span>
+            )}
+          </div>
+          <div>
+            <p className="text-gray-500 text-sm font-medium">คำขอรออนุมัติ</p>
+            <h3 className="text-3xl font-bold text-gray-800 mt-1">{pendingRequests}</h3>
+          </div>
         </div>
-      </section>
+
+        {/* Total Bookings */}
+        <div
+          onClick={() => router.push("/admin/requests")}
+          className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md hover:border-blue-200 transition-all cursor-pointer group"
+        >
+          <div className="flex justify-between items-start mb-4">
+            <div className="p-3 rounded-xl bg-blue-50 text-blue-600 group-hover:bg-blue-100 transition-colors">
+              <FileText className="w-6 h-6" />
+            </div>
+          </div>
+          <div>
+            <p className="text-gray-500 text-sm font-medium">การจองทั้งหมด</p>
+            <h3 className="text-3xl font-bold text-gray-800 mt-1">{totalBookings}</h3>
+          </div>
+        </div>
+
+        {/* Vehicles */}
+        <div
+          onClick={() => router.push("/admin/vehicles")}
+          className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md hover:border-blue-200 transition-all cursor-pointer group"
+        >
+          <div className="flex justify-between items-start mb-4">
+            <div className="p-3 rounded-xl bg-green-50 text-green-600 group-hover:bg-green-100 transition-colors">
+              <Car className="w-6 h-6" />
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-gray-400">รถในระบบ</p>
+            </div>
+          </div>
+          <div>
+            <p className="text-gray-500 text-sm font-medium">รถทั้งหมด</p>
+            <h3 className="text-3xl font-bold text-gray-800 mt-1">{totalVehicles} <span className="text-sm font-normal text-gray-400">คัน</span></h3>
+          </div>
+        </div>
+
+        {/* Drivers */}
+        <div
+          onClick={() => router.push("/admin/drivers")}
+          className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md hover:border-blue-200 transition-all cursor-pointer group"
+        >
+          <div className="flex justify-between items-start mb-4">
+            <div className="p-3 rounded-xl bg-purple-50 text-purple-600 group-hover:bg-purple-100 transition-colors">
+              <Users className="w-6 h-6" />
+            </div>
+          </div>
+          <div>
+            <p className="text-gray-500 text-sm font-medium">พนักงานขับรถ</p>
+            <h3 className="text-3xl font-bold text-gray-800 mt-1">{totalDrivers} <span className="text-sm font-normal text-gray-400">คน</span></h3>
+          </div>
+        </div>
+      </div>
+
+      {/* CONTENT GRID */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+        {/* LEFT COLUMN (2/3) */}
+        <div className="lg:col-span-2 space-y-8">
+
+          {/* Today Activity */}
+          <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-blue-600" />
+                ภารกิจวันนี้
+              </h2>
+              <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                {new Date().toLocaleDateString('th-TH', { dateStyle: 'long' })}
+              </span>
+            </div>
+
+            {todayTrips.length === 0 ? (
+              <div className="text-center py-10 bg-gray-50 rounded-xl border border-dashed text-gray-400">
+                วันนี้ไม่มีภารกิจการเดินรถ
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {todayTrips.map((item) => (
+                  <div
+                    key={item.id}
+                    onClick={() => router.push(`/admin/requests/${item.id}`)} // Fixed link
+                    className="group flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-xl hover:bg-blue-50/50 hover:border-blue-200 transition-all cursor-pointer gap-4"
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center shrink-0 text-blue-600 font-bold">
+                        {item.start_at ? new Date(item.start_at).getHours() : "?"}
+                        <span className="text-[10px] ml-0.5 mt-1">.00</span>
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">
+                          {item.purpose}
+                        </h4>
+                        <div className="text-sm text-gray-500 flex flex-wrap gap-2 mt-1">
+                          <span className="flex items-center gap-1">
+                            <Car className="w-3 h-3" /> {item.vehicle?.plate_number || "-"}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Users className="w-3 h-3" /> {item.driver?.full_name || "-"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+                      <span className={`px-2 py-1 rounded-lg text-xs font-medium border ${item.status === 'COMPLETED' ? 'bg-green-50 text-green-700 border-green-200' :
+                          item.status === 'ASSIGNED' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                            'bg-gray-50 text-gray-600 border-gray-200'
+                        }`}>
+                        {item.status}
+                      </span>
+                      <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-blue-400" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* Recent Requests */}
+          <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                <Activity className="w-5 h-5 text-orange-500" />
+                คำขอล่าสุด
+              </h2>
+              <button
+                onClick={() => router.push("/admin/requests")}
+                className="text-sm text-blue-600 hover:underline"
+              >
+                ดูทั้งหมด
+              </button>
+            </div>
+
+            <div className="divide-y divide-gray-50">
+              {recentRequests.map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() => router.push(`/admin/requests`)} // Link to requests page (filtering by ID is usually via search there)
+                  className="py-4 flex items-center justify-between hover:bg-gray-50 transition-colors cursor-pointer px-2 rounded-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
+                      <FileText className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-800 text-sm">{item.purpose}</p>
+                      <p className="text-xs text-gray-500">โดย {item.requester?.full_name}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className={`text-xs font-bold ${item.status === 'REQUESTED' ? 'text-orange-500' :
+                        item.status === 'APPROVED' ? 'text-green-600' :
+                          'text-gray-500'
+                      }`}>
+                      {item.status}
+                    </span>
+                    <p className="text-[10px] text-gray-400 mt-0.5">
+                      {new Date(item.start_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+        </div>
+
+        {/* RIGHT COLUMN (1/3) */}
+        <div className="space-y-6">
+
+          {/* Quick Actions / Distance */}
+          <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl shadow-lg p-6 text-white relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-10">
+              <MapPin className="w-32 h-32" />
+            </div>
+
+            <h3 className="text-blue-100 font-medium mb-1">ระยะทางที่วิ่งวันนี้</h3>
+            <div className="flex items-end gap-2 mb-6">
+              <span className="text-4xl font-bold">{todayDistance.toLocaleString()}</span>
+              <span className="text-lg opacity-80 mb-1">กิโลเมตร</span>
+            </div>
+
+            <div className="border-t border-white/20 pt-4 mt-4">
+              <div className="flex items-center gap-2 text-sm opacity-90">
+                <Activity className="w-4 h-4" />
+                <span>ข้อมูลอัปเดตแบบ Realtime</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Links */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <h3 className="font-bold text-gray-800 mb-4">เมนูด่วน</h3>
+            <div className="space-y-2">
+              <button
+                onClick={() => router.push("/admin/requests?create=true")} // Assuming logic exists or generic link
+                className="w-full text-left px-4 py-3 rounded-xl bg-gray-50 hover:bg-blue-50 text-gray-700 hover:text-blue-700 font-medium transition-colors flex items-center justify-between group"
+              >
+                <span>+ สร้างคำขอใช้รถ</span>
+                <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-blue-500" />
+              </button>
+              <button
+                onClick={() => router.push("/admin/vehicles")}
+                className="w-full text-left px-4 py-3 rounded-xl bg-gray-50 hover:bg-blue-50 text-gray-700 hover:text-blue-700 font-medium transition-colors flex items-center justify-between group"
+              >
+                <span>จัดการข้อมูลรถ</span>
+                <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-blue-500" />
+              </button>
+              <button
+                onClick={() => router.push("/admin/drivers")}
+                className="w-full text-left px-4 py-3 rounded-xl bg-gray-50 hover:bg-blue-50 text-gray-700 hover:text-blue-700 font-medium transition-colors flex items-center justify-between group"
+              >
+                <span>จัดการคนขับ</span>
+                <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-blue-500" />
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
     </div>
   );
 }

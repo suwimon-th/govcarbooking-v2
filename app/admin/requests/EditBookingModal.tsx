@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import type { BookingRow } from "./page";
+import { bookingStatusMap, getStatusLabel } from "@/lib/statusHelper";
 
 // =======================
 // TYPES
@@ -99,30 +100,36 @@ export default function EditBookingModal({
   // ===============================
 
   const handleSave = async (): Promise<void> => {
-    const driverIdToSave = formData.driver_id || null;
-    const vehicleIdToSave = formData.vehicle_id || null;
+    try {
+      const res = await fetch("/api/admin/update-booking", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: booking.id,
+          requester_id: formData.requester_id,
+          driver_id: formData.driver_id || null,
+          vehicle_id: formData.vehicle_id || null,
+          purpose: formData.purpose,
+          start_at: formData.start_at || null,
+          end_at: formData.end_at || null,
+          status: formData.status,
+        }),
+      });
 
-    const { error } = await supabase
-      .from("bookings")
-      .update({
-        requester_id: formData.requester_id,
-        driver_id: driverIdToSave,
-        vehicle_id: vehicleIdToSave,
-        purpose: formData.purpose,
-        start_at: formData.start_at || null,
-        end_at: formData.end_at || null,
-        status: formData.status,
-      })
-      .eq("id", booking.id);
+      const json = await res.json();
 
-    if (error) {
-      console.error("Update error:", error);
-      alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล");
-      return;
+      if (!res.ok) {
+        console.error("Update error:", json);
+        alert(json.error || "เกิดข้อผิดพลาดในการบันทึกข้อมูล");
+        return;
+      }
+
+      onUpdated();
+      onClose();
+    } catch (err) {
+      console.error("Network error:", err);
+      alert("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้");
     }
-
-    onUpdated();
-    onClose();
   };
 
   // ===============================
@@ -207,9 +214,17 @@ export default function EditBookingModal({
             <select
               className="w-full border rounded-md p-2 text-sm"
               value={formData.driver_id}
-              onChange={(e) =>
-                setFormData((p) => ({ ...p, driver_id: e.target.value }))
-              }
+              onChange={(e) => {
+                const newDriverId = e.target.value;
+                setFormData((p) => {
+                  const newData = { ...p, driver_id: newDriverId };
+                  // ✅ ถ้ามีการเลือกคนขับ และสถานะเดิมเป็น REQUESTED -> เปลี่ยนเป็น ASSIGNED อัตโนมัติ
+                  if (newDriverId && p.status === "REQUESTED") {
+                    newData.status = "ASSIGNED";
+                  }
+                  return newData;
+                });
+              }}
             >
               <option value="">-- เลือกคนขับ --</option>
               {drivers.map((d) => (
@@ -270,13 +285,11 @@ export default function EditBookingModal({
                 setFormData((p) => ({ ...p, status: e.target.value }))
               }
             >
-              <option value="REQUESTED">REQUESTED</option>
-              <option value="APPROVED">APPROVED</option>
-              <option value="ASSIGNED">ASSIGNED</option>
-              <option value="ACCEPTED">ACCEPTED</option>
-              <option value="IN_PROGRESS">IN_PROGRESS</option>
-              <option value="COMPLETED">COMPLETED</option>
-              <option value="CANCELLED">CANCELLED</option>
+              {Object.keys(bookingStatusMap).map((key) => (
+                <option key={key} value={key}>
+                  {getStatusLabel(key)}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -300,6 +313,6 @@ export default function EditBookingModal({
           </button>
         </div>
       </div>
-    </div>
+    </div >
   );
 }

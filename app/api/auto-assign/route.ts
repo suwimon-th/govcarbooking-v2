@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseClient";
-import { sendLinePush, flexAssignDriver } from "@/app/lib/line";
+import { sendLinePush, flexAssignDriver } from "@/lib/line";
 
 function nowThai(): string {
   const now = new Date();

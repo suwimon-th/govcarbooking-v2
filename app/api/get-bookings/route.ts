@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseClient";
+import { isOffHours } from "@/lib/statusHelper";
 
 /* ----------------------------------------
    helper: normalize เวลาไทย (string ล้วน)
@@ -30,7 +31,12 @@ export async function GET() {
         start_at,
         end_at,
         status,
-        vehicle_id
+        vehicle_id,
+        requester_name,
+        vehicles (
+          color,
+          plate_number
+        )
       `);
 
     if (error) {
@@ -41,20 +47,25 @@ export async function GET() {
       );
     }
 
-    const events = data.map((item) => {
+    const events = data.map((item: any) => {
       const start = normalizeThaiTime(item.start_at);
 
       const end = item.end_at
         ? normalizeThaiTime(item.end_at)
-        : endOfDay(start); // ✅ ไม่ข้ามวัน
+        : null; // ✅ ไม่แสดงเวลาสิ้นสุดถ้าไม่ได้ระบุต้นทาง
 
       return {
         id: item.id,
-        title: item.purpose || "ใช้งานรถ",
-        start,          // string เวลาไทยล้วน
-        end,            // string เวลาไทยล้วน (วันเดียว)
+        title: item.requester_name || "ใช้งานรถ",
+        start,
+        end,
         status: item.status,
-        vehicle_id: item.vehicle_id, // ⭐ สำคัญ: ใช้กำหนดสีรถ
+        purpose: item.purpose, // ✅ ส่งกลับไปด้วยเพื่อแสดงในตาราง
+        vehicle_id: item.vehicle_id,
+        vehicle_color: item.vehicles?.color ?? "#9CA3AF",
+        vehicle_plate: item.vehicles?.plate_number ?? "-",
+        requester_name: item.requester_name,
+        is_off_hours: isOffHours(start),
       };
     });
 

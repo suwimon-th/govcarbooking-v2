@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { isOffHours } from "./statusHelper";
 
 // ======================================================
 // PUSH MESSAGE
@@ -11,6 +12,8 @@ export async function sendLinePush(to: string, messages: any[]) {
     return;
   }
 
+  console.log(`📤 [LINE] Sending push to ${to}`, JSON.stringify(messages, null, 2));
+
   const res = await fetch("https://api.line.me/v2/bot/message/push", {
     method: "POST",
     headers: {
@@ -21,9 +24,10 @@ export async function sendLinePush(to: string, messages: any[]) {
   });
 
   if (!res.ok) {
-    console.error("❌ LINE PUSH ERROR:", await res.text());
+    const errorText = await res.text();
+    console.error("❌ [LINE] PUSH ERROR:", errorText);
   } else {
-    console.log("✅ LINE PUSH SUCCESS");
+    console.log("✅ [LINE] PUSH SUCCESS");
   }
 }
 
@@ -81,7 +85,7 @@ export function flexDriverAcceptSuccess(bookingId: string) {
             action: {
               type: "uri",
               label: "กรอกเลขไมล์",
-              uri: `${process.env.NEXT_PUBLIC_BASE_URL}/driver/start-mileage?booking=${bookingId}`,
+              uri: `${process.env.PUBLIC_DOMAIN}/driver/start-mileage?booking=${bookingId}`,
             },
           },
         ],
@@ -104,9 +108,15 @@ export function flexAssignDriver(booking: any, vehicle: any, driver: any) {
     timeDisplay = `${time}–${end.time} น.`;
   }
 
+  const offHours = isOffHours(booking.start_at);
+  const isFuture = new Date(booking.start_at).getTime() > Date.now() + 1000 * 60 * 60; // มากกว่า 1 ชม. ในอนาคต
+
+  let altText = isFuture ? "🗓️ งานจองล่วงหน้า" : "🚘 งานใหม่สำหรับคุณ";
+  if (offHours) altText = "มีงานนอกเวลาราชการ";
+
   return {
     type: "flex",
-    altText: "มีงานใหม่สำหรับคุณ",
+    altText,
     contents: {
       type: "bubble",
       size: "mega",
@@ -115,11 +125,11 @@ export function flexAssignDriver(booking: any, vehicle: any, driver: any) {
         type: "box",
         layout: "vertical",
         paddingAll: "20px",
-        backgroundColor: "#1E88E5",
+        backgroundColor: offHours ? "#F59E0B" : (isFuture ? "#6366F1" : "#2563EB"),
         contents: [
           {
             type: "text",
-            text: "🚘 งานใหม่เข้ามา",
+            text: offHours ? "OT งานนอกเวลาราชการ" : (isFuture ? "🗓️ งานจองล่วงหน้า" : "🚘 งานใหม่เข้ามา"),
             weight: "bold",
             size: "xl",
             color: "#FFFFFF",
@@ -269,3 +279,200 @@ export function flexJobCompleted(booking: any) {
     },
   };
 }
+
+// ======================================================
+// FLEX: แจ้งเตือนแอดมิน เมื่อมีการจองใหม่ (จองล่วงหน้า)
+// ======================================================
+export function flexAdminNotifyNewBooking(booking: any) {
+  const { date, time } = parseThaiDateTime(booking.start_at);
+  const thaiDate = formatThaiDate(date);
+  const offHours = isOffHours(booking.start_at);
+  const isFuture = new Date(booking.start_at).getTime() > Date.now() + 1000 * 60 * 60;
+
+  let timeDisplay = `${time} น.`;
+  if (booking.end_at) {
+    const end = parseThaiDateTime(booking.end_at);
+    timeDisplay = `${time}–${end.time} น.`;
+  }
+
+  return {
+    type: "flex",
+    altText: isFuture ? `🗓️ จองล่วงหน้า: ${booking.request_code}` : `🔔 มีการจองใหม่: ${booking.request_code}`,
+    contents: {
+      type: "bubble",
+      size: "mega",
+      header: {
+        type: "box",
+        layout: "vertical",
+        paddingAll: "20px",
+        backgroundColor: offHours ? "#F59E0B" : (isFuture ? "#4F46E5" : "#1E3A8A"),
+        contents: [
+          {
+            type: "text",
+            text: offHours ? "🗓️ จองล่วงหน้า (OT)" : "🗓️ จองล่วงหน้า",
+            weight: "bold",
+            size: "xl",
+            color: "#FFFFFF",
+          },
+          {
+            type: "text",
+            text: "กรุณามอบหมายคนขับรถ",
+            size: "sm",
+            color: "#FFFFFF",
+            margin: "xs",
+          }
+        ],
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "md",
+        paddingAll: "18px",
+        contents: [
+          {
+            type: "text",
+            text: `รหัสงาน: ${booking.request_code}`,
+            weight: "bold",
+            size: "lg",
+          },
+          { type: "separator", margin: "lg" },
+          {
+            type: "box",
+            layout: "baseline",
+            contents: [
+              { type: "text", text: "📅 วันที่:", flex: 2, size: "sm", color: "#666666" },
+              { type: "text", text: thaiDate, flex: 5, size: "sm", weight: "bold" },
+            ],
+            margin: "md",
+          },
+          {
+            type: "box",
+            layout: "baseline",
+            contents: [
+              { type: "text", text: "⏰ เวลา:", flex: 2, size: "sm", color: "#666666" },
+              { type: "text", text: timeDisplay + (offHours ? " (OT)" : ""), flex: 5, size: "sm", weight: "bold" },
+            ],
+          },
+          {
+            type: "box",
+            layout: "baseline",
+            contents: [
+              { type: "text", text: "👤 ผู้ขอ:", flex: 2, size: "sm", color: "#666666" },
+              { type: "text", text: booking.requester_name ?? "-", flex: 5, size: "sm", weight: "bold" },
+            ],
+          },
+          {
+            type: "box",
+            layout: "baseline",
+            contents: [
+              { type: "text", text: "📝 วัตถุประสงค์:", flex: 2, size: "sm", color: "#666666" },
+              { type: "text", text: booking.purpose ?? "-", flex: 5, size: "sm", weight: "bold", wrap: true },
+            ],
+          },
+        ],
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        paddingAll: "16px",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            color: "#1E3A8A",
+            action: {
+              type: "uri",
+              label: "📍 มอบหมายคนขับรถ",
+              uri: `${process.env.PUBLIC_DOMAIN}/admin/requests`,
+            },
+          },
+        ],
+      },
+    },
+  };
+}
+
+// ======================================================
+// FLEX: แจ้งเตือนงานค้าง (ส่งตอน 17:00)
+// ======================================================
+export function flexReminderPendingJob(bookings: any[]) {
+  const jobItems = bookings.map((b) => ({
+    type: "box",
+    layout: "vertical",
+    margin: "md",
+    contents: [
+      {
+        type: "text",
+        text: `🔹 ${b.request_code}`,
+        weight: "bold",
+        size: "sm",
+        color: "#1E3A8A",
+      },
+      {
+        type: "text",
+        text: `วัตถุประสงค์: ${b.purpose ?? "-"}`,
+        size: "xs",
+        color: "#666666",
+        margin: "xs",
+        wrap: true,
+      },
+    ],
+  }));
+
+  return {
+    type: "flex",
+    altText: "🔔 แจ้งเตือน: ท่านมีงานที่ยังไม่ได้ปิด",
+    contents: {
+      type: "bubble",
+      header: {
+        type: "box",
+        layout: "vertical",
+        paddingAll: "20px",
+        backgroundColor: "#EF4444",
+        contents: [
+          {
+            type: "text",
+            text: "🔔 แจ้งเตือนงานค้าง",
+            weight: "bold",
+            size: "xl",
+            color: "#FFFFFF",
+          },
+        ],
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        paddingAll: "18px",
+        contents: [
+          {
+            type: "text",
+            text: "ท่านยังมีงานที่ยังไม่ได้บันทึกเลขไมล์ปิดงาน กรุณาตรวจสอบและดำเนินการให้เรียบร้อยครับ",
+            size: "sm",
+            color: "#333333",
+            wrap: true,
+          },
+          { type: "separator", margin: "lg" },
+          ...jobItems,
+        ],
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        paddingAll: "16px",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            color: "#EF4444",
+            action: {
+              type: "uri",
+              label: "📋 ไปที่รายการงานของฉัน",
+              uri: `${process.env.PUBLIC_DOMAIN}/driver/start-mileage`,
+            },
+          },
+        ],
+      },
+    },
+  };
+}
+

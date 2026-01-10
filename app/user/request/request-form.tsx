@@ -32,9 +32,11 @@ export default function RequestForm({
   const [startTime, setStartTime] = useState<string>("");
   const [endTime, setEndTime] = useState<string>("");
   const [vehicleId, setVehicleId] = useState<string>("");
+  const [driverId, setDriverId] = useState<string>("");
   const [purpose, setPurpose] = useState<string>("");
 
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [drivers, setDrivers] = useState<any[]>([]);
   const [loadingVehicles, setLoadingVehicles] = useState<boolean>(false);
 
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
@@ -70,7 +72,23 @@ export default function RequestForm({
     };
 
     loadVehicles();
+
+    const loadDrivers = async () => {
+      const { data } = await supabase
+        .from("drivers")
+        .select("id, full_name")
+        .eq("active", true)
+        .order("full_name");
+      setDrivers(data || []);
+    };
+    loadDrivers();
   }, []);
+
+  const isOffHours = () => {
+    if (!startTime) return false;
+    const hour = parseInt(startTime.split(":")[0], 10);
+    return hour < 8 || hour >= 16;
+  };
 
   // Submit ฟอร์ม
   const handleSubmit = async (e: FormEvent) => {
@@ -90,6 +108,12 @@ export default function RequestForm({
       return;
     }
 
+    if (isOffHours() && !driverId) {
+      setSubmitState("error");
+      setMessage("กรุณาเลือกคนขับรถ (นอกเวลาราชการ)");
+      return;
+    }
+
     try {
       setSubmitState("submitting");
 
@@ -105,6 +129,7 @@ export default function RequestForm({
           start_time: startTime,
           end_time: endTime || null,
           purpose,
+          driver_id: isOffHours() ? driverId : null,
         }),
       });
 
@@ -117,17 +142,18 @@ export default function RequestForm({
       }
 
       setSubmitState("success");
-setMessage("บันทึกคำขอใช้รถเรียบร้อยแล้ว");
+      setMessage("บันทึกคำขอใช้รถเรียบร้อยแล้ว");
 
-setTimeout(() => {
-  router.push("/user");
-}, 1500);
+      setTimeout(() => {
+        router.push("/user");
+      }, 1500);
 
 
       // รีเซ็ตฟิลด์บางส่วน
       setStartTime("");
       setEndTime("");
       setVehicleId("");
+      setDriverId("");
       setPurpose("");
     } catch (err) {
       console.error(err);
@@ -150,13 +176,12 @@ setTimeout(() => {
       {/* ผลลัพธ์ */}
       {message && (
         <div
-          className={`mb-6 rounded-xl px-4 py-3 text-sm ${
-            submitState === "success"
-              ? "bg-green-50 text-green-700 border border-green-200"
-              : submitState === "error"
+          className={`mb-6 rounded-xl px-4 py-3 text-sm ${submitState === "success"
+            ? "bg-green-50 text-green-700 border border-green-200"
+            : submitState === "error"
               ? "bg-red-50 text-red-700 border border-red-200"
               : "bg-blue-50 text-blue-700 border border-blue-200"
-          }`}
+            }`}
         >
           {message}
         </div>
@@ -230,52 +255,77 @@ setTimeout(() => {
           />
         </div>
 
-        {/* เลือกรถ */}
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1">
-            เลือกรถที่จะใช้
-          </label>
-          <select
-            value={vehicleId}
-            onChange={(e) => setVehicleId(e.target.value)}
-            className="w-full rounded-xl border border-gray-300 px-3 py-2.5 bg-white"
+        <div className="space-y-6 pt-4 border-t border-gray-100">
+          {/* เลือกรถ */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              เลือกรถที่จะใช้
+            </label>
+            <select
+              value={vehicleId}
+              onChange={(e) => setVehicleId(e.target.value)}
+              className="w-full rounded-xl border border-gray-300 px-3 py-2.5 bg-white"
+            >
+              <option value="">-- กรุณาเลือก --</option>
+              {loadingVehicles && <option>กำลังโหลดข้อมูล...</option>}
+              {!loadingVehicles &&
+                vehicles.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.plate_number ?? "ไม่ระบุ"} —{" "}
+                    {[v.brand, v.model].filter(Boolean).join(" ")}
+                  </option>
+                ))}
+            </select>
+          </div>
+
+          {/* เลือกคนขับ (เฉพาะนอกเวลาราชการ) */}
+          {isOffHours() && (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 animate-in fade-in slide-in-from-top-2">
+              <label className="block text-sm font-bold text-amber-800 mb-2 flex items-center gap-2">
+                OT นอกเวลาราชการ: กรุณาเลือกคนขับที่ท่านประสานงานไว้
+              </label>
+              <select
+                value={driverId}
+                onChange={(e) => setDriverId(e.target.value)}
+                className="w-full rounded-xl border border-amber-300 px-3 py-2.5 bg-white text-gray-800 focus:ring-2 focus:ring-amber-500 outline-none"
+                required={isOffHours()}
+              >
+                <option value="">-- เลือกคนขับรถ --</option>
+                {drivers.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.full_name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[10px] text-amber-600 mt-2">
+                * ข้อมูลจะถูกส่งไปยัง LINE ของคนขับโดยตรง
+              </p>
+            </div>
+          )}
+
+          {/* วัตถุประสงค์ */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              วัตถุประสงค์การใช้รถ
+            </label>
+            <textarea
+              value={purpose}
+              onChange={(e) => setPurpose(e.target.value)}
+              rows={4}
+              className="w-full rounded-xl border border-gray-300 px-3 py-2.5 resize-none"
+              placeholder="เช่น ออกตรวจพื้นที่, ลงพื้นที่ประชุม, ปฏิบัติภารกิจพิเศษ ฯลฯ"
+            />
+          </div>
+
+          {/* ปุ่มส่ง */}
+          <button
+            type="submit"
+            disabled={isSubmitting || !requesterId}
+            className="w-full rounded-2xl bg-blue-600 text-white font-semibold py-3 shadow-md hover:bg-blue-700 disabled:opacity-60 transition-colors"
           >
-            <option value="">-- กรุณาเลือก --</option>
-
-            {loadingVehicles && <option>กำลังโหลดข้อมูล...</option>}
-
-            {!loadingVehicles &&
-              vehicles.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.plate_number ?? "ไม่ระบุ"} —{" "}
-                  {[v.brand, v.model].filter(Boolean).join(" ")}
-                </option>
-              ))}
-          </select>
+            {isSubmitting ? "กำลังส่งคำขอ..." : "ส่งคำขอ"}
+          </button>
         </div>
-
-        {/* วัตถุประสงค์ */}
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1">
-            วัตถุประสงค์การใช้รถ
-          </label>
-          <textarea
-            value={purpose}
-            onChange={(e) => setPurpose(e.target.value)}
-            rows={4}
-            className="w-full rounded-xl border border-gray-300 px-3 py-2.5 resize-none"
-            placeholder="เช่น ออกตรวจพื้นที่, ลงพื้นที่ประชุม, ปฏิบัติภารกิจพิเศษ ฯลฯ"
-          />
-        </div>
-
-        {/* ปุ่มส่ง */}
-        <button
-          type="submit"
-          disabled={isSubmitting || !requesterId}
-          className="w-full rounded-2xl bg-blue-600 text-white font-semibold py-3 shadow-md hover:bg-blue-700 disabled:opacity-60"
-        >
-          {isSubmitting ? "กำลังส่งคำขอ..." : "ส่งคำขอ"}
-        </button>
       </form>
     </div>
   );

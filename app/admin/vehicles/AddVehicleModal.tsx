@@ -25,6 +25,7 @@ export default function AddVehicleModal({
     type: "",
     status: "ACTIVE" as VehicleStatus,
     remark: "",
+    color: "#3B82F6",
   });
 
   const update = (key: keyof typeof form, value: string) => {
@@ -50,6 +51,7 @@ export default function AddVehicleModal({
         type: form.type || null,
         status: form.status,
         remark: form.remark || null,
+        color: form.color,
       },
     ]);
 
@@ -65,8 +67,8 @@ export default function AddVehicleModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-[999]">
-      <div className="bg-white w-full max-w-xl rounded-2xl shadow-xl p-7 relative">
+    <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-[999] p-4">
+      <div className="bg-white w-full max-w-xl rounded-2xl shadow-xl p-7 relative max-h-[90vh] overflow-y-auto">
         {/* ปุ่มปิด */}
         <button
           onClick={onClose}
@@ -151,6 +153,31 @@ export default function AddVehicleModal({
               className="mt-1 border rounded-lg p-3 w-full focus:ring-2 focus:ring-blue-500 focus:outline-none"
               rows={3}
             />
+          </div>
+
+          <div>
+            <label className="font-semibold text-gray-700 block mb-2">สีประจำรถ</label>
+            <div className="flex flex-wrap gap-3">
+              {[
+                "#3B82F6", // Blue
+                "#EF4444", // Red
+                "#A855F7", // Purple
+                "#EAB308", // Yellow
+                "#22C55E", // Green
+                "#F97316", // Orange
+                "#EC4899", // Pink
+                "#6B7280", // Gray
+              ].map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => update("color", c)}
+                  className={`w-8 h-8 rounded-full border-2 transition-all ${form.color === c ? "border-gray-600 scale-110 shadow-md" : "border-transparent opacity-70 hover:opacity-100"
+                    }`}
+                  style={{ backgroundColor: c }}
+                />
+              ))}
+            </div>
           </div>
         </div>
 

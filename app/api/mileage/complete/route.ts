@@ -36,39 +36,53 @@ export async function POST(req: Request) {
     const distance = Number(endMileage) - Number(startMileage);
 
     // 1) อัปเดต booking
-await supabase
-  .from("bookings")
-  .update({
-    start_mileage: startMileage,
-    end_mileage: endMileage,
-    distance,
-    status: "COMPLETED",
-    completed_at: new Date().toISOString(),
-  })
-  .eq("id", bookingId);
+    await supabase
+      .from("bookings")
+      .update({
+        start_mileage: startMileage,
+        end_mileage: endMileage,
+        distance,
+        status: "COMPLETED",
+        completed_at: new Date().toISOString(),
+      })
+      .eq("id", bookingId);
 
-// 2) เพิ่ม Log ลง mileage_logs
-await supabase
-  .from("mileage_logs")
-  .insert([
-    {
-      booking_id: booking.id,
-      driver_id: booking.driver_id,
-      vehicle_id: booking.vehicle_id,
-      start_mileage: startMileage,
-      end_mileage: endMileage,
-      distance,
-      logged_at: new Date().toISOString(),
-    },
-  ]);
+    // 2) เพิ่ม Log ลง mileage_logs
+    await supabase
+      .from("mileage_logs")
+      .insert([
+        {
+          booking_id: booking.id,
+          driver_id: booking.driver_id,
+          vehicle_id: booking.vehicle_id,
+          start_mileage: startMileage,
+          end_mileage: endMileage,
+          distance,
+          logged_at: new Date().toISOString(),
+        },
+      ]);
 
-// 3) รีเซ็ตสถานะคนขับกลับเป็น AVAILABLE
-if (booking.driver_id) {
-  await supabase
-    .from("drivers")
-    .update({ status: "AVAILABLE" })
-    .eq("id", booking.driver_id);
-}
+    // 3) รีเซ็ตสถานะคนขับกลับเป็น AVAILABLE และ เวียนคิว (ต่อท้ายแถว)
+    if (booking.driver_id) {
+      // 3.1) หาค่า queue_order สูงสุดในปัจจุบัน
+      const { data: maxOrderData } = await supabase
+        .from("drivers")
+        .select("queue_order")
+        .order("queue_order", { ascending: false })
+        .limit(1)
+        .single();
+
+      const nextOrder = (maxOrderData?.queue_order ?? 0) + 1;
+
+      // 3.2) อัปเดตสถานะ และ ต่อท้ายแถว
+      await supabase
+        .from("drivers")
+        .update({
+          status: "AVAILABLE",
+          queue_order: nextOrder
+        })
+        .eq("id", booking.driver_id);
+    }
     // --------------------------
     // 3) ส่ง LINE แจ้งงานเสร็จ
     // --------------------------

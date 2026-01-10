@@ -1,9 +1,19 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import {
+  Menu,
+  X,
+  Car,
+  FileText,
+  Key,
+  LogOut,
+  LayoutDashboard
+} from "lucide-react";
 
 export default function UserLayout({
   children,
@@ -17,7 +27,7 @@ export default function UserLayout({
   const handleLogout = async () => {
     try {
       setLoggingOut(true);
-      await supabase.auth.signOut().catch(() => {});
+      await supabase.auth.signOut().catch(() => { });
       router.push("/login");
     } finally {
       setLoggingOut(false);
@@ -27,37 +37,56 @@ export default function UserLayout({
   return (
     <div className="min-h-screen bg-gray-50">
 
-      {/* ===== HEADER (เหมือน admin) ===== */}
-      <header className="w-full bg-white shadow-sm border-b fixed top-0 left-0 z-40">
-        <div className="max-w-[1400px] mx-auto px-4 md:px-6 py-3 flex items-center justify-between gap-4">
+      {/* ===== HEADER (Modern) ===== */}
+      <header className="w-full bg-white/90 backdrop-blur-md shadow-sm border-b fixed top-0 left-0 z-40 transition-all duration-300">
+        <div className="max-w-[1400px] mx-auto px-4 md:px-6 h-16 flex items-center justify-between gap-4">
 
-          {/* ชื่อระบบ */}
-          <h1 className="text-sm md:text-lg font-bold">
+          {/* Left: Logo/Icon */}
+          <div className="shrink-0 flex items-center gap-2 text-blue-600">
+            <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+              <Car className="w-5 h-5" />
+            </div>
+          </div>
+
+          {/* Center: Title */}
+          <h1 className="text-base md:text-xl font-bold text-gray-800 text-center truncate flex-1 leading-tight">
             ระบบบริหารการใช้รถราชการ
           </h1>
 
-          {/* เมนู Desktop */}
-          <div className="hidden md:flex items-center gap-4 text-sm">
-            <Link href="/user">🚗 ขอใช้รถ</Link>
-            <Link href="/user/my-requests">📘 ประวัติการขอใช้รถ</Link>
-            <Link href="/user/change-password">🔐 เปลี่ยนรหัสผ่าน</Link>
-
+          {/* Right: Menu */}
+          <div className="shrink-0 flex items-center">
+            {/* Mobile Menu Toggle */}
             <button
-              onClick={handleLogout}
-              disabled={loggingOut}
-              className="px-3 py-1 rounded-md bg-red-600 hover:bg-red-700 text-white"
+              className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              onClick={() => setMobileMenuOpen(true)}
             >
-              ออกจากระบบ
+              <Menu className="w-6 h-6" />
             </button>
-          </div>
 
-          {/* เมนู Mobile */}
-          <button
-            className="md:hidden px-3 py-1 bg-blue-600 text-white rounded-md"
-            onClick={() => setMobileMenuOpen(true)}
-          >
-            เมนู ☰
-          </button>
+            {/* Desktop Menu */}
+            <div className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-600">
+              <Link href="/user" className="hover:text-blue-600 flex items-center gap-1.5 transition-colors">
+                <Car className="w-4 h-4" /> ขอใช้รถ
+              </Link>
+              <Link href="/user/my-requests" className="hover:text-blue-600 flex items-center gap-1.5 transition-colors">
+                <FileText className="w-4 h-4" /> ประวัติ
+              </Link>
+              <Link href="/user/change-password" className="hover:text-blue-600 flex items-center gap-1.5 transition-colors">
+                <Key className="w-4 h-4" /> รหัสผ่าน
+              </Link>
+
+              <div className="h-6 w-px bg-gray-200 mx-2"></div>
+
+              <button
+                onClick={handleLogout}
+                disabled={loggingOut}
+                className="flex items-center gap-2 text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                {loggingOut ? "..." : "ออก"}
+              </button>
+            </div>
+          </div>
         </div>
       </header>
 

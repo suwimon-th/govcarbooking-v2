@@ -1,4 +1,4 @@
- 
+
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { supabase } from "@/lib/supabaseClient";
@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabaseClient";
 import {
   sendLinePush,
   flexDriverAcceptSuccess,
-} from "@/app/lib/line";
+} from "@/lib/line";
 
 const CHANNEL_SECRET = process.env.LINE_CHANNEL_SECRET!;
 const ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN!;
@@ -55,7 +55,7 @@ export async function POST(req: Request) {
       const replyToken = event.replyToken;
 
       if (text === "ลงทะเบียน") {
-        const formUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/driver/register-form?uid=${userId}`;
+        const formUrl = `${process.env.PUBLIC_DOMAIN}/driver/register-form?uid=${userId}`;
 
         const flexRegister = {
           type: "bubble",
