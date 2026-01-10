@@ -207,15 +207,33 @@ export async function POST(req: Request) {
     // ✅ 2) ส่ง LINE หาแอดมิน (ถ้ามี ADMIN_LINE_USER_ID)
     const adminLineId = process.env.ADMIN_LINE_USER_ID;
     if (adminLineId) {
-      notifications.push((async () => {
-        try {
-          console.log("📤 [NOTIFY] Sending to Admin:", adminLineId);
-          const adminFlex = flexAdminNotifyNewBooking(data);
-          await sendLinePush(adminLineId, [adminFlex]);
-        } catch (err) {
-          console.error("❌ [NOTIFY] Admin error:", err);
-        }
-      })());
+      // Check for Skip Condition: Advance + OT + Driver Selected
+      // 1. isAdvance?
+      const isAdvance = date > today; // string comparison "2026-02-12" > "2026-01-10" works for ISO format
+
+      // 2. isOT? (Weekend or <08:00 or >=16:00)
+      const dObj = new Date(date);
+      const day = dObj.getDay(); // 0-6
+      const [sh_check] = start_time.split(":").map(Number);
+      const isWeekend = day === 0 || day === 6;
+      const isOT = isWeekend || sh_check < 8 || sh_check >= 16;
+
+      // 3. hasDriver?
+      const hasDriver = !!driver_id;
+
+      if (isAdvance && isOT && hasDriver) {
+        console.log("🚫 [NOTIFY] Skipping Admin Notification (Reason: Advance + OT + Driver Selected)");
+      } else {
+        notifications.push((async () => {
+          try {
+            console.log("📤 [NOTIFY] Sending to Admin:", adminLineId);
+            const adminFlex = flexAdminNotifyNewBooking(data);
+            await sendLinePush(adminLineId, [adminFlex]);
+          } catch (err) {
+            console.error("❌ [NOTIFY] Admin error:", err);
+          }
+        })());
+      }
     } else {
       console.log("🔍 [NOTIFY] Skipping Admin: ADMIN_LINE_USER_ID not found in env");
     }
