@@ -166,8 +166,8 @@ export default function RequestForm({
   const isSubmitting = submitState === "submitting";
 
   // New Helper for Select Dropdown styling
-  const selectInputClasses = "w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 bg-gray-50/50 appearance-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all";
-  const textInputClasses = "w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 bg-gray-50/50 focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all placeholder:text-gray-400";
+  const selectInputClasses = "w-full pl-14 pr-4 py-3 rounded-xl border border-gray-200 bg-gray-50/50 appearance-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all";
+  const textInputClasses = "w-full pl-14 pr-4 py-3 rounded-xl border border-gray-200 bg-gray-50/50 focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all placeholder:text-gray-400";
   const labelClasses = "block text-sm font-semibold text-gray-700 mb-2";
 
   return (
