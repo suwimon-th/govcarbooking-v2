@@ -78,6 +78,7 @@ const vehicleDisplay = (v: VehicleInfo | null): string => {
 function AdminRequestsContent() {
   const searchParams = useSearchParams();
   const initialStatus = searchParams.get("status") || "ทั้งหมด";
+  const openId = searchParams.get("id"); // Get ID from URL
 
   const [rows, setRows] = useState<BookingRow[]>([]);
   const [editItem, setEditItem] = useState<BookingRow | null>(null);
@@ -138,6 +139,16 @@ function AdminRequestsContent() {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Auto-open modal if ID is present
+  useEffect(() => {
+    if (openId && rows.length > 0) {
+      const found = rows.find((r) => r.id === openId);
+      if (found) {
+        setEditItem(found);
+      }
+    }
+  }, [openId, rows]);
 
   const deleteBooking = async (id: string) => {
     if (!confirm("ต้องการลบคำขอนี้หรือไม่?")) return;

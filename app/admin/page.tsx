@@ -248,7 +248,7 @@ export default function AdminDashboardPage() {
                 {todayTrips.map((item) => (
                   <div
                     key={item.id}
-                    onClick={() => router.push(`/admin/requests/${item.id}`)} // Fixed link
+                    onClick={() => router.push(`/admin/requests?id=${item.id}`)} // Fixed link
                     className="group flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-xl hover:bg-blue-50/50 hover:border-blue-200 transition-all cursor-pointer gap-4"
                   >
                     <div className="flex items-start gap-4">
@@ -272,8 +272,8 @@ export default function AdminDashboardPage() {
                     </div>
                     <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
                       <span className={`px-2 py-1 rounded-lg text-xs font-medium border ${item.status === 'COMPLETED' ? 'bg-green-50 text-green-700 border-green-200' :
-                          item.status === 'ASSIGNED' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                            'bg-gray-50 text-gray-600 border-gray-200'
+                        item.status === 'ASSIGNED' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                          'bg-gray-50 text-gray-600 border-gray-200'
                         }`}>
                         {item.status}
                       </span>
@@ -304,7 +304,7 @@ export default function AdminDashboardPage() {
               {recentRequests.map((item) => (
                 <div
                   key={item.id}
-                  onClick={() => router.push(`/admin/requests`)} // Link to requests page (filtering by ID is usually via search there)
+                  onClick={() => router.push(`/admin/requests?id=${item.id}`)} // Link to requests page checking ID
                   className="py-4 flex items-center justify-between hover:bg-gray-50 transition-colors cursor-pointer px-2 rounded-lg"
                 >
                   <div className="flex items-center gap-3">
@@ -318,8 +318,8 @@ export default function AdminDashboardPage() {
                   </div>
                   <div className="text-right">
                     <span className={`text-xs font-bold ${item.status === 'REQUESTED' ? 'text-orange-500' :
-                        item.status === 'APPROVED' ? 'text-green-600' :
-                          'text-gray-500'
+                      item.status === 'APPROVED' ? 'text-green-600' :
+                        'text-gray-500'
                       }`}>
                       {item.status}
                     </span>

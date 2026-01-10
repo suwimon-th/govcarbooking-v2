@@ -13,7 +13,8 @@ import {
   Car,
   Users,
   FileText,
-  LogOut
+  LogOut,
+  Calendar
 } from "lucide-react";
 
 export default function AdminLayout({
@@ -90,6 +91,9 @@ export default function AdminLayout({
               <Link href="/admin/requests" className="hover:text-blue-600 flex items-center gap-1.5 transition-colors">
                 <FileText className="w-4 h-4" /> คำขอใช้รถ
               </Link>
+              <Link href="/calendar" className="hover:text-blue-600 flex items-center gap-1.5 transition-colors" target="_blank">
+                <Calendar className="w-4 h-4" /> ปฏิทิน
+              </Link>
               <Link href="/admin/vehicles" className="hover:text-blue-600 flex items-center gap-1.5 transition-colors">
                 <Car className="w-4 h-4" /> ข้อมูลรถ
               </Link>
@@ -131,6 +135,9 @@ export default function AdminLayout({
             <div className="flex flex-col gap-3">
               <Link href="/admin/requests" onClick={() => setMobileMenuOpen(false)}>
                 คำขอใช้รถ
+              </Link>
+              <Link href="/calendar" onClick={() => setMobileMenuOpen(false)} target="_blank">
+                ปฏิทินงาน
               </Link>
               <Link href="/admin/vehicles" onClick={() => setMobileMenuOpen(false)}>
                 รถทั้งหมด

@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseClient";
+import { sendLinePush, flexJobCompleted } from "@/lib/line";
 
 export async function POST(req: Request) {
   try {
@@ -83,67 +84,29 @@ export async function POST(req: Request) {
         })
         .eq("id", booking.driver_id);
     }
+
     // --------------------------
-    // 3) ส่ง LINE แจ้งงานเสร็จ
+    // 3) ส่ง LINE แจ้งงานเสร็จ (ใช้ lib/line.ts ให้ออกแบบสวยงาม + มีปุ่ม)
     // --------------------------
     try {
-      const lineToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
-
       const { data: driver } = await supabase
         .from("drivers")
         .select("line_user_id, full_name")
         .eq("id", booking.driver_id)
         .single();
 
-      if (lineToken && driver?.line_user_id) {
-        await fetch("https://api.line.me/v2/bot/message/push", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${lineToken}`,
-          },
-          body: JSON.stringify({
-            to: driver.line_user_id,
-            messages: [
-              {
-                type: "flex",
-                altText: "🎉 งานเสร็จเรียบร้อย",
-                contents: {
-                  type: "bubble",
-                  body: {
-                    type: "box",
-                    layout: "vertical",
-                    spacing: "md",
-                    contents: [
-                      {
-                        type: "text",
-                        text: "🎉 งานเสร็จเรียบร้อย",
-                        weight: "bold",
-                        size: "xl",
-                        color: "#1DB446"
-                      },
-                      {
-                        type: "text",
-                        wrap: true,
-                        color: "#333",
-                        text: `งาน ${booking.request_code} ปิดงานสำเร็จแล้ว`
-                      },
-                      {
-                        type: "text",
-                        wrap: true,
-                        color: "#555",
-                        size: "sm",
-                        text: `เลขไมล์: ${startMileage} → ${endMileage} กม.`
-                      }
-                    ]
-                  }
-                }
-              }
-            ],
-          }),
-        });
+      if (driver?.line_user_id) {
+        console.log("📨 Sending JOB COMPLETED to:", driver.line_user_id);
 
-        console.log("📨 LINE Completed sent.");
+        await sendLinePush(driver.line_user_id, [
+          flexJobCompleted(booking, {
+            start: Number(startMileage),
+            end: Number(endMileage),
+            distance: Number(distance)
+          })
+        ]);
+      } else {
+        console.warn("⚠️ No driver LINE ID found to send completion message.");
       }
 
     } catch (err) {
@@ -156,6 +119,7 @@ export async function POST(req: Request) {
     });
 
   } catch (err) {
+    console.error("SERVER_ERROR:", err);
     return NextResponse.json(
       { error: "เกิดข้อผิดพลาดที่เซิร์ฟเวอร์" },
       { status: 500 }

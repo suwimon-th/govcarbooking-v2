@@ -88,6 +88,16 @@ export function flexDriverAcceptSuccess(bookingId: string) {
               uri: `${process.env.PUBLIC_DOMAIN}/driver/start-mileage?booking=${bookingId}`,
             },
           },
+          {
+            type: "button",
+            style: "secondary",
+            margin: "sm",
+            action: {
+              type: "uri",
+              label: "📅 ดูตารางการใช้รถ",
+              uri: `${process.env.PUBLIC_DOMAIN}/calendar`,
+            },
+          },
         ],
       },
     },
@@ -228,6 +238,16 @@ export function flexAssignDriver(booking: any, vehicle: any, driver: any) {
             },
           },
           {
+            type: "button",
+            style: "secondary",
+            margin: "sm",
+            action: {
+              type: "uri",
+              label: "📅 ดูตารางการใช้รถ",
+              uri: `${process.env.PUBLIC_DOMAIN}/calendar`,
+            },
+          },
+          {
             type: "text",
             text: "กรุณากดรับงานภายใน 1 ชั่วโมง",
             size: "xs",
@@ -244,7 +264,58 @@ export function flexAssignDriver(booking: any, vehicle: any, driver: any) {
 // ======================================================
 // FLEX: แจ้งงานเสร็จ
 // ======================================================
-export function flexJobCompleted(booking: any) {
+export function flexJobCompleted(booking: any, mileage?: { start: number; end: number; distance: number }) {
+  const contents: any[] = [
+    {
+      type: "text",
+      text: "🎉 งานเสร็จเรียบร้อย!",
+      weight: "bold",
+      size: "xl",
+      color: "#16a34a",
+    },
+    {
+      type: "text",
+      wrap: true,
+      color: "#444",
+      text: `งานหมายเลข ${booking.request_code}`,
+    }
+  ];
+
+  if (mileage) {
+    contents.push({
+      type: "box",
+      layout: "vertical",
+      margin: "md",
+      paddingAll: "10px",
+      backgroundColor: "#f3f4f6",
+      cornerRadius: "8px",
+      contents: [
+        {
+          type: "text",
+          text: `เลขไมล์: ${mileage.start} → ${mileage.end}`,
+          size: "sm",
+          color: "#555"
+        },
+        {
+          type: "text",
+          text: `รวมระยะทาง: ${mileage.distance} กม.`,
+          size: "sm",
+          weight: "bold",
+          color: "#333",
+          margin: "xs"
+        }
+      ]
+    });
+  } else {
+    contents.push({
+      type: "text",
+      wrap: true,
+      color: "#666",
+      text: "ขอบคุณสำหรับการปฏิบัติงานครับ 🙏",
+      margin: "md"
+    });
+  }
+
   return {
     type: "flex",
     altText: "🎉 งานเสร็จเรียบร้อย",
@@ -254,25 +325,21 @@ export function flexJobCompleted(booking: any) {
         type: "box",
         layout: "vertical",
         spacing: "md",
+        contents: contents,
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        paddingAll: "16px",
         contents: [
           {
-            type: "text",
-            text: "🎉 งานเสร็จเรียบร้อย!",
-            weight: "bold",
-            size: "xl",
-            color: "#16a34a",
-          },
-          {
-            type: "text",
-            wrap: true,
-            color: "#444",
-            text: `งานหมายเลข ${booking.request_code}`,
-          },
-          {
-            type: "text",
-            wrap: true,
-            color: "#666",
-            text: "ขอบคุณสำหรับการปฏิบัติงานครับ 🙏",
+            type: "button",
+            style: "secondary",
+            action: {
+              type: "uri",
+              label: "📅 ดูตารางการใช้รถ",
+              uri: `${process.env.PUBLIC_DOMAIN}/calendar`,
+            },
           },
         ],
       },
@@ -386,6 +453,16 @@ export function flexAdminNotifyNewBooking(booking: any) {
               uri: `${process.env.PUBLIC_DOMAIN}/admin/requests`,
             },
           },
+          {
+            type: "button",
+            style: "secondary",
+            margin: "sm",
+            action: {
+              type: "uri",
+              label: "📅 ดูตารางการใช้รถ",
+              uri: `${process.env.PUBLIC_DOMAIN}/calendar`,
+            },
+          },
         ],
       },
     },
@@ -470,9 +547,18 @@ export function flexReminderPendingJob(bookings: any[]) {
               uri: `${process.env.PUBLIC_DOMAIN}/driver/start-mileage`,
             },
           },
+          {
+            type: "button",
+            style: "secondary",
+            margin: "sm",
+            action: {
+              type: "uri",
+              label: "📅 ดูตารางการใช้รถ",
+              uri: `${process.env.PUBLIC_DOMAIN}/calendar`,
+            },
+          },
         ],
       },
     },
   };
 }
-

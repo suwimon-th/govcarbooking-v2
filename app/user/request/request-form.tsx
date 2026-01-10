@@ -12,6 +12,7 @@ interface Vehicle {
   brand: string | null;
   model: string | null;
   status: string;
+  type: string | null;
 }
 
 interface Driver {
@@ -62,7 +63,7 @@ export default function RequestForm({
         setLoadingVehicles(true);
         const { data, error } = await supabase
           .from("vehicles")
-          .select("id, plate_number, brand, model, status")
+          .select("id, plate_number, brand, model, status, type")
           .eq("status", "ACTIVE")
           .order("plate_number", { ascending: true });
 
@@ -498,8 +499,13 @@ export default function RequestForm({
                         <Car className="w-6 h-6" />
                       </div>
                       <div className="text-left flex-1 min-w-0">
-                        <div className="font-bold text-gray-900 text-lg truncate">
+                        <div className="font-bold text-gray-900 text-lg truncate flex items-center gap-2">
                           {v.plate_number}
+                          {v.type && (
+                            <span className="text-sm font-normal text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                              {v.type}
+                            </span>
+                          )}
                         </div>
                         <div className="text-sm text-gray-500 truncate">
                           {v.brand} {v.model}

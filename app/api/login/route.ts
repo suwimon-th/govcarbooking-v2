@@ -22,8 +22,8 @@ export async function POST(req: Request) {
     const { data: user } = await supabase
       .from("profiles")
       .select("*")
-      .eq("username", username)
-      .eq("password", password)
+      .ilike("username", username)
+      .ilike("password", password)
       .maybeSingle();
 
     // ไม่พบ user
