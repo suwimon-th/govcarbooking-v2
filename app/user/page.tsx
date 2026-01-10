@@ -239,7 +239,7 @@ export default function UserPage() {
                         className="flex items-center gap-2 bg-[#1E40AF] hover:bg-blue-800 text-white px-5 py-2.5 rounded-lg shadow-md transition-all font-medium"
                     >
                         <Plus className="w-5 h-5" />
-                        จองรถใหม่
+                        ขอใช้รถใหม่
                     </Link>
                 </div>
             </div>
@@ -318,7 +318,7 @@ export default function UserPage() {
                                 return (
                                     <div className="flex items-center justify-center w-full h-full py-0.5 rounded-sm">
                                         <span className="text-[11px] font-bold text-white leading-none flex items-center gap-0.5">
-                                            {isOff && <span className="bg-amber-500 text-[8px] px-0.5 rounded leading-none">OT</span>}
+                                            {isOff && <span className="bg-amber-500 text-[8px] px-0.5 rounded leading-none font-bold">OT</span>}
                                             {formatTime(arg.event.startStr)}
                                         </span>
                                     </div>
@@ -327,10 +327,7 @@ export default function UserPage() {
                             return (
                                 <div className="px-1.5 py-1 overflow-hidden text-white">
                                     <div className="flex items-center gap-1.5 leading-tight">
-                                        <span className="font-bold opacity-80 text-[12px] flex items-center gap-0.5">
-                                            {isOff && <span className="bg-amber-500 text-[10px] px-1 rounded leading-none">OT</span>}
-                                            {formatTime(arg.event.startStr)}
-                                        </span>
+                                        {isOff && <span className="bg-amber-500 text-[10px] px-1 rounded leading-none font-bold">OT</span>}
                                         <span className="font-bold truncate text-[12px]">{arg.event.title}</span>
                                     </div>
                                 </div>
@@ -353,7 +350,7 @@ export default function UserPage() {
             <div className="hidden md:block max-w-[1200px] mx-auto px-8 mt-10 mb-20">
                 <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
                     <Clock className="w-6 h-6 text-blue-600" />
-                    รายการจองเดือน {currentViewTitle}
+                    รายการขอใช้รถเดือน {currentViewTitle}
                 </h3>
 
                 <div className="bg-white border rounded-xl shadow-sm overflow-hidden">
@@ -363,7 +360,7 @@ export default function UserPage() {
                                 <tr>
                                     <th className="px-6 py-4 font-semibold">วันที่</th>
                                     <th className="px-6 py-4 font-semibold">เวลา</th>
-                                    <th className="px-6 py-4 font-semibold">ผู้จอง / จุดหมาย</th>
+                                    <th className="px-6 py-4 font-semibold">ผู้ขอ / จุดหมาย</th>
                                     <th className="px-6 py-4 font-semibold">รถปฏิบัติงาน</th>
                                     <th className="px-6 py-4 font-semibold text-center">สถานะ</th>
                                 </tr>
@@ -377,7 +374,7 @@ export default function UserPage() {
                                         return (
                                             <tr>
                                                 <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                                                    ไม่มีรายการจองในเดือนนี้
+                                                    ไม่มีรายการขอใช้รถในเดือนนี้
                                                 </td>
                                             </tr>
                                         );
@@ -428,7 +425,7 @@ export default function UserPage() {
                                                 <td className="px-6 py-4 align-top max-w-[300px]">
                                                     <div className="flex flex-col gap-2.5">
                                                         <div className="flex flex-col">
-                                                            <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-0.5">ผู้จอง (Requester)</span>
+                                                            <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-0.5">ผู้ขอ (Requester)</span>
                                                             <span className="font-extrabold text-gray-900 text-lg leading-none">
                                                                 {evt.extendedProps?.requester || "ไม่ระบุชื่อ"}
                                                             </span>
@@ -541,14 +538,14 @@ export default function UserPage() {
                                     <Clock className="w-8 h-8 text-gray-300" />
                                 </div>
                                 <p className="text-gray-500 font-medium">ว่างตลอดทั้งวัน</p>
-                                <p className="text-xs text-gray-400 mt-1 mb-6">ยังไม่มีใครจองรถในวันนี้</p>
+                                <p className="text-xs text-gray-400 mt-1 mb-6">ยังไม่มีใครขอใช้รถในวันนี้</p>
 
                                 <Link
                                     href={`/user/request?date=${selectedDate}`}
                                     className="inline-flex items-center gap-2 bg-[#1E40AF] text-white px-8 py-3.5 rounded-full text-base font-bold shadow-lg hover:bg-blue-800 transition-all active:scale-95"
                                 >
                                     <Plus className="w-5 h-5" />
-                                    จองรถตอนนี้
+                                    ขอใช้รถตอนนี้
                                 </Link>
                             </div>
                         )}
@@ -561,7 +558,7 @@ export default function UserPage() {
                                     className="w-full bg-[#1E40AF] text-white py-4 rounded-full font-bold shadow-lg flex items-center justify-center gap-2 hover:bg-blue-800 active:scale-95 transition-all text-lg"
                                 >
                                     <Plus className="w-6 h-6" />
-                                    จองรถตอนนี้
+                                    ขอใช้รถตอนนี้
                                 </Link>
                             </div>
                         )}

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { X, Car, Tag, Plus, Palette } from "lucide-react";
 
 interface Props {
   onClose: () => void;
@@ -67,96 +68,116 @@ export default function AddVehicleModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-[999] p-4">
-      <div className="bg-white w-full max-w-xl rounded-2xl shadow-xl p-7 relative max-h-[90vh] overflow-y-auto">
-        {/* ปุ่มปิด */}
-        <button
-          onClick={onClose}
-          className="absolute top-3 right-3 w-9 h-9 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-lg"
-        >
-          ✕
-        </button>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-[999] p-4 animate-in fade-in duration-200">
+      <div
+        className="bg-white w-full max-w-xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
 
-        <h2 className="text-2xl font-bold text-blue-800 mb-6">
-          เพิ่มรถราชการใหม่
-        </h2>
-
-        <div className="space-y-4">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-100">
           <div>
-            <label className="font-semibold text-gray-700">
-              ทะเบียนรถ <span className="text-red-500">*</span>
+            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+              <Plus className="w-6 h-6 text-blue-600" />
+              เพิ่มรถราชการใหม่
+            </h2>
+            <p className="text-sm text-gray-500 mt-1">กรอกข้อมูลเพื่อลงทะเบียนรถใหม่</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Form Content */}
+        <div className="p-6 overflow-y-auto space-y-6">
+
+          {/* Plate Number */}
+          <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100/50">
+            <label className="block text-sm font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
+              <Car className="w-4 h-4 text-blue-500" /> ทะเบียนรถ <span className="text-red-500">*</span>
             </label>
             <input
               value={form.plate_number}
               onChange={(e) => update("plate_number", e.target.value)}
-              placeholder="เช่น 2กข-5678"
-              className="mt-1 border rounded-lg p-3 w-full focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              placeholder="เช่น 1กข 1234"
+              className="w-full border-gray-200 rounded-lg p-2.5 text-lg font-mono font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none border shadow-sm placeholder:text-gray-300"
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label className="font-semibold text-gray-700">
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                 ยี่ห้อ <span className="text-red-500">*</span>
               </label>
               <input
                 value={form.brand}
                 onChange={(e) => update("brand", e.target.value)}
-                placeholder="เช่น Toyota, Isuzu"
-                className="mt-1 border rounded-lg p-3 w-full focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                placeholder="เช่น Toyota"
+                className="w-full border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none border transition-all"
               />
             </div>
 
             <div>
-              <label className="font-semibold text-gray-700">
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                 รุ่น <span className="text-red-500">*</span>
               </label>
               <input
                 value={form.model}
                 onChange={(e) => update("model", e.target.value)}
-                placeholder="เช่น Hilux, D-Max"
-                className="mt-1 border rounded-lg p-3 w-full focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                placeholder="เช่น Alphard"
+                className="w-full border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none border transition-all"
               />
             </div>
           </div>
 
-          <div>
-            <label className="font-semibold text-gray-700">ประเภท</label>
-            <input
-              value={form.type}
-              onChange={(e) => update("type", e.target.value)}
-              placeholder="เช่น รถกระบะ, รถตู้, รถเก๋ง"
-              className="mt-1 border rounded-lg p-3 w-full focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5 flex items-center gap-1.5">
+                <Tag className="w-4 h-4 text-gray-400" /> ประเภท
+              </label>
+              <input
+                value={form.type}
+                onChange={(e) => update("type", e.target.value)}
+                placeholder="เช่น รถตู้"
+                className="w-full border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none border transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                สถานะเริ่มต้น
+              </label>
+              <select
+                value={form.status}
+                onChange={(e) =>
+                  update("status", e.target.value as VehicleStatus)
+                }
+                className="w-full border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none border bg-white"
+              >
+                <option value="ACTIVE">พร้อมใช้งาน (ACTIVE)</option>
+                <option value="INACTIVE">งดใช้ชั่วคราว (INACTIVE)</option>
+                <option value="REPAIR">อยู่ระหว่างซ่อม (REPAIR)</option>
+              </select>
+            </div>
           </div>
 
           <div>
-            <label className="font-semibold text-gray-700">สถานะ</label>
-            <select
-              value={form.status}
-              onChange={(e) =>
-                update("status", e.target.value as VehicleStatus)
-              }
-              className="mt-1 border rounded-lg p-3 w-full focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            >
-              <option value="ACTIVE">พร้อมใช้งาน (ACTIVE)</option>
-              <option value="INACTIVE">งดใช้ชั่วคราว (INACTIVE)</option>
-              <option value="REPAIR">อยู่ระหว่างซ่อม (REPAIR)</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="font-semibold text-gray-700">หมายเหตุ</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">หมายเหตุ</label>
             <textarea
               value={form.remark}
               onChange={(e) => update("remark", e.target.value)}
-              className="mt-1 border rounded-lg p-3 w-full focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              className="w-full border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none border transition-all min-h-[80px]"
               rows={3}
             />
           </div>
 
           <div>
-            <label className="font-semibold text-gray-700 block mb-2">สีประจำรถ</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-1.5">
+              <Palette className="w-4 h-4 text-gray-400" /> สีประจำรถ
+            </label>
             <div className="flex flex-wrap gap-3">
               {[
                 "#3B82F6", // Blue
@@ -172,19 +193,22 @@ export default function AddVehicleModal({
                   key={c}
                   type="button"
                   onClick={() => update("color", c)}
-                  className={`w-8 h-8 rounded-full border-2 transition-all ${form.color === c ? "border-gray-600 scale-110 shadow-md" : "border-transparent opacity-70 hover:opacity-100"
+                  className={`w-10 h-10 rounded-full border-2 transition-all flex items-center justify-center ${form.color === c ? "border-gray-600 scale-110 shadow-md ring-2 ring-gray-200" : "border-transparent hover:opacity-100 hover:scale-105"
                     }`}
                   style={{ backgroundColor: c }}
-                />
+                >
+                  {form.color === c && <div className="w-2 h-2 bg-white rounded-full" />}
+                </button>
               ))}
             </div>
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 mt-8">
+        {/* Footer */}
+        <div className="p-5 border-t border-gray-100 bg-gray-50 rounded-b-2xl flex justify-end gap-3">
           <button
             onClick={onClose}
-            className="px-5 py-2.5 rounded-lg bg-gray-400 text-white hover:bg-gray-500"
+            className="px-6 py-2.5 rounded-xl bg-white border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 focus:ring-2 focus:ring-gray-100 transition-all"
           >
             ยกเลิก
           </button>
@@ -192,11 +216,13 @@ export default function AddVehicleModal({
           <button
             onClick={handleSave}
             disabled={loading}
-            className="px-5 py-2.5 rounded-lg bg-blue-700 text-white hover:bg-blue-800 shadow-md disabled:opacity-60"
+            className="px-6 py-2.5 rounded-xl bg-blue-600 text-white font-medium hover:bg-blue-700 shadow-md shadow-blue-200 focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 disabled:opacity-60 disabled:shadow-none transition-all flex items-center gap-2"
           >
-            {loading ? "กำลังบันทึก..." : "บันทึก"}
+            {loading && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+            {loading ? "กำลังบันทึก..." : "เพิ่มรถ"}
           </button>
         </div>
+
       </div>
     </div>
   );
