@@ -193,18 +193,62 @@ export default function RequestForm({
         </p>
       </div>
 
-      {/* Message Alert */}
+      {/* Message Modal Overlay */}
       {message && (
         <div
-          className={`mb-8 rounded-2xl px-5 py-4 flex items-start gap-3 shadow-sm ${submitState === "success"
-            ? "bg-green-50 text-green-800 border-l-4 border-green-500"
-            : submitState === "error"
-              ? "bg-red-50 text-red-800 border-l-4 border-red-500"
-              : "bg-blue-50 text-blue-800 border-l-4 border-blue-500"
-            }`}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-300"
+          onClick={() => {
+            if (submitState !== "submitting") setMessage("");
+          }}
         >
-          {submitState === "success" ? <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" /> : <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />}
-          <span className="font-medium text-sm leading-relaxed">{message}</span>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className={`relative max-w-sm w-full bg-white rounded-3xl shadow-2xl p-6 transform transition-all animate-in zoom-in-95 duration-300 ${submitState === "error"
+              ? "border-b-4 border-red-500"
+              : submitState === "success"
+                ? "border-b-4 border-green-500"
+                : "border-b-4 border-blue-500"
+              }`}
+          >
+            <div className="flex flex-col items-center text-center">
+              <div
+                className={`mb-4 p-4 rounded-full ${submitState === "success"
+                  ? "bg-green-100 text-green-600"
+                  : submitState === "error"
+                    ? "bg-red-100 text-red-600"
+                    : "bg-blue-100 text-blue-600"
+                  }`}
+              >
+                {submitState === "success" ? (
+                  <CheckCircle2 className="w-8 h-8" />
+                ) : (
+                  <AlertTriangle className="w-8 h-8" />
+                )}
+              </div>
+
+              <h3
+                className={`text-xl font-bold mb-2 ${submitState === "success"
+                  ? "text-green-800"
+                  : submitState === "error"
+                    ? "text-red-800"
+                    : "text-blue-800"
+                  }`}
+              >
+                {submitState === "success" ? "บันทึกข้อมูลสำเร็จ" : "แจ้งเตือน"}
+              </h3>
+
+              <p className="text-gray-600 font-medium leading-relaxed mb-6">
+                {message}
+              </p>
+
+              <button
+                onClick={() => setMessage("")}
+                className="w-full py-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold transition-colors"
+              >
+                รับทราบ
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
