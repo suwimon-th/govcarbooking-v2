@@ -359,7 +359,7 @@ export default function RequestForm({
                   {!loadingVehicles &&
                     vehicles.map((v) => (
                       <option key={v.id} value={v.id}>
-                        {v.plate_number ?? "ไม่ระบุ"} — {[v.brand, v.model].filter(Boolean).join(" ")}
+                        {v.plate_number ?? "ไม่ระบุ"} — {v.brand} {v.model?.split(" ").slice(0, 2).join(" ")}
                       </option>
                     ))}
                 </select>
