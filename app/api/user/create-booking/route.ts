@@ -85,8 +85,10 @@ export async function POST(req: Request) {
       const d = new Date(date);
       const dayOfMonth = d.getDate();
 
-      // เช็ควันที่ 15-21
-      if (dayOfMonth >= 15 && dayOfMonth <= 21) {
+      const dayOfWeek = dayOfMonth ? new Date(date).getDay() : 0; // 0=Sun, 1=Mon
+
+      // เช็คว่าเป็นช่วงวันที่ 15-21 และเป็น "วันจันทร์" (1)
+      if (dayOfMonth >= 15 && dayOfMonth <= 21 && dayOfWeek === 1) {
         // เช็คเวลาเหลื่อมกับ 08:00 - 16:00 หรือไม่
         // แปลงเวลาเป็นตัวเลขนาทีเพื่อให้เปรียบเทียบง่าย (08:00 = 480, 16:00 = 960)
         const [sh, sm] = start_time.split(":").map(Number);
@@ -110,7 +112,7 @@ export async function POST(req: Request) {
         // Booking Start < Duty End AND Booking End > Duty Start
         if (startTotal < dutyEnd && endTotal > dutyStart) {
           return NextResponse.json(
-            { error: "รถตู้ติดภารกิจเวรประจำวัน (วันที่ 15-21 ของเดือน เวลา 08:00-16:00) ไม่สามารถจองได้" },
+            { error: "รถตู้ติดภารกิจเวรประจำวัน (วันจันทร์สัปดาห์ที่ 3 ของเดือน เวลา 08:00-16:00) ไม่สามารถจองได้" },
             { status: 400 }
           );
         }
