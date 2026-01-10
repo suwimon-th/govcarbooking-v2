@@ -73,7 +73,10 @@ export async function POST(req: Request) {
 
     // --------------------------------------------------------
     // ✅ ตรวจสอบเงื่อนไขพิเศษ: รถตู้ (Van)
-    // ห้ามจอง "วันจันทร์ สัปดาห์ที่ 3 ของเดือน" เวลา 08:00-16:00 (เวรประจำวัน)
+    // ห้ามจอง "วันจันทร์ สัปดาห์ที่ 3 ของปฏิทิน" เวลา 08:00-16:00 (เวรประจำวัน)
+    // Jan 2026 -> Mon 12
+    // Feb 2026 -> Mon 16
+    // Formula: 16 - dayOfFirst (where Sun=0)
     // --------------------------------------------------------
     const { data: vehicleData } = await supabase
       .from("vehicles")
@@ -87,36 +90,13 @@ export async function POST(req: Request) {
       const currentMonth = d.getMonth();
       const currentYear = d.getFullYear();
 
-      // หาวันจันทร์ของสัปดาห์ที่ 3 (Monday of Week 3)
-      // Logic:
-      // 1. หาว่าวันแรกของเดือนเป็นวันอะไร (firstOfMonth)
-      // 2. ถ้าวันแรกเป็นวันจันทร์ (Mon) -> Week 1 เริ่มจันทร์ที่ 1 -> จันทร์ Week 3 คือวันที่ 15
-      // 3. ถ้าวันแรกไม่ใช่วันจันทร์ (Tue-Sun) -> จันทร์แรก (First Mon) ถือว่าเป็น Week 2 (Week 1 แหว่ง) -> จันทร์ Week 3 คือ First Mon + 7
-
       const firstOfMonth = new Date(currentYear, currentMonth, 1);
       const dayOfFirst = firstOfMonth.getDay(); // 0=Sun, 1=Mon...
 
-      let firstMondayDate = 1;
-      if (dayOfFirst !== 1) {
-        // คำนวณวันที่ของจันทร์แรกของเดือน
-        // ถ้า Sun(0) -> อีก 1 วันเป็น Mon(1st) -> date = 1+1=2
-        // ถ้า Sat(6) -> อีก 2 วันเป็น Mon(1st) -> date = 1+2=3
-        // สูตร: Distance to next Monday = (8 - dayOfFirst) % 7
-        // (Sun: 8-0=8%7=1. Sat: 8-6=2. Tue: 8-2=6 => Tue+6days = Next Mon)
-        let daysUntil = (8 - dayOfFirst) % 7;
-        if (dayOfFirst === 0) daysUntil = 1;
-
-        firstMondayDate = 1 + daysUntil;
-      }
-
-      let targetDate = 0;
-      if (dayOfFirst === 1) {
-        // 1st is Monday implies Week 1 is full. Week 3 Monday is 1+14 = 15.
-        targetDate = 15;
-      } else {
-        // 1st is not Monday implies partial Week 1. First Mon starts Week 2. Week 3 Mon is FirstMon+7.
-        targetDate = firstMondayDate + 7;
-      }
+      // สูตรคำนวณวันจันทร์ของแถวที่ 3 ในปฏิทิน
+      // Jan 2026 (Thu=4): 16 - 4 = 12
+      // Feb 2026 (Sun=0): 16 - 0 = 16
+      const targetDate = 16 - dayOfFirst;
 
       // ตรวจสอบว่าใช่วันที่ต้องห้ามหรือไม่
       if (dayOfMonth === targetDate) {
