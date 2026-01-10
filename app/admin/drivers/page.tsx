@@ -91,19 +91,19 @@ export default function DriversPage() {
 
   // ======================= Clear All Status ==========================
   const handleClearAllStatus = async () => {
-    if (!confirm("ตั้งสถานะคนขับทุกคนเป็น AVAILABLE ใช่หรือไม่?")) return;
+    if (!confirm("รีเซ็ตสถานะคนขับที่ 'ไม่ว่าง' ให้เป็น 'ว่าง' ทั้งหมดใช่หรือไม่? (คนขับที่ปิดรับงานจะไม่ถูกเปลี่ยน)")) return;
 
     const { error } = await supabase
       .from("drivers")
       .update({ status: "AVAILABLE" })
-      .neq("status", "AVAILABLE");
+      .eq("status", "BUSY"); // ✅ แก้ให้รีเซ็ตเฉพาะคนที่เป็น BUSY เท่านั้น
 
     if (error) {
       showToast("error", "อัปเดตสถานะล้มเหลว");
       return;
     }
 
-    showToast("success", "ตั้งสถานะทั้งหมดเป็น AVAILABLE แล้ว");
+    showToast("success", "รีเซ็ตคนขับที่ไม่ว่างเรียบร้อยแล้ว");
     loadDrivers();
   };
 
