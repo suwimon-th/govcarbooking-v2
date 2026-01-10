@@ -71,6 +71,53 @@ export async function POST(req: Request) {
       );
     }
 
+    // --------------------------------------------------------
+    // ✅ ตรวจสอบเงื่อนไขพิเศษ: รถตู้ (Van)
+    // ห้ามจองวันที่ 15-21 ของเดือน เวลา 08:00-16:00 (เวรประจำวัน)
+    // --------------------------------------------------------
+    const { data: vehicleData } = await supabase
+      .from("vehicles")
+      .select("type")
+      .eq("id", vehicle_id)
+      .single();
+
+    if (vehicleData?.type === "รถตู้") {
+      const d = new Date(date);
+      const dayOfMonth = d.getDate();
+
+      // เช็ควันที่ 15-21
+      if (dayOfMonth >= 15 && dayOfMonth <= 21) {
+        // เช็คเวลาเหลื่อมกับ 08:00 - 16:00 หรือไม่
+        // แปลงเวลาเป็นตัวเลขนาทีเพื่อให้เปรียบเทียบง่าย (08:00 = 480, 16:00 = 960)
+        const [sh, sm] = start_time.split(":").map(Number);
+        const startTotal = sh * 60 + sm;
+
+        // ถ้าไม่จบเวลา ให้ถือว่าจบสิ้นวันหรือตาม duration ปกติ แต่เพื่อความปลอดภัย
+        // ถ้าเริ่มในเวลางาน (08:00-16:00) โดนแน่ๆ
+        // หรือถ้าเริ่มก่อน 08:00 แต่จบหลัง 08:00 ก็โดน
+
+        // Duty range in minutes
+        const dutyStart = 8 * 60;      // 08:00
+        const dutyEnd = 16 * 60;       // 16:00
+
+        let endTotal = 24 * 60; // default end of day if not specified
+        if (end_time) {
+          const [eh, em] = end_time.split(":").map(Number);
+          endTotal = eh * 60 + em;
+        }
+
+        // Logic check overlap:
+        // Booking Start < Duty End AND Booking End > Duty Start
+        if (startTotal < dutyEnd && endTotal > dutyStart) {
+          return NextResponse.json(
+            { error: "รถตู้ติดภารกิจเวรประจำวัน (วันที่ 15-21 ของเดือน เวลา 08:00-16:00) ไม่สามารถจองได้" },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
+
     // ✅ สร้างเวลาไทยแบบ string ตรง ๆ (ไม่ใช้ Date)
     const start_at = `${date}T${padTime(start_time)}`;
     const end_at = end_time ? `${date}T${padTime(end_time)}` : null;
