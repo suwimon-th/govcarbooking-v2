@@ -16,9 +16,21 @@ function normalizeThaiTime(v: string) {
    helper: บังคับ end ให้อยู่วันเดียว
    (แก้ปัญหา event ล้นไปวันถัดไปในปฏิทิน)
 ---------------------------------------- */
-function endOfDay(start: string) {
-  const [date] = start.split("T");
-  return `${date}T23:59:59`;
+/* ----------------------------------------
+   helper: Interface
+---------------------------------------- */
+interface BookingItem {
+  id: string;
+  purpose: string;
+  start_at: string;
+  end_at: string | null;
+  status: string;
+  vehicle_id: string;
+  requester_name: string;
+  vehicles: {
+    color: string;
+    plate_number: string;
+  } | null;
 }
 
 export async function GET() {
@@ -37,7 +49,8 @@ export async function GET() {
           color,
           plate_number
         )
-      `);
+      `)
+      .returns<BookingItem[]>();
 
     if (error) {
       console.error("GET_BOOKINGS_ERROR:", error);
@@ -47,7 +60,7 @@ export async function GET() {
       );
     }
 
-    const events = data.map((item: any) => {
+    const events = data.map((item) => {
       const start = normalizeThaiTime(item.start_at);
 
       const end = item.end_at

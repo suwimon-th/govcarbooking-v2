@@ -14,6 +14,11 @@ interface Vehicle {
   status: string;
 }
 
+interface Driver {
+  id: string;
+  full_name: string;
+}
+
 interface RequestFormProps {
   requesterId: string;
   requesterName: string;
@@ -37,7 +42,7 @@ export default function RequestForm({
   const [purpose, setPurpose] = useState<string>("");
 
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [drivers, setDrivers] = useState<any[]>([]);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loadingVehicles, setLoadingVehicles] = useState<boolean>(false);
 
   const [submitState, setSubmitState] = useState<SubmitState>("idle");

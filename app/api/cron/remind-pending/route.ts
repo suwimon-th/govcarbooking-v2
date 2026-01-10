@@ -6,7 +6,15 @@ import { sendLinePush, flexReminderPendingJob } from "@/lib/line";
  * API สำหรับ Cron Job เรียกตอน 17:00 น.
  * เพื่อแจ้งเตือนคนขับที่มีงานสถานะ ASSIGNED หรือ STARTED ค้างอยู่
  */
-export async function GET(req: Request) {
+interface Booking {
+    driver_id: string;
+    driver?: {
+        line_user_id: string;
+    };
+    [key: string]: unknown;
+}
+
+export async function GET() {
     try {
         // 1) ดึงงานที่มีสถานะ ASSIGNED หรือ STARTED
         // และดูเฉพาะงานที่เริ่มวันนี้หรือในอดีต (ไม่เตือนงานของพรุ่งนี้)
@@ -20,7 +28,8 @@ export async function GET(req: Request) {
       `)
             .in("status", ["ASSIGNED", "STARTED"])
             .lte("start_at", `${today}T23:59:59`)
-            .not("driver_id", "is", null);
+            .not("driver_id", "is", null)
+            .returns<Booking[]>();
 
         if (error) {
             console.error("❌ [CRON] FETCH ERROR:", error);
@@ -32,9 +41,9 @@ export async function GET(req: Request) {
         }
 
         // 2) จัดกลุ่มตามคนขับ
-        const driverJobs: Record<string, { line_user_id: string; bookings: any[] }> = {};
+        const driverJobs: Record<string, { line_user_id: string; bookings: Booking[] }> = {};
 
-        pendingBookings.forEach((b: any) => {
+        pendingBookings.forEach((b) => {
             const driverId = b.driver_id;
             const lineId = b.driver?.line_user_id;
 
