@@ -75,6 +75,7 @@ export async function GET(req: Request) {
       requester_name: booking.requester_name ?? "-",
       department: dept?.name ?? "-",
       purpose: booking.purpose ?? "-",
+      destination: booking.destination ?? "-",
 
       // ⭐ แก้ตรงนี้
       start_at: toThaiString(booking.start_at),

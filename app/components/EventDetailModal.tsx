@@ -20,6 +20,7 @@ export type BookingDetail = {
   department: string;
 
   purpose: string;
+  destination: string;
 
   start_at: string;
   end_at: string | null;
@@ -102,9 +103,15 @@ export default function EventDetailModal({ open, detail, onClose }: Props) {
                   <div className="flex items-center gap-2 text-blue-700 font-bold uppercase text-xs tracking-wider mb-2">
                     <MapPin className="w-4 h-4" /> วัตถุประสงค์ / สถานที่
                   </div>
-                  <div className="text-lg md:text-xl font-bold text-gray-900 leading-relaxed">
+                  <div className="text-lg md:text-xl font-bold text-gray-900 leading-relaxed mb-1">
                     {detail.purpose || "-"}
                   </div>
+                  {detail.destination && (
+                    <div className="flex items-center gap-1.5 text-sm text-gray-600 font-medium bg-white/50 w-fit px-3 py-1 rounded-lg">
+                      <MapPin className="w-3.5 h-3.5 text-rose-500" />
+                      <span>ไปที่: {detail.destination}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 

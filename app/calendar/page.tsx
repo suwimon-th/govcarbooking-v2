@@ -38,6 +38,7 @@ type BookingDetail = {
     request_code: string;
     requester_name: string;
     purpose: string;
+    destination: string;
     start_at: string;
     end_at: string | null;
     driver_name: string;

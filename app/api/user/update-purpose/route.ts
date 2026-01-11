@@ -16,9 +16,9 @@ export async function PUT(req: Request) {
     }
 
     // 📥 รับข้อมูล
-    const { id, purpose } = await req.json();
+    const { id, purpose, destination } = await req.json();
 
-    if (!id || !purpose) {
+    if (!id || (!purpose && !destination)) {
       return NextResponse.json(
         { error: "ข้อมูลไม่ครบถ้วน" },
         { status: 400 }
@@ -48,10 +48,14 @@ export async function PUT(req: Request) {
       );
     }
 
-    // ✏️ อัปเดตวัตถุประสงค์
+    // ✏️ เตรียมข้อมูลอัปเดต
+    const updates: any = {};
+    if (purpose) updates.purpose = purpose;
+    if (destination !== undefined) updates.destination = destination;
+
     const { error: updateErr } = await supabase
       .from("bookings")
-      .update({ purpose })
+      .update(updates)
       .eq("id", id);
 
     if (updateErr) throw updateErr;
@@ -60,7 +64,7 @@ export async function PUT(req: Request) {
   } catch (err) {
     console.error("update-purpose error:", err);
     return NextResponse.json(
-      { error: "แก้ไขวัตถุประสงค์ไม่สำเร็จ" },
+      { error: "แก้ไขข้อมูลไม่สำเร็จ" },
       { status: 500 }
     );
   }

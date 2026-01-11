@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { generateBookingDocument } from "@/lib/documentGenerator";
+import EditPurposeModal from "./EditPurposeModal";
 
 /* =========================
    TYPES
@@ -79,14 +80,12 @@ const vehicleFullDisplay = (v: MyRequest['vehicle']) => {
 /* =========================
    PAGE
 ========================= */
-/* =========================
- PAGE
- ========================= */
 export default function MyRequestsPage() {
   const [items, setItems] = useState<MyRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("ทั้งหมด");
+  const [editingItem, setEditingItem] = useState<MyRequest | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -113,28 +112,11 @@ export default function MyRequestsPage() {
     load();
   }, []);
 
-  const handleEdit = async (item: MyRequest) => {
-    const newPurpose = prompt("แก้ไขวัตถุประสงค์", item.purpose);
-    if (!newPurpose || newPurpose === item.purpose) return;
+  const handleEdit = (item: MyRequest) => {
+    setEditingItem(item);
+  };
 
-    const ok = confirm("ยืนยันการแก้ไขวัตถุประสงค์ ?");
-    if (!ok) return;
-
-    const res = await fetch("/api/user/update-purpose", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({
-        id: item.id,
-        purpose: newPurpose,
-      }),
-    });
-
-    if (!res.ok) {
-      alert("แก้ไขไม่สำเร็จ");
-      return;
-    }
-
+  const handleUpdateSuccess = () => {
     location.reload();
   };
 
@@ -487,6 +469,15 @@ export default function MyRequestsPage() {
           </div>
 
         </div>
+      )}
+
+      {/* MODAL */}
+      {editingItem && (
+        <EditPurposeModal
+          booking={editingItem}
+          onClose={() => setEditingItem(null)}
+          onUpdated={handleUpdateSuccess}
+        />
       )}
     </div>
   );
