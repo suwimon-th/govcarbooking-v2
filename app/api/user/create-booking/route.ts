@@ -224,10 +224,11 @@ export async function POST(req: Request) {
 
     // ✅ 2) ส่ง LINE หาแอดมิน (ถ้ามี ADMIN_LINE_USER_ID)
     const adminLineId = process.env.ADMIN_LINE_USER_ID;
+
     if (adminLineId) {
       // Check for Skip Condition: Advance + OT + Driver Selected
       // 1. isAdvance?
-      const isAdvance = date > today; // string comparison "2026-02-12" > "2026-01-10" works for ISO format
+      const isAdvance = date > today;
 
       // 2. isOT? (Weekend or <08:00 or >=16:00)
       const dObj = new Date(date);
@@ -239,12 +240,21 @@ export async function POST(req: Request) {
       // 3. hasDriver?
       const hasDriver = !!driver_id;
 
-      if (isAdvance && isOT && hasDriver) {
+      // [DEBUG] Log all conditions
+      console.log(`[AdminNotify] Check: isAdvance=${isAdvance}, isOT=${isOT}, hasDriver=${hasDriver}, AdminID=${adminLineId ? 'Set' : 'Null'}`);
+
+      // Condition to SKIP admin notification
+      // คือ ถ้าเป็นการจองล่วงหน้า (Advance) + เป็น OT + เลือกคนขับแล้ว (Driver Selected)
+      // กรณีนี้ คนขับรับรู้แล้ว (ได้ LINE) -> ไม่ต้องกวน Admin ให้กด Assign อีก
+      const shouldSkipAdmin = isAdvance && isOT && hasDriver;
+
+      if (shouldSkipAdmin) {
         console.log("🚫 [NOTIFY] Skipping Admin Notification (Reason: Advance + OT + Driver Selected)");
       } else {
+        // Normal Case: Send to Admin
         notifications.push((async () => {
           try {
-            console.log("📤 [NOTIFY] Sending to Admin:", adminLineId);
+            console.log(`📤 [NOTIFY] Sending to Admin: ${adminLineId}`);
             const adminFlex = flexAdminNotifyNewBooking(data);
             await sendLinePush(adminLineId, [adminFlex]);
           } catch (err) {
@@ -253,7 +263,7 @@ export async function POST(req: Request) {
         })());
       }
     } else {
-      console.log("🔍 [NOTIFY] Skipping Admin: ADMIN_LINE_USER_ID not found in env");
+      console.warn("⚠️ [NOTIFY] Skipping Admin: ADMIN_LINE_USER_ID not found in env");
     }
 
     // Wait for all notifications to complete (but don't fail the whole request if they fail)
