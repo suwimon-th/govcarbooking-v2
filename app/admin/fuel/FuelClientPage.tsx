@@ -131,58 +131,96 @@ export default function FuelClientPage() {
             {loading ? (
                 <div className="text-center py-10 text-gray-500">กำลังโหลด...</div>
             ) : (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                    <table className="w-full text-left border-collapse">
-                        <thead className="bg-gray-50 border-b border-gray-200">
-                            <tr>
-                                <th className="p-4 font-semibold text-gray-600 text-sm">วันที่แจ้ง</th>
-                                <th className="p-4 font-semibold text-gray-600 text-sm">ผู้ขอเบิก</th>
-                                <th className="p-4 font-semibold text-gray-600 text-sm">ทะเบียนรถ</th>
-                                <th className="p-4 font-semibold text-gray-600 text-sm">สถานะ</th>
-                                <th className="p-4 font-semibold text-gray-600 text-sm text-right">จัดการ</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                            {requests.length === 0 ? (
+                <>
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <table className="w-full text-left border-collapse">
+                            <thead className="bg-gray-50 border-b border-gray-200">
                                 <tr>
-                                    <td colSpan={5} className="p-8 text-center text-gray-400">
-                                        ไม่พบข้อมูล
-                                    </td>
+                                    <th className="p-4 font-semibold text-gray-600 text-sm">วันที่แจ้ง</th>
+                                    <th className="p-4 font-semibold text-gray-600 text-sm">ผู้ขอเบิก</th>
+                                    <th className="p-4 font-semibold text-gray-600 text-sm">ทะเบียนรถ</th>
+                                    <th className="p-4 font-semibold text-gray-600 text-sm">สถานะ</th>
+                                    <th className="p-4 font-semibold text-gray-600 text-sm text-right">จัดการ</th>
                                 </tr>
-                            ) : (
-                                requests.map((req) => (
-                                    <tr key={req.id} className="hover:bg-gray-50/50 transition-colors">
-                                        <td className="p-4 text-sm text-gray-600">
-                                            {new Date(req.created_at).toLocaleString("th-TH")}
-                                        </td>
-                                        <td className="p-4 text-sm font-medium text-gray-800">
-                                            {req.driver_name}
-                                        </td>
-                                        <td className="p-4 text-sm text-gray-600">
-                                            <div className="flex items-center gap-2">
-                                                <Car className="w-4 h-4 text-gray-400" />
-                                                {req.plate_number}
-                                            </div>
-                                        </td>
-                                        <td className="p-4 cursor-pointer" onClick={() => handleOpenModal(req.id, req.status)}>
-                                            <div className="hover:scale-105 transition-transform inline-block" title="คลิกเพื่อเปลี่ยนสถานะ">
-                                                {getStatusBadge(req.status)}
-                                            </div>
-                                        </td>
-                                        <td className="p-4 text-right">
-                                            <button
-                                                onClick={() => handleOpenModal(req.id, req.status)}
-                                                className="px-3 py-1.5 bg-blue-50 text-blue-600 text-xs font-medium rounded-lg hover:bg-blue-100 transition-colors border border-blue-200"
-                                            >
-                                                จัดการ
-                                            </button>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {requests.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={5} className="p-8 text-center text-gray-400">
+                                            ไม่พบข้อมูล
                                         </td>
                                     </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                                ) : (
+                                    requests.map((req) => (
+                                        <tr key={req.id} className="hover:bg-gray-50/50 transition-colors">
+                                            <td className="p-4 text-sm text-gray-600">
+                                                {new Date(req.created_at).toLocaleString("th-TH")}
+                                            </td>
+                                            <td className="p-4 text-sm font-medium text-gray-800">
+                                                {req.driver_name}
+                                            </td>
+                                            <td className="p-4 text-sm text-gray-600">
+                                                <div className="flex items-center gap-2">
+                                                    <Car className="w-4 h-4 text-gray-400" />
+                                                    {req.plate_number}
+                                                </div>
+                                            </td>
+                                            <td className="p-4 cursor-pointer" onClick={() => handleOpenModal(req.id, req.status)}>
+                                                <div className="hover:scale-105 transition-transform inline-block" title="คลิกเพื่อเปลี่ยนสถานะ">
+                                                    {getStatusBadge(req.status)}
+                                                </div>
+                                            </td>
+                                            <td className="p-4 text-right">
+                                                <button
+                                                    onClick={() => handleOpenModal(req.id, req.status)}
+                                                    className="px-3 py-1.5 bg-blue-50 text-blue-600 text-xs font-medium rounded-lg hover:bg-blue-100 transition-colors border border-blue-200"
+                                                >
+                                                    จัดการ
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Mobile Card View */}
+                    <div className="md:hidden space-y-4">
+                        {requests.length === 0 ? (
+                            <div className="text-center py-10 text-gray-400 bg-white rounded-xl border border-dashed border-gray-200">
+                                ไม่พบข้อมูล
+                            </div>
+                        ) : (
+                            requests.map((req) => (
+                                <div key={req.id} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col gap-3">
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex flex-col">
+                                            <span className="text-xs text-gray-500">{new Date(req.created_at).toLocaleString("th-TH")}</span>
+                                            <span className="font-bold text-gray-900 mt-1">{req.driver_name}</span>
+                                        </div>
+                                        <div onClick={() => handleOpenModal(req.id, req.status)}>
+                                            {getStatusBadge(req.status)}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 p-2 rounded-lg">
+                                        <Car className="w-4 h-4" />
+                                        <span className="font-medium">{req.plate_number}</span>
+                                    </div>
+
+                                    <button
+                                        onClick={() => handleOpenModal(req.id, req.status)}
+                                        className="w-full py-2 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 active:scale-95 transition-all shadow-sm"
+                                    >
+                                        จัดการสถานะ
+                                    </button>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </>
             )}
 
             <UpdateStatusModal
