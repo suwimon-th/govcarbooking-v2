@@ -131,7 +131,7 @@ export default function FuelClientPage() {
             {loading ? (
                 <div className="text-center py-10 text-gray-500">กำลังโหลด...</div>
             ) : (
-                <>
+                <div className="space-y-6">
                     {/* Desktop Table View */}
                     <div className="hidden md:block bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                         <table className="w-full text-left border-collapse">
@@ -220,7 +220,7 @@ export default function FuelClientPage() {
                             ))
                         )}
                     </div>
-                </>
+                </div>
             )}
 
             <UpdateStatusModal

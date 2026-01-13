@@ -13,6 +13,7 @@ import {
   Car,
   Users,
   FileText,
+  Wrench,
   LogOut,
   Calendar,
   Fuel,
@@ -149,9 +150,12 @@ export default function AdminLayout({
                   <ChevronDown className="w-4 h-4" />
                 </button>
                 {/* Dropdown Content with safe hover area */}
-                <div className="absolute top-full right-0 pt-2 w-48 hidden group-hover:block z-50">
+                <div className="absolute top-full right-0 pt-2 w-64 hidden group-hover:block z-50">
                   <div className="bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                     <div className="p-1">
+                      <Link href="/admin/maintenance" className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 rounded-lg text-gray-700 whitespace-nowrap">
+                        <Wrench className="w-4 h-4 text-amber-500 shrink-0" /> แจ้งปัญหา/ซ่อมบำรุง
+                      </Link>
                       <Link href="/admin/fuel" className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 rounded-lg text-gray-700">
                         <Fuel className="w-4 h-4 text-rose-500" /> เบิกน้ำมัน
                       </Link>
@@ -267,6 +271,9 @@ export default function AdminLayout({
               <div>
                 <p className="px-3 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">ระบบงาน</p>
                 <div className="space-y-1">
+                  <Link href="/admin/maintenance" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 text-gray-600 rounded-lg">
+                    <Wrench className="w-4 h-4" /> แจ้งปัญหา/ซ่อมบำรุง
+                  </Link>
                   <Link href="/admin/fuel" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 text-gray-600 rounded-lg">
                     <Fuel className="w-4 h-4" /> เบิกน้ำมัน
                   </Link>
