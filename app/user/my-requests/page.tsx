@@ -47,6 +47,7 @@ type MyRequest = {
   destination?: string;
   passenger_count?: number;
   passengers?: { type: string; name: string; position: string }[];
+  is_ot?: boolean;
 };
 
 /* =========================
@@ -155,6 +156,7 @@ export default function MyRequestsPage() {
       passenger_count: item.passenger_count,
       requester_position: item.requester?.position || null,
       passengers: item.passengers,
+      is_ot: item.is_ot,
     });
   };
 
@@ -340,7 +342,7 @@ export default function MyRequestsPage() {
                           <Clock className="w-3.5 h-3.5" />
                           <span className="flex items-center gap-1">
                             {formatThaiTime(it.start_at)}
-                            {it.start_at && isOffHours(it.start_at) && <span className="text-amber-600 font-bold ml-1" title="นอกเวลาราชการ">OT</span>}
+                            {it.is_ot && <span className="text-amber-600 font-bold ml-1" title="นอกเวลาราชการ">OT</span>}
                           </span>
                           {it.end_at && (
                             <>
@@ -471,16 +473,19 @@ export default function MyRequestsPage() {
           </div>
 
         </div>
-      )}
+      )
+      }
 
       {/* MODAL */}
-      {editingItem && (
-        <EditPurposeModal
-          booking={editingItem}
-          onClose={() => setEditingItem(null)}
-          onUpdated={handleUpdateSuccess}
-        />
-      )}
-    </div>
+      {
+        editingItem && (
+          <EditPurposeModal
+            booking={editingItem}
+            onClose={() => setEditingItem(null)}
+            onUpdated={handleUpdateSuccess}
+          />
+        )
+      }
+    </div >
   );
 }

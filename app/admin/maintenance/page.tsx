@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AlertTriangle, Car, Calendar, User, Wrench, Search, CheckCircle, AlertCircle } from "lucide-react";
+import { AlertTriangle, Car, Calendar, User, Wrench, Search, CheckCircle, AlertCircle, Trash2 } from "lucide-react";
 import UpdateIssueModal from "./UpdateIssueModal";
 
 interface VehicleIssue {
@@ -58,6 +58,23 @@ export default function MaintenancePage() {
                 fetchIssues(); // Reload
             } else {
                 alert("บันทึกไม่สำเร็จ");
+            }
+        } catch (err) {
+            alert("เกิดข้อผิดพลาด");
+        }
+    };
+
+    const handleDelete = async (id: string) => {
+        if (!confirm("คุณแน่ใจหรือไม่ว่าต้องการลบรายการนี้?")) return;
+
+        try {
+            const res = await fetch(`/api/admin/issues?id=${id}`, {
+                method: "DELETE",
+            });
+            if (res.ok) {
+                fetchIssues(); // Reload
+            } else {
+                alert("ลบไม่สำเร็จ");
             }
         } catch (err) {
             alert("เกิดข้อผิดพลาด");
@@ -155,15 +172,24 @@ export default function MaintenancePage() {
                                     </div>
                                 )}
 
-                                <button
-                                    onClick={() => {
-                                        setSelectedIssue(issue);
-                                        setIsModalOpen(true);
-                                    }}
-                                    className="w-full mt-auto bg-white border border-gray-300 text-gray-700 font-bold py-2 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all text-sm"
-                                >
-                                    จัดการ / อัปเดตสถานะ
-                                </button>
+                                <div className="mt-auto flex gap-2">
+                                    <button
+                                        onClick={() => {
+                                            setSelectedIssue(issue);
+                                            setIsModalOpen(true);
+                                        }}
+                                        className="flex-1 bg-white border border-gray-300 text-gray-700 font-bold py-2 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all text-sm"
+                                    >
+                                        จัดการ / อัปเดตสถานะ
+                                    </button>
+                                    <button
+                                        onClick={() => handleDelete(issue.id)}
+                                        className="ml-2 bg-red-50 border border-red-200 text-red-600 p-2 rounded-lg hover:bg-red-100 transition-all"
+                                        title="ลบรายการ"
+                                    >
+                                        <Trash2 className="w-5 h-5" />
+                                    </button>
+                                </div>
                             </div>
                         ))
                     )}

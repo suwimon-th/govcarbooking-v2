@@ -243,6 +243,27 @@ export default function EditBookingModal({
                 />
               </div>
 
+              {/* Passengers List (Read-only display) */}
+              <div className="md:col-span-2 space-y-1.5">
+                <label className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5 text-gray-400" /> รายชื่อผู้โดยสาร
+                </label>
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm text-gray-600 max-h-[150px] overflow-y-auto">
+                  {booking.passengers && booking.passengers.length > 0 ? (
+                    <ul className="list-disc list-inside space-y-1">
+                      {booking.passengers.map((p, idx) => (
+                        <li key={idx} className="truncate">
+                          <span className="font-medium text-gray-800">{p.name}</span>
+                          {p.position && <span className="text-gray-500"> - {p.position}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-gray-400 italic">ไม่มีข้อมูลผู้โดยสารระบุไว้</p>
+                  )}
+                </div>
+              </div>
+
               {/* Destination (Full Width) */}
               <div className="space-y-1.5 md:col-span-2">
                 <label className="text-sm font-medium text-gray-700 flex items-center gap-1.5">

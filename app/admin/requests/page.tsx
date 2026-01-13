@@ -189,6 +189,7 @@ function AdminRequestsContent() {
       passenger_count: booking.passenger_count || 1,
       requester_position: booking.requester?.position || null,
       passengers: booking.passengers || undefined,
+      is_ot: booking.is_ot,
     });
   };
 
@@ -605,13 +606,7 @@ function AdminRequestsContent() {
                             >
                               <FileDoc className="w-4 h-4" />
                             </button>
-                            <button
-                              onClick={() => handlePrintPDF(b.id)}
-                              className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors tooltip tooltip-top"
-                              title="พิมพ์ PDF"
-                            >
-                              <FileDown className="w-4 h-4" />
-                            </button>
+
                             <button
                               onClick={() => setEditItem(b)}
                               className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors tooltip tooltip-top"

@@ -471,6 +471,7 @@ export default function PublicCalendarPage() {
                             center: 'title',
                             right: ''
                         }}
+                        nextDayThreshold="09:00:00"
 
                         events={events}
                         eventDisplay="block"

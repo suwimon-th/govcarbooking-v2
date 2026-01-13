@@ -1,4 +1,4 @@
-import { Document, Packer, Paragraph, TextRun, AlignmentType, HeadingLevel, patchDocument, PatchType, LineRuleType, Table, TableRow, TableCell, WidthType, BorderStyle, TabStopType, LeaderType } from "docx";
+import { Document, Packer, Paragraph, TextRun, AlignmentType, HeadingLevel, patchDocument, PatchType, LineRuleType, Table, TableRow, TableCell, WidthType, BorderStyle, TabStopType, LeaderType, UnderlineType } from "docx";
 import { saveAs } from "file-saver";
 
 interface BookingData {
@@ -15,6 +15,7 @@ interface BookingData {
     destination?: string;
     requester_position?: string | null;
     passengers?: { type: string; name: string; position: string }[];
+    is_ot?: boolean;
 }
 
 // ==========================================
@@ -54,7 +55,7 @@ const formatTimeThai = (dateStr: string) => {
 
 export const generateBookingDocument = async (booking: BookingData) => {
     try {
-        console.log("Starting document generation (Code Mode)...");
+        console.log("Starting document generation (Code Mode v2-FIXED)...");
         await generateFromCode(booking);
         // Template generation code commented out due to previous issues
     } catch (error) {
@@ -113,8 +114,8 @@ const generateFromCode = async (booking: BookingData) => {
                 properties: {
                     page: {
                         margin: {
-                            top: 1134, // ~2cm
-                            bottom: 1134,
+                            top: 850, // Reduced from 1134 (~1.5cm)
+                            bottom: 850,
                             left: 1134,
                             right: 1134,
                         },
@@ -170,6 +171,16 @@ const generateFromCode = async (booking: BookingData) => {
                                                 ],
                                             }),
                                             // Box End
+
+                                            // OT Label (Moved below box)
+                                            ...(booking.is_ot ? [
+                                                new Paragraph({
+                                                    alignment: AlignmentType.RIGHT,
+                                                    children: [new TextRun({ text: "นอกเวลาราชการ", ...boldStyle })],
+                                                    spacing: { before: 50 },
+                                                })
+                                            ] : []),
+
                                             new Paragraph({
                                                 alignment: AlignmentType.RIGHT,
                                                 children: [new TextRun({ text: "แบบ ๓", ...fontStyle })],
@@ -186,7 +197,7 @@ const generateFromCode = async (booking: BookingData) => {
                     new Paragraph({
                         heading: HeadingLevel.HEADING_1,
                         alignment: AlignmentType.CENTER,
-                        spacing: { before: 200, after: 100 },
+                        spacing: { before: 100, after: 50 },
                         children: [
                             new TextRun({
                                 text: "ใบขออนุญาตใช้รถยนต์ส่วนกลาง",
@@ -206,7 +217,7 @@ const generateFromCode = async (booking: BookingData) => {
                             new TextRun({ text: "พ.ศ.", ...fontStyle }),
                             new TextRun({ text: `.....${reqYear}.....`, ...fontStyle }),
                         ],
-                        spacing: { after: 400 },
+                        spacing: { after: 200 },
                         indent: { right: 720 }
                     }),
 
@@ -216,23 +227,23 @@ const generateFromCode = async (booking: BookingData) => {
                         children: [
                             new TextRun({ text: "เรียน   ผู้อำนวยการเขตจอมทอง", ...fontStyle }),
                         ],
-                        spacing: { after: 200 },
+                        spacing: { after: 100 },
                     }),
 
                     // 5. Body: Requester
                     new Paragraph({
-                        indent: { firstLine: 1440 }, // Indent start
+                        indent: { left: 720 }, // Left aligned, no special first line indent
                         tabStops: [
-                            { type: TabStopType.LEFT, position: 6000, leader: LeaderType.DOT },
-                            { type: TabStopType.RIGHT, position: 9500, leader: LeaderType.DOT }
+                            { type: TabStopType.LEFT, position: 6000 }, // Align with "Time" column
+                            { type: TabStopType.RIGHT, position: 9638 }
                         ],
                         children: [
                             new TextRun({ text: "ข้าพเจ้า ", ...fontStyle }),
-                            new TextRun({ text: `...${booking.requester_name}...`, ...fontStyle }),
-                            new TextRun({ children: ["\t"], ...fontStyle }),
+                            new TextRun({ text: `  ${booking.requester_name}  `, ...fontStyle, underline: { type: UnderlineType.DOTTED, color: "000000" } }),
+                            new TextRun({ children: ["\t"], ...fontStyle, underline: { type: UnderlineType.DOTTED, color: "000000" } }),
                             new TextRun({ text: " ตำแหน่ง ", ...fontStyle }),
-                            new TextRun({ text: `...${booking.requester_position || "-"}...`, ...fontStyle }),
-                            new TextRun({ children: ["\t"], ...fontStyle }),
+                            new TextRun({ text: `  ${booking.requester_position || "-"}  `, ...fontStyle, underline: { type: UnderlineType.DOTTED, color: "000000" } }),
+                            new TextRun({ children: ["\t"], ...fontStyle, underline: { type: UnderlineType.DOTTED, color: "000000" } }),
                         ],
                         spacing: { after: 100 },
                     }),
@@ -241,12 +252,12 @@ const generateFromCode = async (booking: BookingData) => {
                     new Paragraph({
                         indent: { left: 720 },
                         tabStops: [
-                            { type: TabStopType.RIGHT, position: 9500, leader: LeaderType.DOT }
+                            { type: TabStopType.RIGHT, position: 9638 }
                         ],
                         children: [
                             new TextRun({ text: "ขออนุญาตใช้รถ (ไปที่ไหน) ", ...fontStyle }),
-                            new TextRun({ text: `........................${booking.destination || "-"}........................`, ...fontStyle }),
-                            new TextRun({ children: ["\t"], ...fontStyle }),
+                            new TextRun({ text: `  ${booking.destination || "-"}  `, ...fontStyle, underline: { type: UnderlineType.DOTTED, color: "000000" } }),
+                            new TextRun({ children: ["\t"], ...fontStyle, underline: { type: UnderlineType.DOTTED, color: "000000" } }),
                         ],
                         spacing: { after: 100 },
                     }),
@@ -255,15 +266,22 @@ const generateFromCode = async (booking: BookingData) => {
                     new Paragraph({
                         indent: { left: 720 },
                         tabStops: [
-                            { type: TabStopType.RIGHT, position: 9500, leader: LeaderType.DOT }
+                            { type: TabStopType.RIGHT, position: 9638 }
                         ],
                         children: [
                             new TextRun({ text: "เพื่อ ", ...fontStyle }),
                             new TextRun({
-                                text: `........................${booking.purpose} ${booking.passenger_count && booking.passenger_count > 0 ? `(จำนวนผู้โดยสาร ${toThaiNum(booking.passenger_count)} คน)` : ""}........................`,
-                                ...fontStyle
+                                text: `  ${booking.purpose}  `,
+                                ...fontStyle,
+                                underline: { type: UnderlineType.DOTTED, color: "000000" }
                             }),
-                            new TextRun({ children: ["\t"], ...fontStyle }),
+                            new TextRun({ children: ["\t"], ...fontStyle, underline: { type: UnderlineType.DOTTED, color: "000000" } }),
+                            ...(booking.passenger_count && booking.passenger_count > 0 ? [
+                                new TextRun({
+                                    text: `(มีคนนั่ง ${toThaiNum(booking.passenger_count)} คน)`,
+                                    ...fontStyle
+                                })
+                            ] : [])
                         ],
                         spacing: { after: 100 },
                     }),
@@ -271,13 +289,17 @@ const generateFromCode = async (booking: BookingData) => {
                     // 8. Body: Start Date
                     new Paragraph({
                         indent: { left: 720 },
-                        tabStops: [{ type: TabStopType.LEFT, position: 6000, leader: LeaderType.DOT }],
+                        tabStops: [
+                            { type: TabStopType.LEFT, position: 6000 },
+                            { type: TabStopType.RIGHT, position: 9300 } // RIGHT align to extend dots to end
+                        ],
                         children: [
                             new TextRun({ text: "ในวันที่ ", ...fontStyle }),
-                            new TextRun({ text: `.....${formatDateThai(booking.start_at)}.....`, ...fontStyle }),
-                            new TextRun({ children: ["\t"], ...fontStyle }),
+                            new TextRun({ text: `  ${formatDateThai(booking.start_at)}  `, ...fontStyle, underline: { type: UnderlineType.DOTTED, color: "000000" } }),
+                            new TextRun({ children: ["\t"], ...fontStyle, underline: { type: UnderlineType.DOTTED, color: "000000" } }),
                             new TextRun({ text: " เวลา ", ...fontStyle }),
-                            new TextRun({ text: `.....${formatTimeThai(booking.start_at)}.....`, ...fontStyle }),
+                            new TextRun({ text: `  ${formatTimeThai(booking.start_at)}  `, ...fontStyle, underline: { type: UnderlineType.DOTTED, color: "000000" } }),
+                            new TextRun({ children: ["\t"], ...fontStyle, underline: { type: UnderlineType.DOTTED, color: "000000" } }),
                             new TextRun({ text: " น.", ...fontStyle }),
                         ],
                     }),
@@ -285,82 +307,87 @@ const generateFromCode = async (booking: BookingData) => {
                     // 9. Body: End Date
                     new Paragraph({
                         indent: { left: 720 },
-                        tabStops: [{ type: TabStopType.LEFT, position: 6000, leader: LeaderType.DOT }],
+                        tabStops: [
+                            { type: TabStopType.LEFT, position: 6000 },
+                            { type: TabStopType.RIGHT, position: 9300 } // RIGHT align to extend dots to end
+                        ],
                         children: [
                             new TextRun({ text: "ถึงวันที่ ", ...fontStyle }),
-                            new TextRun({ text: `.....${booking.end_at ? formatDateThai(booking.end_at) : formatDateThai(booking.start_at)}.....`, ...fontStyle }),
-                            new TextRun({ children: ["\t"], ...fontStyle }),
+                            new TextRun({ text: `  ${booking.end_at ? formatDateThai(booking.end_at) : formatDateThai(booking.start_at)}  `, ...fontStyle, underline: { type: UnderlineType.DOTTED, color: "000000" } }),
+                            new TextRun({ children: ["\t"], ...fontStyle, underline: { type: UnderlineType.DOTTED, color: "000000" } }),
                             new TextRun({ text: " เวลา ", ...fontStyle }),
-                            new TextRun({ text: `.....${booking.end_at ? formatTimeThai(booking.end_at) : "........."}.....`, ...fontStyle }),
+                            new TextRun({ text: `  ${booking.end_at ? formatTimeThai(booking.end_at) : "-"}  `, ...fontStyle, underline: { type: UnderlineType.DOTTED, color: "000000" } }),
+                            new TextRun({ children: ["\t"], ...fontStyle, underline: { type: UnderlineType.DOTTED, color: "000000" } }),
                             new TextRun({ text: " น.", ...fontStyle }),
                         ],
                         spacing: { after: 200 },
                     }),
 
-                    // 10. Staff List (Dynamic)
-                    new Paragraph({
-                        indent: { left: 720 },
-                        children: [
-                            new TextRun({ text: "เจ้าหน้าที่ประกอบด้วย", ...fontStyle }),
-                        ],
-                    }),
-                    ...(booking.passengers && booking.passengers.length > 0
-                        ? booking.passengers.map((p, index) =>
-                            new Paragraph({
-                                indent: { left: 1440 },
-                                tabStops: [
-                                    { type: TabStopType.LEFT, position: 6000, leader: LeaderType.DOT },
-                                    { type: TabStopType.RIGHT, position: 9500, leader: LeaderType.DOT }
-                                ],
-                                children: [
-                                    new TextRun({
-                                        text: `${toThaiNum(index + 1)}. ${p.name || "................................................................."}`,
-                                        ...fontStyle
-                                    }),
-                                    new TextRun({
-                                        children: ["\t"],
-                                        ...fontStyle
-                                    }),
-                                    new TextRun({
-                                        text: `ตำแหน่ง ${p.position || ".............................................................."}`,
-                                        ...fontStyle
-                                    }),
-                                    new TextRun({
-                                        children: ["\t"],
-                                        ...fontStyle
-                                    }),
-                                ],
-                            })
+                    // 10. Staff List (Dynamic - Conditional)
+                    ...(booking.passenger_count && booking.passenger_count > 0 ? [
+                        new Paragraph({
+                            indent: { left: 720 },
+                            children: [
+                                new TextRun({ text: "เจ้าหน้าที่ประกอบด้วย", ...fontStyle }),
+                            ],
+                        }),
+                        ...(booking.passengers && booking.passengers.length > 0
+                            ? booking.passengers.map((p, index) =>
+                                new Paragraph({
+                                    indent: { left: 1440 },
+                                    tabStops: [
+                                        { type: TabStopType.LEFT, position: 5000 },
+                                        { type: TabStopType.RIGHT, position: 9638 }
+                                    ],
+                                    children: [
+                                        new TextRun({
+                                            text: `${toThaiNum(index + 1)}. `,
+                                            ...fontStyle
+                                        }),
+                                        new TextRun({
+                                            text: `  ${p.name || "-"}  `,
+                                            ...fontStyle,
+                                            underline: { type: UnderlineType.DOTTED, color: "000000" }
+                                        }),
+                                        new TextRun({
+                                            children: ["\t"],
+                                            ...fontStyle,
+                                            underline: { type: UnderlineType.DOTTED, color: "000000" }
+                                        }),
+                                        new TextRun({
+                                            text: "ตำแหน่ง ",
+                                            ...fontStyle
+                                        }),
+                                        new TextRun({
+                                            text: `  ${p.position || "-"}  `,
+                                            ...fontStyle,
+                                            underline: { type: UnderlineType.DOTTED, color: "000000" }
+                                        }),
+                                        new TextRun({
+                                            children: ["\t"],
+                                            ...fontStyle,
+                                            underline: { type: UnderlineType.DOTTED, color: "000000" }
+                                        }),
+                                    ],
+                                })
+                            )
+                            : Array.from({ length: booking.passenger_count }).map((_, i) =>
+                                new Paragraph({
+                                    indent: { left: 1440 },
+                                    tabStops: [
+                                        { type: TabStopType.LEFT, position: 5000 },
+                                        { type: TabStopType.RIGHT, position: 9638 }
+                                    ],
+                                    children: [
+                                        new TextRun({ text: `${toThaiNum(i + 1)}. `, ...fontStyle }),
+                                        new TextRun({ children: ["\t"], ...fontStyle, underline: { type: UnderlineType.DOTTED, color: "000000" } }),
+                                        new TextRun({ text: "ตำแหน่ง ", ...fontStyle }),
+                                        new TextRun({ children: ["\t"], ...fontStyle, underline: { type: UnderlineType.DOTTED, color: "000000" } }),
+                                    ],
+                                })
+                            )
                         )
-                        : [
-                            new Paragraph({
-                                indent: { left: 1440 },
-                                tabStops: [
-                                    { type: TabStopType.LEFT, position: 6000, leader: LeaderType.DOT },
-                                    { type: TabStopType.RIGHT, position: 9500, leader: LeaderType.DOT }
-                                ],
-                                children: [
-                                    new TextRun({ text: "๑. .................................................................", ...fontStyle }),
-                                    new TextRun({ children: ["\t"], ...fontStyle }),
-                                    new TextRun({ text: "ตำแหน่ง ..............................................................", ...fontStyle }),
-                                    new TextRun({ children: ["\t"], ...fontStyle }),
-                                ],
-                            }),
-                            new Paragraph({
-                                indent: { left: 1440 },
-                                tabStops: [
-                                    { type: TabStopType.LEFT, position: 6000, leader: LeaderType.DOT },
-                                    { type: TabStopType.RIGHT, position: 9500, leader: LeaderType.DOT }
-                                ],
-                                children: [
-                                    new TextRun({ text: "๒. .................................................................", ...fontStyle }),
-                                    new TextRun({ children: ["\t"], ...fontStyle }),
-                                    new TextRun({ text: "ตำแหน่ง ..............................................................", ...fontStyle }),
-                                    new TextRun({ children: ["\t"], ...fontStyle }),
-                                ],
-                            })
-                        ]
-                    ),
+                    ] : []),
                     new Paragraph({ // Spacer
                         children: [],
                         spacing: { after: 400 },
@@ -372,7 +399,7 @@ const generateFromCode = async (booking: BookingData) => {
                         children: [
                             new TextRun({ text: "....................................................... ผู้ขออนุญาต", ...fontStyle }),
                         ],
-                        spacing: { before: 200 }
+                        spacing: { before: 50 }
                     }),
                     new Paragraph({
                         alignment: AlignmentType.RIGHT,
@@ -393,66 +420,247 @@ const generateFromCode = async (booking: BookingData) => {
                         children: [
                             new TextRun({ text: "ฝ่ายสิ่งแวดล้อมและสุขาภิบาล สำนักงานเขตจอมทอง", ...fontStyle }),
                         ],
-                        spacing: { after: 600 }
+                        spacing: { after: 300 }
                     }),
 
-                    // 12. Approval Text (Middle)
-                    new Paragraph({
-                        indent: { left: 720 },
-                        children: [
-                            new TextRun({ text: "อนุมัติให้ใช้รถยนต์หมายเลขทะเบียน ", ...fontStyle }),
-                            new TextRun({ text: `...${plateThai}...`, ...fontStyle }),
-                            new TextRun({ text: " กรุงเทพมหานคร", ...fontStyle }),
-                        ],
-                        spacing: { before: 200 }
-                    }),
-                    new Paragraph({
-                        indent: { left: 720 },
-                        children: [
-                            new TextRun({ text: "โดยให้ ", ...fontStyle }),
-                            new TextRun({ text: `........................${driverName}........................`, ...fontStyle }),
-                            new TextRun({ text: " เป็นพนักงานขับรถยนต์", ...fontStyle }),
-                        ],
-                        spacing: { after: 600 }
-                    }),
+                    // APPROVAL LOGIC : OT vs Standard
+                    ...(booking.is_ot ? [
+                        // OT LAYOUT
+                        // Mrs. Orasa (Middle) - Table for perfect centering
+                        new Table({
+                            alignment: AlignmentType.RIGHT,
+                            width: { size: 0, type: WidthType.AUTO },
+                            borders: {
+                                top: { style: BorderStyle.NONE },
+                                bottom: { style: BorderStyle.NONE },
+                                left: { style: BorderStyle.NONE },
+                                right: { style: BorderStyle.NONE },
+                                insideHorizontal: { style: BorderStyle.NONE },
+                                insideVertical: { style: BorderStyle.NONE },
+                            },
+                            rows: [
+                                new TableRow({
+                                    children: [
+                                        new TableCell({
+                                            children: [
+                                                new Paragraph({
+                                                    alignment: AlignmentType.CENTER,
+                                                    children: [
+                                                        new TextRun({ text: ".......................................................", ...fontStyle }),
+                                                    ],
+                                                    spacing: { before: 200 }
+                                                }),
+                                                new Paragraph({
+                                                    alignment: AlignmentType.CENTER,
+                                                    children: [
+                                                        new TextRun({ text: "( นางอรสา ชื่นม่วง )", ...fontStyle }),
+                                                    ]
+                                                }),
+                                                new Paragraph({
+                                                    alignment: AlignmentType.CENTER,
+                                                    children: [
+                                                        new TextRun({ text: "นักวิชาการสุขาภิบาลชำนาญการพิเศษ", ...fontStyle }),
+                                                    ]
+                                                }),
+                                                new Paragraph({
+                                                    alignment: AlignmentType.CENTER,
+                                                    children: [
+                                                        new TextRun({ text: "หัวหน้าฝ่ายสิ่งแวดล้อมและสุขาภิบาล สำนักงานเขตจอมทอง", ...fontStyle }),
+                                                    ],
+                                                    spacing: { after: 200 }
+                                                }),
+                                                new Paragraph({
+                                                    alignment: AlignmentType.CENTER,
+                                                    children: [
+                                                        new TextRun({ text: "..........................................", ...fontStyle }),
+                                                    ],
+                                                    spacing: { after: 600 }
+                                                }),
+                                            ],
+                                        }),
+                                    ],
+                                }),
+                            ],
+                        }),
 
-                    // 13. Approver Signature (Bottom Right specific)
-                    new Paragraph({
-                        alignment: AlignmentType.RIGHT,
-                        children: [
-                            new TextRun({ text: "( ....................................................... )", ...fontStyle }),
-                        ],
-                        indent: { right: 1440 }
-                    }),
-                    new Paragraph({
-                        alignment: AlignmentType.RIGHT,
-                        children: [
-                            new TextRun({ text: "( นางอรสา ชื่นม่วง )", ...fontStyle }),
-                        ],
-                        indent: { right: 1600 }
-                    }),
-                    new Paragraph({
-                        alignment: AlignmentType.RIGHT,
-                        children: [
-                            new TextRun({ text: "นักวิชาการสุขาภิบาลชำนาญการพิเศษ", ...fontStyle }),
-                        ],
-                        indent: { right: 1100 }
-                    }),
-                    new Paragraph({
-                        alignment: AlignmentType.RIGHT,
-                        children: [
-                            new TextRun({ text: "หัวหน้าฝ่ายสิ่งแวดล้อมและสุขาภิบาล", ...fontStyle }),
-                        ],
-                        indent: { right: 1200 }
-                    }),
-                    new Paragraph({
-                        alignment: AlignmentType.RIGHT,
-                        children: [
-                            new TextRun({ text: "สำนักงานเขตจอมทอง", ...fontStyle }),
-                        ],
-                        indent: { right: 1600 },
-                        spacing: { after: 800 }
-                    }),
+
+
+                        // Approval Text
+                        new Paragraph({
+                            indent: { left: 720 },
+                            children: [
+                                new TextRun({ text: "อนุมัติให้ใช้รถยนต์หมายเลขทะเบียน ", ...fontStyle }),
+                                new TextRun({ text: `...${plateThai}...`, ...fontStyle }),
+                                new TextRun({ text: " กรุงเทพมหานคร", ...fontStyle }),
+                            ],
+                        }),
+                        new Paragraph({
+                            indent: { left: 720 },
+                            children: [
+                                new TextRun({ text: "โดยให้ ", ...fontStyle }),
+                                new TextRun({ text: `........................${driverName}........................`, ...fontStyle }),
+                                new TextRun({ text: " เป็นพนักงานขับรถยนต์", ...fontStyle }),
+                            ],
+                            spacing: { after: 200 }
+                        }),
+
+                        // Director (Bottom Right) - Updated Layout from Image 2
+                        new Table({
+                            alignment: AlignmentType.RIGHT,
+                            width: { size: 0, type: WidthType.AUTO },
+                            borders: {
+                                top: { style: BorderStyle.NONE },
+                                bottom: { style: BorderStyle.NONE },
+                                left: { style: BorderStyle.NONE },
+                                right: { style: BorderStyle.NONE },
+                                insideHorizontal: { style: BorderStyle.NONE },
+                                insideVertical: { style: BorderStyle.NONE },
+                            },
+                            rows: [
+                                new TableRow({
+                                    children: [
+                                        new TableCell({
+                                            // "(ลงนามผู้มีอำนาจสั่งใช้รถ)"
+                                            children: [
+                                                new Paragraph({
+                                                    alignment: AlignmentType.LEFT,
+                                                    children: [
+                                                        new TextRun({ text: "(ลงนามผู้มีอำนาจสั่งใช้รถ)", ...fontStyle }),
+                                                    ],
+                                                }),
+                                            ],
+                                            verticalAlign: "center",
+                                        }),
+                                        new TableCell({
+                                            // Signature Line
+                                            children: [
+                                                new Paragraph({
+                                                    alignment: AlignmentType.CENTER,
+                                                    children: [
+                                                        new TextRun({ text: ".......................................................", ...fontStyle }),
+                                                    ],
+                                                }),
+                                            ],
+                                            verticalAlign: "bottom", // Align line with text
+                                        }),
+                                        new TableCell({
+                                            // "ผู้อำนวยการ"
+                                            children: [
+                                                new Paragraph({
+                                                    alignment: AlignmentType.LEFT,
+                                                    children: [
+                                                        new TextRun({ text: "ผู้อำนวยการ", ...fontStyle }),
+                                                    ],
+                                                }),
+                                            ],
+                                            verticalAlign: "center",
+                                        }),
+                                    ],
+                                }),
+                                new TableRow({
+                                    children: [
+                                        new TableCell({ children: [] }), // Empty
+                                        new TableCell({ children: [] }), // Empty
+                                        new TableCell({
+                                            children: [
+                                                new Paragraph({
+                                                    alignment: AlignmentType.CENTER, // Center under "ผู้อำนวยการ"? Or just left aligned in this cell?
+                                                    children: [
+                                                        new TextRun({ text: "หรือผู้แทน", ...fontStyle }), // Based on image, it looks centered under the "Director" text roughly
+                                                    ],
+                                                }),
+                                            ],
+                                        }),
+                                    ],
+                                }),
+                            ],
+                        }),
+                        new Paragraph({ // Spacer - Enter 1 time
+                            children: [],
+                            spacing: { after: 100 }
+                        }),
+
+
+
+                    ] : [
+                        // STANDARD LAYOUT
+                        new Paragraph({
+                            indent: { left: 720 },
+                            children: [
+                                new TextRun({ text: "อนุมัติให้ใช้รถยนต์หมายเลขทะเบียน ", ...fontStyle }),
+                                new TextRun({ text: `...${plateThai}...`, ...fontStyle }),
+                                new TextRun({ text: " กรุงเทพมหานคร", ...fontStyle }),
+                            ],
+                            spacing: { before: 200 }
+                        }),
+                        new Paragraph({
+                            indent: { left: 720 },
+                            children: [
+                                new TextRun({ text: "โดยให้ ", ...fontStyle }),
+                                new TextRun({ text: `........................${driverName}........................`, ...fontStyle }),
+                                new TextRun({ text: " เป็นพนักงานขับรถยนต์", ...fontStyle }),
+                            ],
+                            spacing: { after: 200 }
+                        }),
+
+                        // Approver Signature (Bottom Right - Table for Centering)
+                        new Table({
+                            alignment: AlignmentType.RIGHT,
+                            width: { size: 0, type: WidthType.AUTO },
+                            borders: {
+                                top: { style: BorderStyle.NONE },
+                                bottom: { style: BorderStyle.NONE },
+                                left: { style: BorderStyle.NONE },
+                                right: { style: BorderStyle.NONE },
+                                insideHorizontal: { style: BorderStyle.NONE },
+                                insideVertical: { style: BorderStyle.NONE },
+                            },
+                            rows: [
+                                new TableRow({
+                                    children: [
+                                        new TableCell({
+                                            children: [
+                                                new Paragraph({
+                                                    alignment: AlignmentType.CENTER,
+                                                    children: [
+                                                        new TextRun({ text: "( ....................................................... )", ...fontStyle }),
+                                                    ],
+                                                }),
+                                                new Paragraph({
+                                                    alignment: AlignmentType.CENTER,
+                                                    children: [
+                                                        new TextRun({ text: "( นางอรสา ชื่นม่วง )", ...fontStyle }),
+                                                    ],
+                                                }),
+                                                new Paragraph({
+                                                    alignment: AlignmentType.CENTER,
+                                                    children: [
+                                                        new TextRun({ text: "นักวิชาการสุขาภิบาลชำนาญการพิเศษ", ...fontStyle }),
+                                                    ],
+                                                }),
+                                                new Paragraph({
+                                                    alignment: AlignmentType.CENTER,
+                                                    children: [
+                                                        new TextRun({ text: "หัวหน้าฝ่ายสิ่งแวดล้อมและสุขาภิบาล", ...fontStyle }),
+                                                    ],
+                                                }),
+                                                new Paragraph({
+                                                    alignment: AlignmentType.CENTER,
+                                                    children: [
+                                                        new TextRun({ text: "สำนักงานเขตจอมทอง", ...fontStyle }),
+                                                    ],
+                                                }),
+                                            ],
+                                            margins: { right: 400 }, // Padding from right edge
+                                        }),
+                                    ],
+                                }),
+                            ],
+                        }),
+                        new Paragraph({ // Spacer
+                            spacing: { after: 100 }
+                        })
+                    ]),
 
                     // 14. Footer Mileage
                     new Paragraph({

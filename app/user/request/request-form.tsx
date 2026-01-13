@@ -295,6 +295,7 @@ export default function RequestForm({
       destination: createdBooking.destination || "",
       requester_position: createdBooking.requester_position || position || "",
       passengers: createdBooking.passengers || [],
+      is_ot: createdBooking.is_ot,
     });
   };
 
