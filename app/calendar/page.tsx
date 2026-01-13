@@ -62,7 +62,11 @@ type BookingDetail = {
 function normalizeDate(date: Date | string) {
     if (!date) return "";
     const d = new Date(date);
-    return d.toISOString().split('T')[0];
+    // Use local time components to construct YYYY-MM-DD
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 
 function formatTime(dateStr: string) {
@@ -73,6 +77,10 @@ function formatTime(dateStr: string) {
 
 function toThaiHeading(dateStr: string) {
     if (!dateStr) return "";
+    // Handle YYYY-MM-DD string parsing safely for local time
+    // new Date("YYYY-MM-DD") is UTC, but we just want to extract parts if it's already a date string
+    // But since it comes from normalizeDate (Local YYYY-MM-DD), treating it as UTC for formatting is tricky if we use getDay/Month on it.
+    // However, 00:00 UTC is 07:00 Thai, so date remains same. It's safe.
     const d = new Date(dateStr);
     const months = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
     return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear() + 543}`;
@@ -86,7 +94,16 @@ export default function PublicCalendarPage() {
     const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [modalOpen, setModalOpen] = useState(false);
     const [selected, setSelected] = useState<BookingDetail | null>(null);
-    const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+
+    // Initialize with LOCAL date string
+    const [selectedDate, setSelectedDate] = useState<string>(() => {
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    });
+
     const [isMobile, setIsMobile] = useState(false);
 
     const [vehicles, setVehicles] = useState<{ id: string, plate_number: string, color: string | null }[]>([]);
@@ -99,13 +116,15 @@ export default function PublicCalendarPage() {
 
     // Close help menu when clicking outside
     useEffect(() => {
-        function handleClickOutside(event: MouseEvent) {
+        const handleClickOutside = (event: MouseEvent) => {
             if (helpMenuRef.current && !helpMenuRef.current.contains(event.target as Node)) {
                 setHelpMenuOpen(false);
             }
-        }
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
     }, []);
 
     // Table View State
@@ -225,7 +244,13 @@ export default function PublicCalendarPage() {
                         ปฏิทินการใช้รถ
                     </h1>
                     <div className="flex gap-4 text-sm font-medium opacity-90 items-center">
-                        <button onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])}>
+                        <button onClick={() => {
+                            const d = new Date();
+                            const year = d.getFullYear();
+                            const month = String(d.getMonth() + 1).padStart(2, '0');
+                            const day = String(d.getDate()).padStart(2, '0');
+                            setSelectedDate(`${year}-${month}-${day}`);
+                        }}>
                             วันนี้
                         </button>
 
@@ -471,7 +496,7 @@ export default function PublicCalendarPage() {
                             center: 'title',
                             right: ''
                         }}
-                        nextDayThreshold="09:00:00"
+                        // nextDayThreshold removed to default to 00:00:00
 
                         events={events}
                         eventDisplay="block"

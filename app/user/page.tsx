@@ -67,7 +67,11 @@ const DEFAULT_COLOR = "#9CA3AF";
 function normalizeDate(date: Date | string) {
     if (!date) return "";
     const d = new Date(date);
-    return d.toISOString().split('T')[0];
+    // Use local time components to construct YYYY-MM-DD
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 
 function formatTime(dateStr: string) {
@@ -92,7 +96,16 @@ export default function UserPage() {
     const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [modalOpen, setModalOpen] = useState(false);
     const [selected, setSelected] = useState<BookingDetail | null>(null);
-    const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+
+    // Initialize with LOCAL date string
+    const [selectedDate, setSelectedDate] = useState<string>(() => {
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    });
+
     const [isMobile, setIsMobile] = useState(false);
     const [vehicles, setVehicles] = useState<{ id: string, plate_number: string, color: string | null }[]>([]);
 
@@ -234,7 +247,13 @@ export default function UserPage() {
                 <div className="flex items-center justify-between w-full">
                     <h1 className="text-lg font-bold tracking-wide">ปฏิทินการใช้รถ</h1>
                     <div className="flex gap-4 text-sm font-medium opacity-90 items-center">
-                        <button onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])}>
+                        <button onClick={() => {
+                            const d = new Date();
+                            const year = d.getFullYear();
+                            const month = String(d.getMonth() + 1).padStart(2, '0');
+                            const day = String(d.getDate()).padStart(2, '0');
+                            setSelectedDate(`${year}-${month}-${day}`);
+                        }}>
                             วันนี้
                         </button>
                         <Link href="/user/request"><Plus className="w-6 h-6" /></Link>
