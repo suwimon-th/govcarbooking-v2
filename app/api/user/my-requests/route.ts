@@ -23,6 +23,7 @@ export async function GET() {
       status,
       destination,
       passenger_count,
+      passengers,
       vehicle:vehicles (
         plate_number,
         brand,

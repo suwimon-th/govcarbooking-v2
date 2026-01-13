@@ -12,7 +12,8 @@ import {
   Clock,
   MapPin,
   ChevronRight,
-  Calendar
+  Calendar,
+  Fuel
 } from "lucide-react";
 
 // =======================
@@ -48,6 +49,7 @@ export default function AdminDashboardPage() {
   const [pendingRequests, setPendingRequests] = useState<number>(0);
   const [totalVehicles, setTotalVehicles] = useState<number>(0);
   const [totalDrivers, setTotalDrivers] = useState<number>(0);
+  const [pendingFuelRequests, setPendingFuelRequests] = useState<number>(0);
 
   const [todayTrips, setTodayTrips] = useState<TodayTrip[]>([]);
   const [recentRequests, setRecentRequests] = useState<RecentBooking[]>([]);
@@ -82,6 +84,13 @@ export default function AdminDashboardPage() {
       .from("drivers")
       .select("id");
     setTotalDrivers(drivers?.length || 0);
+
+    // Fuel Requests
+    const { count: fuelCount } = await supabase
+      .from("fuel_requests")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "PENDING");
+    setPendingFuelRequests(fuelCount ?? 0);
 
     // Today Trips
     const today = new Date().toISOString().split("T")[0];
@@ -219,6 +228,28 @@ export default function AdminDashboardPage() {
             <h3 className="text-3xl font-bold text-gray-800 mt-1">{totalDrivers} <span className="text-sm font-normal text-gray-400">คน</span></h3>
           </div>
         </div>
+
+        {/* Fuel Requests */}
+        <div
+          onClick={() => router.push("/admin/fuel")}
+          className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md hover:border-rose-200 transition-all cursor-pointer group"
+        >
+          <div className="flex justify-between items-start mb-4">
+            <div className="p-3 rounded-xl bg-rose-50 text-rose-600 group-hover:bg-rose-100 transition-colors">
+              <Fuel className="w-6 h-6" />
+            </div>
+            {pendingFuelRequests > 0 && (
+              <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded-full animate-pulse">
+                รออนุมัติ {pendingFuelRequests}
+              </span>
+            )}
+          </div>
+          <div>
+            <p className="text-gray-500 text-sm font-medium">เบิกน้ำมันเชื้อเพลิง</p>
+            <h3 className="text-3xl font-bold text-gray-800 mt-1">{pendingFuelRequests} <span className="text-sm font-normal text-gray-400">รายการ</span></h3>
+          </div>
+        </div>
+
       </div>
 
       {/* CONTENT GRID */}

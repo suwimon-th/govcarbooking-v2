@@ -13,6 +13,8 @@ import {
   Clock,
   FileText,
   Activity,
+  MapPin,
+  Users,
   Save,
   CheckCircle2
 } from "lucide-react";
@@ -77,9 +79,12 @@ export default function EditBookingModal({
     driver_id: booking.driver_id ?? "",
     vehicle_id: booking.vehicle_id ?? "",
     purpose: booking.purpose ?? "",
+    destination: booking.destination ?? "",
+    passenger_count: booking.passenger_count ?? 1,
     start_at: booking.start_at ?? "",
     end_at: booking.end_at ?? "",
     status: booking.status,
+    is_ot: booking.is_ot || false,
   });
 
   // ===============================
@@ -123,9 +128,12 @@ export default function EditBookingModal({
           driver_id: formData.driver_id || null,
           vehicle_id: formData.vehicle_id || null,
           purpose: formData.purpose,
+          destination: formData.destination,
+          passenger_count: formData.passenger_count,
           start_at: formData.start_at || null,
           end_at: formData.end_at || null,
           status: formData.status,
+          is_ot: formData.is_ot,
         }),
       });
 
@@ -193,7 +201,7 @@ export default function EditBookingModal({
         {/* CONTENT */}
         <div className="flex-1 overflow-y-auto p-6 space-y-8">
 
-          {/* SECTION 1: ข้อมูลการจอง */}
+          {/* SECTION 1: ข้อมูลการขอใช้รถ */}
           <div className="space-y-4">
             <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
               <FileText className="w-4 h-4" /> ข้อมูลทั่วไป
@@ -219,6 +227,34 @@ export default function EditBookingModal({
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
                   </div>
                 </div>
+              </div>
+
+              {/* Passenger Count */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5 text-gray-400" /> จำนวนผู้โดยสาร (คน)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                  value={formData.passenger_count}
+                  onChange={(e) => setFormData((p) => ({ ...p, passenger_count: parseInt(e.target.value) || 1 }))}
+                />
+              </div>
+
+              {/* Destination (Full Width) */}
+              <div className="space-y-1.5 md:col-span-2">
+                <label className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-gray-400" /> สถานที่ไป (Destination)
+                </label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                  value={formData.destination}
+                  onChange={(e) => setFormData((p) => ({ ...p, destination: e.target.value }))}
+                  placeholder="ระบุสถานที่..."
+                />
               </div>
 
               {/* วัตถุประสงค์ (Full Width in Grid) */}
@@ -257,6 +293,23 @@ export default function EditBookingModal({
                   value={toInputDateTime(formData.end_at)}
                   onChange={(e) => setFormData((p) => ({ ...p, end_at: e.target.value }))}
                 />
+              </div>
+
+              {/* OT Toggle (Full Width) */}
+              <div className="md:col-span-2 flex items-center gap-3 bg-red-50 p-3 rounded-xl border border-red-100">
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.is_ot}
+                    onChange={(e) => setFormData(p => ({ ...p, is_ot: e.target.checked }))}
+                    className="sr-only peer"
+                    id="ot_toggle"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-500"></div>
+                </label>
+                <label htmlFor="ot_toggle" className="text-sm font-semibold text-red-700 cursor-pointer select-none">
+                  ขอใช้นอกเวลาราชการ (OT)
+                </label>
               </div>
             </div>
           </div>

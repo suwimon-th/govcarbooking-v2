@@ -1,9 +1,11 @@
- "use client";
+"use client";
 export const dynamic = "force-dynamic";
 
 
 
+
 import { useState, useEffect } from "react";
+import { BookOpen } from "lucide-react";
 
 interface BookingInfo {
   request_code: string;
@@ -90,6 +92,12 @@ export default function EndMileagePage({
       >
         {loading ? "กำลังบันทึก..." : "บันทึกเลขไมล์สิ้นสุด"}
       </button>
+
+      <div className="flex justify-center gap-4 text-sm text-gray-500 mt-8">
+        <a href="/manual" target="_blank" className="flex items-center gap-1 hover:text-blue-600 transition-colors">
+          <BookOpen className="w-4 h-4" /> คู่มือการใช้งาน
+        </a>
+      </div>
     </div>
   );
 }

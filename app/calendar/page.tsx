@@ -8,7 +8,9 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import type { EventClickArg } from "@fullcalendar/core";
 import EventDetailModal from "@/app/components/EventDetailModal";
-import { Calendar as CalendarIcon, Clock, ChevronRight, LogIn } from "lucide-react";
+import FuelRequestModal from "@/app/components/FuelRequestModal";
+import ReportIssueModal from "@/app/components/ReportIssueModal";
+import { Calendar as CalendarIcon, Clock, ChevronRight, LogIn, HelpCircle, Fuel, AlertTriangle, MessageCircle, BookOpen } from "lucide-react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import { getStatusLabel, getStatusColor } from "@/lib/statusHelper";
@@ -86,7 +88,25 @@ export default function PublicCalendarPage() {
     const [selected, setSelected] = useState<BookingDetail | null>(null);
     const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
     const [isMobile, setIsMobile] = useState(false);
+
     const [vehicles, setVehicles] = useState<{ id: string, plate_number: string, color: string | null }[]>([]);
+
+    // Fuel Request State
+    const [fuelModalOpen, setFuelModalOpen] = useState(false);
+    const [reportModalOpen, setReportModalOpen] = useState(false);
+    const [helpMenuOpen, setHelpMenuOpen] = useState(false);
+    const helpMenuRef = useRef<HTMLDivElement>(null);
+
+    // Close help menu when clicking outside
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (helpMenuRef.current && !helpMenuRef.current.contains(event.target as Node)) {
+                setHelpMenuOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
 
     // Table View State
     const [currentMonthStart, setCurrentMonthStart] = useState<Date | null>(null);
@@ -125,15 +145,20 @@ export default function PublicCalendarPage() {
 
         const formatted: CalendarEvent[] = raw.map((item: any) => {
             const isCompleted = item.status === "COMPLETED";
+            const isCancelled = item.status === "CANCELLED";
             // Use dynamic color from API
             const vehicleColor = item.vehicle_color || "#3B82F6";
+
+            let eventColor = vehicleColor;
+            if (isCompleted) eventColor = "#22C55E";
+            if (isCancelled) eventColor = "#9CA3AF"; // Gray for cancelled
 
             return {
                 id: item.id,
                 title: item.requester_name || "ใช้งานรถ",
                 start: item.start,
                 end: item.end ?? undefined,
-                color: isCompleted ? "#22C55E" : vehicleColor,
+                color: eventColor,
                 extendedProps: {
                     requester: item.requester_name || "ไม่ระบุ",
                     status: item.status,
@@ -203,13 +228,65 @@ export default function PublicCalendarPage() {
                         <button onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])}>
                             วันนี้
                         </button>
+
+                        {/* Mobile Help Button */}
+                        <div className="relative" ref={isMobile ? helpMenuRef : null}>
+                            <button onClick={() => setHelpMenuOpen(!helpMenuOpen)} className="opacity-90 hover:opacity-100">
+                                <HelpCircle className="w-5 h-5" />
+                            </button>
+
+                            {/* Mobile Dropdown */}
+                            {helpMenuOpen && (
+                                <div className="absolute right-0 top-8 w-56 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-50 text-gray-800 animate-in fade-in zoom-in-95 duration-200">
+                                    <button
+                                        onClick={() => {
+                                            setHelpMenuOpen(false);
+                                            setFuelModalOpen(true);
+                                        }}
+                                        className="flex items-center gap-3 w-full px-4 py-3 hover:bg-rose-50 rounded-lg transition-colors text-left group"
+                                    >
+                                        <div className="bg-rose-100 text-rose-600 p-2 rounded-lg">
+                                            <Fuel className="w-4 h-4" />
+                                        </div>
+                                        <span className="text-sm font-bold">เบิกน้ำมัน</span>
+                                    </button>
+
+                                    <button
+                                        onClick={() => {
+                                            setHelpMenuOpen(false);
+                                            setReportModalOpen(true);
+                                        }}
+                                        className="flex items-center gap-3 w-full px-4 py-3 hover:bg-amber-50 rounded-lg transition-colors text-left group"
+                                    >
+                                        <div className="bg-amber-100 text-amber-600 p-2 rounded-lg">
+                                            <AlertTriangle className="w-4 h-4" />
+                                        </div>
+                                        <span className="text-sm font-bold">แจ้งปัญหา</span>
+                                    </button>
+
+                                    <a
+                                        href="https://line.me/R/ti/p/@420uicrg"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-3 w-full px-4 py-3 hover:bg-green-50 rounded-lg transition-colors text-left group"
+                                        onClick={() => setHelpMenuOpen(false)}
+                                    >
+                                        <div className="bg-green-100 text-green-600 p-2 rounded-lg">
+                                            <MessageCircle className="w-4 h-4" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-bold">ติดต่อเรา</span>
+                                            <span className="text-[10px] text-gray-500">Line: @420uicrg</span>
+                                        </div>
+                                    </a>
+                                </div>
+                            )}
+                        </div>
+
                         <Link href="/login" className="flex items-center gap-1 opacity-70 hover:opacity-100">
-                            <LogIn className="w-4 h-4" />
+                            <LogIn className="w-5 h-5" />
                         </Link>
                     </div>
-                </div>
-                <div className="text-[10px] text-blue-200 mt-1 text-center font-light">
-                    สำหรับเจ้าหน้าที่ขับรถและผู้สนใจทั่วไป
                 </div>
             </div>
 
@@ -231,15 +308,98 @@ export default function PublicCalendarPage() {
                                 <span className="text-xs text-gray-600">{v.plate_number ? `รถ ${v.plate_number}` : 'รถอื่นๆ'}</span>
                             </div>
                         ))}
+                        {/* Cancelled Legend */}
+                        <div className="flex items-center gap-1.5">
+                            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: '#9CA3AF' }}></span>
+                            <span className="text-xs text-gray-600">ยกเลิก</span>
+                        </div>
                     </div>
 
                     <Link
                         href="/login"
-                        className="flex items-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-5 py-2.5 rounded-lg shadow-sm transition-all font-medium"
+                        className="flex items-center gap-2 bg-[#1E40AF] hover:bg-blue-800 text-white px-5 py-2.5 rounded-lg shadow-md transition-all font-medium"
                     >
-                        <LogIn className="w-4 h-4" />
+                        <LogIn className="w-5 h-5" />
                         เข้าสู่ระบบ
                     </Link>
+
+                    {/* Help Button with Dropdown */}
+                    <div className="relative" ref={helpMenuRef}>
+                        <button
+                            onClick={() => setHelpMenuOpen(!helpMenuOpen)}
+                            className="flex items-center gap-2 bg-rose-50 border border-rose-100 hover:bg-rose-100 text-rose-700 px-4 py-2.5 rounded-lg shadow-sm transition-all font-medium"
+                        >
+                            <HelpCircle className="w-4 h-4" />
+                            ความช่วยเหลือ
+                        </button>
+
+                        {helpMenuOpen && (
+                            <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-50 animate-in fade-in zoom-in-95 duration-200">
+                                <button
+                                    onClick={() => {
+                                        setHelpMenuOpen(false);
+                                        setFuelModalOpen(true);
+                                    }}
+                                    className="flex items-center gap-3 w-full px-4 py-3 hover:bg-rose-50 rounded-lg transition-colors text-left group"
+                                >
+                                    <div className="bg-rose-100 text-rose-600 p-2 rounded-lg group-hover:bg-white group-hover:shadow-sm transition-all">
+                                        <Fuel className="w-5 h-5" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-sm font-bold text-gray-800">เบิกน้ำมันเชื้อเพลิง</span>
+                                        <span className="text-[10px] text-gray-500">สำหรับพนักงานขับรถ</span>
+                                    </div>
+                                </button>
+
+                                <Link
+                                    href="/manual"
+                                    target="_blank"
+                                    className="flex items-center gap-3 w-full px-4 py-3 hover:bg-indigo-50 rounded-lg transition-colors text-left group"
+                                    onClick={() => setHelpMenuOpen(false)}
+                                >
+                                    <div className="bg-indigo-100 text-indigo-600 p-2 rounded-lg group-hover:bg-white group-hover:shadow-sm transition-all">
+                                        <BookOpen className="w-5 h-5" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-sm font-bold text-gray-800">คู่มือการใช้งาน</span>
+                                        <span className="text-[10px] text-gray-500">สำหรับผู้ใช้งานใหม่</span>
+                                    </div>
+                                </Link>
+
+                                <button
+                                    onClick={() => {
+                                        setHelpMenuOpen(false);
+                                        setReportModalOpen(true);
+                                    }}
+                                    className="flex items-center gap-3 w-full px-4 py-3 hover:bg-amber-50 rounded-lg transition-colors text-left group"
+                                >
+                                    <div className="bg-amber-100 text-amber-600 p-2 rounded-lg group-hover:bg-white group-hover:shadow-sm transition-all">
+                                        <AlertTriangle className="w-5 h-5" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-sm font-bold text-gray-800">แจ้งปัญหาการใช้รถ</span>
+                                        <span className="text-[10px] text-gray-500">สำหรับแจ้งซ่อม/ปัญหา</span>
+                                    </div>
+                                </button>
+
+                                <a
+                                    href="https://line.me/R/ti/p/@420uicrg"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-3 w-full px-4 py-3 hover:bg-green-50 rounded-lg transition-colors text-left group"
+                                    onClick={() => setHelpMenuOpen(false)}
+                                >
+                                    <div className="bg-green-100 text-green-600 p-2 rounded-lg group-hover:bg-white group-hover:shadow-sm transition-all">
+                                        <MessageCircle className="w-5 h-5" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-sm font-bold text-gray-800">ติดต่อเรา</span>
+                                        <span className="text-[10px] text-gray-500">Line ID: @420uicrg</span>
+                                    </div>
+                                </a>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -251,6 +411,11 @@ export default function PublicCalendarPage() {
                         <span>{v.plate_number ? `รถ ${v.plate_number}` : 'รถอื่นๆ'}</span>
                     </div>
                 ))}
+                {/* Cancelled Legend */}
+                <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-full shadow-sm text-[10px] text-gray-600 border border-gray-100">
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#9CA3AF' }}></span>
+                    <span>ยกเลิก</span>
+                </div>
             </div>
 
             {/* CALENDAR SECTION */}
@@ -548,6 +713,16 @@ export default function PublicCalendarPage() {
                 onClose={() => setModalOpen(false)}
                 detail={selected}
             />
-        </div>
+
+            <FuelRequestModal
+                open={fuelModalOpen}
+                onClose={() => setFuelModalOpen(false)}
+            />
+
+            <ReportIssueModal
+                open={reportModalOpen}
+                onClose={() => setReportModalOpen(false)}
+            />
+        </div >
     );
 }

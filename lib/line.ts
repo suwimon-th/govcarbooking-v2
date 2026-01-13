@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { isOffHours } from "./statusHelper";
 
+const BASE_URL = "https://govcarbooking-v2-suwimon-ths-projects.vercel.app";
+
 // ======================================================
 // PUSH MESSAGE
 // ======================================================
@@ -85,7 +87,7 @@ export function flexDriverAcceptSuccess(bookingId: string) {
             action: {
               type: "uri",
               label: "กรอกเลขไมล์",
-              uri: `${process.env.PUBLIC_DOMAIN}/driver/start-mileage?booking=${bookingId}`,
+              uri: `${BASE_URL}/driver/start-mileage?booking=${bookingId}`,
             },
           },
           {
@@ -95,7 +97,7 @@ export function flexDriverAcceptSuccess(bookingId: string) {
             action: {
               type: "uri",
               label: "📅 ดูตารางการใช้รถ",
-              uri: `${process.env.PUBLIC_DOMAIN}/calendar`,
+              uri: `${BASE_URL}/calendar`,
             },
           },
         ],
@@ -244,7 +246,7 @@ export function flexAssignDriver(booking: any, vehicle: any, driver: any) {
             action: {
               type: "uri",
               label: "📅 ดูตารางการใช้รถ",
-              uri: `${process.env.PUBLIC_DOMAIN}/calendar`,
+              uri: `${BASE_URL}/calendar`,
             },
           },
           {
@@ -338,7 +340,7 @@ export function flexJobCompleted(booking: any, mileage?: { start: number; end: n
             action: {
               type: "uri",
               label: "📅 ดูตารางการใช้รถ",
-              uri: `${process.env.PUBLIC_DOMAIN}/calendar`,
+              uri: `${BASE_URL}/calendar`,
             },
           },
         ],
@@ -450,7 +452,7 @@ export function flexAdminNotifyNewBooking(booking: any) {
             action: {
               type: "uri",
               label: "📍 มอบหมายคนขับรถ",
-              uri: `${process.env.PUBLIC_DOMAIN}/admin/requests`,
+              uri: `${BASE_URL}/admin/requests`,
             },
           },
           {
@@ -460,7 +462,7 @@ export function flexAdminNotifyNewBooking(booking: any) {
             action: {
               type: "uri",
               label: "📅 ดูตารางการใช้รถ",
-              uri: `${process.env.PUBLIC_DOMAIN}/calendar`,
+              uri: `${BASE_URL}/calendar`,
             },
           },
         ],
@@ -544,7 +546,7 @@ export function flexReminderPendingJob(bookings: any[]) {
             action: {
               type: "uri",
               label: "📋 ไปที่รายการงานของฉัน",
-              uri: `${process.env.PUBLIC_DOMAIN}/driver/start-mileage`,
+              uri: `${BASE_URL}/driver/start-mileage`,
             },
           },
           {
@@ -554,7 +556,94 @@ export function flexReminderPendingJob(bookings: any[]) {
             action: {
               type: "uri",
               label: "📅 ดูตารางการใช้รถ",
-              uri: `${process.env.PUBLIC_DOMAIN}/calendar`,
+              uri: `${BASE_URL}/calendar`,
+            },
+          },
+        ],
+      },
+    },
+  };
+}
+
+// ======================================================
+// FLEX: แจ้งเตือนขอเบิกน้ำมัน (สำหรับ Admin)
+// ======================================================
+export function flexFuelRequest(driverName: string, plateNumber: string) {
+  return {
+    type: "flex",
+    altText: "⛽️ มีการขอเบิกน้ำมันเชื้อเพลิง",
+    contents: {
+      type: "bubble",
+      header: {
+        type: "box",
+        layout: "vertical",
+        paddingAll: "20px",
+        backgroundColor: "#E11D48", // Rose-600
+        contents: [
+          {
+            type: "text",
+            text: "⛽️ ขอเบิกน้ำมัน",
+            weight: "bold",
+            size: "xl",
+            color: "#FFFFFF",
+          },
+        ],
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "md",
+        paddingAll: "20px",
+        contents: [
+          {
+            type: "text",
+            text: "แจ้งเตือนการขอเบิกน้ำมันเชื้อเพลิง",
+            weight: "bold",
+            size: "sm",
+            color: "#333333",
+          },
+          { type: "separator", margin: "md" },
+          {
+            type: "box",
+            layout: "baseline",
+            margin: "md",
+            contents: [
+              { type: "text", text: plateNumber.includes("เครื่องพ่นหมอกควัน") ? "ผู้เบิก:" : "คนขับ:", flex: 2, size: "sm", color: "#666666" },
+              { type: "text", text: driverName, flex: 4, size: "sm", weight: "bold", color: "#1F2937", wrap: true },
+            ],
+          },
+          {
+            type: "box",
+            layout: "baseline",
+            margin: "sm",
+            contents: [
+              { type: "text", text: "ทะเบียน:", flex: 2, size: "sm", color: "#666666" },
+              {
+                type: "text",
+                text: plateNumber.replace(" (", "\n("),
+                flex: 4,
+                size: "sm",
+                weight: "bold",
+                color: "#1F2937",
+                wrap: true
+              },
+            ],
+          },
+        ],
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        paddingAll: "16px",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            color: "#E11D48",
+            action: {
+              type: "uri",
+              label: "จัดการรายการเบิก",
+              uri: `${BASE_URL}/admin/fuel`,
             },
           },
         ],

@@ -123,7 +123,7 @@ export async function POST(req: Request) {
 
         if (startTotal < dutyEnd && endTotal > dutyStart) {
           return NextResponse.json(
-            { error: `รถตู้ติดภารกิจเวรประจำวัน (วันจันทร์สัปดาห์ที่ 3 ตรงกับวันที่ ${targetDate}) เวลา 08:00-16:00 ไม่สามารถจองได้` },
+            { error: `รถตู้ติดภารกิจเวรประจำวัน (วันจันทร์สัปดาห์ที่ 3 ตรงกับวันที่ ${targetDate}) เวลา 08:00-16:00 ไม่สามารถขอใช้รถได้` },
             { status: 400 }
           );
         }
@@ -144,6 +144,22 @@ export async function POST(req: Request) {
     }
 
     const request_code = await generateRequestCode();
+
+    // ✅ Calculate is_ot automatically
+    // Logic: Weekend (Sat/Sun) OR Time < 08:30 OR Time >= 16:30
+    const dObj = new Date(date);
+    const day = dObj.getDay(); // 0-6
+    const [sh, sm] = start_time.split(":").map(Number);
+
+    // Weekend check
+    const isWeekend = day === 0 || day === 6;
+
+    // Time check
+    const timeVal = sh * 60 + sm;
+    const startWork = 8 * 60 + 30; // 08:30
+    const endWork = 16 * 60 + 30;  // 16:30
+
+    const isOT = isWeekend || timeVal < startWork || timeVal >= endWork;
 
     /* ---------------------------
        INSERT booking
@@ -167,6 +183,9 @@ export async function POST(req: Request) {
           assigned_at: driver_id ? new Date().toISOString() : null,
           passenger_count,
           destination,
+          requester_position: position, // Store the snapshot of position
+          passengers: body.passengers || [],
+          is_ot: isOT,
         },
       ])
       .select()
@@ -182,8 +201,8 @@ export async function POST(req: Request) {
 
     /* ---------------------------
        Auto-assign คนขับ (ถ้ามี)
-       เงื่อนไข: เฉพาะการจอง "วันนี้" เท่านั้น
-       (จองล่วงหน้า -> รอ Admin กด assign เอง)
+       เงื่อนไข: เฉพาะการขอใช้รถ "วันนี้" เท่านั้น
+       (ขอใช้รถล่วงหน้า -> รอ Admin กด assign เอง)
     ---------------------------- */
     const DOMAIN = process.env.PUBLIC_DOMAIN;
 
@@ -244,7 +263,7 @@ export async function POST(req: Request) {
       console.log(`[AdminNotify] Check: isAdvance=${isAdvance}, isOT=${isOT}, hasDriver=${hasDriver}, AdminID=${adminLineId ? 'Set' : 'Null'}`);
 
       // Condition to SKIP admin notification
-      // คือ ถ้าเป็นการจองล่วงหน้า (Advance) + เป็น OT + เลือกคนขับแล้ว (Driver Selected)
+      // คือ ถ้าเป็นการขอใช้รถล่วงหน้า (Advance) + เป็น OT + เลือกคนขับแล้ว (Driver Selected)
       // กรณีนี้ คนขับรับรู้แล้ว (ได้ LINE) -> ไม่ต้องกวน Admin ให้กด Assign อีก
       const shouldSkipAdmin = isAdvance && isOT && hasDriver;
 

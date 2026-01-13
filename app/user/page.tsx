@@ -13,6 +13,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { getStatusLabel, getStatusColor } from "@/lib/statusHelper";
+import { HelpCircle, Fuel, AlertTriangle, MessageCircle } from "lucide-react";
+import FuelRequestModal from "@/app/components/FuelRequestModal";
+import ReportIssueModal from "@/app/components/ReportIssueModal";
 
 /* ----------------------------------------------------
    TYPES
@@ -28,6 +31,7 @@ type CalendarEvent = {
         status?: string;
         location?: string;
         vehicle?: string;
+        driver?: string;
         isOffHours?: boolean;
     };
     backgroundColor?: string;
@@ -92,6 +96,23 @@ export default function UserPage() {
     const [isMobile, setIsMobile] = useState(false);
     const [vehicles, setVehicles] = useState<{ id: string, plate_number: string, color: string | null }[]>([]);
 
+    // Help / Fuel / Report State
+    const [fuelModalOpen, setFuelModalOpen] = useState(false);
+    const [reportModalOpen, setReportModalOpen] = useState(false);
+    const [helpMenuOpen, setHelpMenuOpen] = useState(false);
+    const helpMenuRef = useRef<HTMLDivElement>(null);
+
+    // Close help menu when clicking outside
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (helpMenuRef.current && !helpMenuRef.current.contains(event.target as Node)) {
+                setHelpMenuOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
     // Table View State
     const [currentMonthStart, setCurrentMonthStart] = useState<Date | null>(null);
     const [currentMonthEnd, setCurrentMonthEnd] = useState<Date | null>(null);
@@ -129,21 +150,27 @@ export default function UserPage() {
 
         const formatted: CalendarEvent[] = raw.map((item: any) => {
             const isCompleted = item.status === "COMPLETED";
+            const isCancelled = item.status === "CANCELLED";
             // Use dynamic color from API
             const vehicleColor = item.vehicle_color || "#3B82F6";
+
+            let eventColor = vehicleColor;
+            if (isCompleted) eventColor = "#22C55E";
+            if (isCancelled) eventColor = "#9CA3AF";
 
             return {
                 id: item.id,
                 title: item.requester_name || "ใช้งานรถ",
                 start: item.start,
                 end: item.end ?? undefined,
-                color: isCompleted ? "#22C55E" : vehicleColor,
+                color: eventColor,
                 extendedProps: {
                     requester: item.requester_name || "ไม่ระบุ",
                     status: item.status,
                     location: item.purpose, // Now purpose should be in item
                     vehicle: `รถ ${item.vehicle_plate || '-'}`,
                     isOffHours: item.is_off_hours,
+                    driver: item.driver_name
                 }
             };
         });
@@ -233,6 +260,11 @@ export default function UserPage() {
                                 <span className="text-xs text-gray-600">{v.plate_number ? `รถ ${v.plate_number}` : 'รถอื่นๆ'}</span>
                             </div>
                         ))}
+                        {/* Cancelled Legend */}
+                        <div className="flex items-center gap-1.5">
+                            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: '#9CA3AF' }}></span>
+                            <span className="text-xs text-gray-600">ยกเลิก</span>
+                        </div>
                     </div>
 
                     <Link
@@ -242,6 +274,69 @@ export default function UserPage() {
                         <Plus className="w-5 h-5" />
                         ขอใช้รถใหม่
                     </Link>
+
+                    {/* Help Button with Dropdown */}
+                    <div className="relative" ref={helpMenuRef}>
+                        <button
+                            onClick={() => setHelpMenuOpen(!helpMenuOpen)}
+                            className="flex items-center gap-2 bg-rose-50 border border-rose-100 hover:bg-rose-100 text-rose-700 px-4 py-2.5 rounded-lg shadow-sm transition-all font-medium"
+                        >
+                            <HelpCircle className="w-4 h-4" />
+                            ความช่วยเหลือ
+                        </button>
+
+                        {helpMenuOpen && (
+                            <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-50 animate-in fade-in zoom-in-95 duration-200">
+                                <button
+                                    onClick={() => {
+                                        setHelpMenuOpen(false);
+                                        setFuelModalOpen(true);
+                                    }}
+                                    className="flex items-center gap-3 w-full px-4 py-3 hover:bg-rose-50 rounded-lg transition-colors text-left group"
+                                >
+                                    <div className="bg-rose-100 text-rose-600 p-2 rounded-lg group-hover:bg-white group-hover:shadow-sm transition-all">
+                                        <Fuel className="w-5 h-5" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-sm font-bold text-gray-800">เบิกน้ำมันเชื้อเพลิง</span>
+                                        <span className="text-[10px] text-gray-500">สำหรับพนักงานขับรถ</span>
+                                    </div>
+                                </button>
+
+                                <button
+                                    onClick={() => {
+                                        setHelpMenuOpen(false);
+                                        setReportModalOpen(true);
+                                    }}
+                                    className="flex items-center gap-3 w-full px-4 py-3 hover:bg-amber-50 rounded-lg transition-colors text-left group"
+                                >
+                                    <div className="bg-amber-100 text-amber-600 p-2 rounded-lg group-hover:bg-white group-hover:shadow-sm transition-all">
+                                        <AlertTriangle className="w-5 h-5" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-sm font-bold text-gray-800">แจ้งปัญหาการใช้รถ</span>
+                                        <span className="text-[10px] text-gray-500">สำหรับแจ้งซ่อม/ปัญหา</span>
+                                    </div>
+                                </button>
+
+                                <a
+                                    href="https://line.me/R/ti/p/@420uicrg"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-3 w-full px-4 py-3 hover:bg-green-50 rounded-lg transition-colors text-left group"
+                                    onClick={() => setHelpMenuOpen(false)}
+                                >
+                                    <div className="bg-green-100 text-green-600 p-2 rounded-lg group-hover:bg-white group-hover:shadow-sm transition-all">
+                                        <MessageCircle className="w-5 h-5" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-sm font-bold text-gray-800">ติดต่อเรา</span>
+                                        <span className="text-[10px] text-gray-500">Line ID: @420uicrg</span>
+                                    </div>
+                                </a>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -253,6 +348,11 @@ export default function UserPage() {
                         <span>{v.plate_number ? `รถ ${v.plate_number}` : 'รถอื่นๆ'}</span>
                     </div>
                 ))}
+                {/* Cancelled Legend */}
+                <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-full shadow-sm text-[10px] text-gray-600 border border-gray-100">
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#9CA3AF' }}></span>
+                    <span>ยกเลิก</span>
+                </div>
             </div>
 
             {/* CALENDAR SECTION */}
@@ -452,6 +552,12 @@ export default function UserPage() {
                                                         <span className="w-2 h-2 rounded-full" style={{ backgroundColor: evt.color || '#9CA3AF' }}></span>
                                                         {evt.extendedProps?.vehicle}
                                                     </span>
+                                                    {evt.extendedProps?.driver && (
+                                                        <div className="mt-1.5 text-xs text-gray-500 flex items-center gap-1">
+                                                            <span className="w-1.5 h-1.5 bg-gray-300 rounded-full"></span>
+                                                            คนขับ: {evt.extendedProps.driver}
+                                                        </div>
+                                                    )}
                                                 </td>
 
                                                 {/* STATUS */}
@@ -523,6 +629,11 @@ export default function UserPage() {
                                             <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
                                                 {evt.extendedProps?.vehicle}
                                             </span>
+                                            {evt.extendedProps?.driver && (
+                                                <span className="text-[10px] bg-gray-50 text-gray-500 px-2 py-0.5 rounded-full border border-gray-100">
+                                                    คนขับ: {evt.extendedProps.driver}
+                                                </span>
+                                            )}
                                             <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${getStatusColor(evt.extendedProps?.status || 'REQUESTED')}`}>
                                                 {getStatusLabel(evt.extendedProps?.status || 'REQUESTED')}
                                             </span>
@@ -566,6 +677,16 @@ export default function UserPage() {
                     </div>
                 </div>
             </div>
+
+            <FuelRequestModal
+                open={fuelModalOpen}
+                onClose={() => setFuelModalOpen(false)}
+            />
+
+            <ReportIssueModal
+                open={reportModalOpen}
+                onClose={() => setReportModalOpen(false)}
+            />
 
             <EventDetailModal
                 open={modalOpen}

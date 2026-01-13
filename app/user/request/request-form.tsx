@@ -27,6 +27,19 @@ interface RequestFormProps {
   selectedDate: string; // YYYY-MM-DD
 }
 
+interface Passenger {
+  type: "profile" | "external";
+  name: string;
+  position: string;
+  profile_id?: string;
+}
+
+interface Profile {
+  id: string;
+  full_name: string;
+  position: string | null;
+}
+
 type SubmitState = "idle" | "submitting" | "success" | "error";
 
 export default function RequestForm({
@@ -41,7 +54,12 @@ export default function RequestForm({
   const [vehicleId, setVehicleId] = useState<string>("");
   const [driverId, setDriverId] = useState<string>("");
   const [purpose, setPurpose] = useState<string>("");
-  const [passengerCount, setPassengerCount] = useState<number>(1);
+
+  // Passenger Logic
+  const [passengerCount, setPassengerCount] = useState<string>(""); // Default empty
+  const [passengers, setPassengers] = useState<Passenger[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+
   const [destination, setDestination] = useState<string>("");
   const [position, setPosition] = useState<string>("");
 
@@ -55,6 +73,57 @@ export default function RequestForm({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [createdBooking, setCreatedBooking] = useState<any>(null);
   const router = useRouter();
+
+  // Load Profiles
+  useEffect(() => {
+    const loadProfiles = async () => {
+      const { data } = await supabase.from("profiles").select("id, full_name, position").order("full_name");
+      setProfiles(data || []);
+    };
+    loadProfiles();
+  }, []);
+
+  // Update passengers array when count changes
+  useEffect(() => {
+    const count = parseInt(passengerCount) || 0;
+    setPassengers(prev => {
+      const newArr = [...prev];
+      if (count > newArr.length) {
+        // Add new empty passengers
+        for (let i = newArr.length; i < count; i++) {
+          newArr.push({ type: "external", name: "", position: "" });
+        }
+      } else if (count < newArr.length) {
+        // Trim
+        newArr.length = count;
+      }
+      return newArr;
+    });
+  }, [passengerCount]);
+
+  const updatePassenger = (index: number, field: keyof Passenger, value: string) => {
+    const newPassengers = [...passengers];
+    newPassengers[index] = { ...newPassengers[index], [field]: value };
+
+    // If selecting a profile, auto-fill details
+    if (field === 'profile_id') {
+      const profile = profiles.find(p => p.id === value);
+      if (profile) {
+        newPassengers[index].name = profile.full_name;
+        newPassengers[index].position = profile.position || "";
+        newPassengers[index].type = "profile";
+      }
+    }
+
+    // If switching type to external, clear profile_id
+    if (field === 'type' && value === 'external') {
+      newPassengers[index].profile_id = undefined;
+      newPassengers[index].name = "";
+      newPassengers[index].position = "";
+    }
+
+    setPassengers(newPassengers);
+  };
 
   // Sync วันที่เมื่อ URL เปลี่ยน
   useEffect(() => {
@@ -80,6 +149,7 @@ export default function RequestForm({
   // โหลดรายการรถจาก Supabase
   useEffect(() => {
     const loadVehicles = async () => {
+      // ... existing vehicle loading code ...
       try {
         setLoadingVehicles(true);
         const { data, error } = await supabase
@@ -171,9 +241,10 @@ export default function RequestForm({
           end_time: endTime || null,
           purpose,
           driver_id: isOffHours() ? driverId : null,
-          passenger_count: passengerCount,
+          passenger_count: parseInt(passengerCount) || 1,
           destination: destination,
           position: position,
+          passengers: passengers,
         }),
       });
 
@@ -195,7 +266,8 @@ export default function RequestForm({
       setVehicleId("");
       setDriverId("");
       setPurpose("");
-      setPassengerCount(1);
+      setPassengerCount("");
+      setPassengers([]);
       setDestination("");
     } catch (err) {
       console.error(err);
@@ -221,7 +293,8 @@ export default function RequestForm({
       brand: vehicles.find((v) => v.id === createdBooking.vehicle_id)?.brand || null,
       passenger_count: createdBooking.passenger_count || 1,
       destination: createdBooking.destination || "",
-      requester_position: position || "",
+      requester_position: createdBooking.requester_position || position || "",
+      passengers: createdBooking.passengers || [],
     });
   };
 
@@ -235,7 +308,7 @@ export default function RequestForm({
   return (
     <div className="bg-white shadow-[0_8px_30px_rgb(0,0,0,0.08)] rounded-3xl p-6 md:p-10 max-w-2xl mx-auto border-t-4 border-blue-600 relative overflow-hidden">
 
-      {/* Decorative background blob */}
+      {/* ... Header ... */}
       <div className="absolute -top-20 -right-20 w-60 h-60 bg-blue-50 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
 
       <div className="text-center mb-8 relative z-10">
@@ -252,9 +325,7 @@ export default function RequestForm({
 
       {/* Message Modal Overlay */}
       {message && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-300"
-        >
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
           <div
             onClick={(e) => e.stopPropagation()}
             className={`relative max-w-sm w-full bg-white rounded-3xl shadow-2xl p-6 transform transition-all animate-in zoom-in-95 duration-300 ${submitState === "error"
@@ -265,6 +336,7 @@ export default function RequestForm({
               }`}
           >
             <div className="flex flex-col items-center text-center">
+              {/* ... Status Icon ... */}
               <div
                 className={`mb-4 p-4 rounded-full ${submitState === "success"
                   ? "bg-green-100 text-green-600"
@@ -511,14 +583,78 @@ export default function RequestForm({
                 <User className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
                 <input
                   type="number"
-                  min="1"
+                  min="0"
                   value={passengerCount}
-                  onChange={(e) => setPassengerCount(parseInt(e.target.value) || 1)}
+                  onChange={(e) => setPassengerCount(e.target.value)}
                   className={textInputClasses}
+                  placeholder="-"
                 />
               </div>
             </div>
           </div>
+
+          {/* Dynamic Passenger List */}
+          {passengers.length > 0 && (
+            <div className="space-y-3 bg-gray-50/50 p-4 rounded-xl border border-gray-100 animate-in fade-in slide-in-from-top-2">
+              <h4 className="text-sm font-bold text-gray-700">รายชื่อผู้โดยสาร</h4>
+              {passengers.map((p, idx) => (
+                <div key={idx} className="grid md:grid-cols-2 gap-3 p-3 bg-white rounded-lg shadow-sm border border-gray-100">
+                  <div className="md:col-span-2 flex items-center gap-2 mb-1">
+                    <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded-full">
+                      คนที่ {idx + 1}
+                    </span>
+                  </div>
+
+                  {/* Type Selector & Name */}
+                  <div className="relative">
+                    <select
+                      value={p.profile_id || "other"}
+                      onChange={(e) => {
+                        if (e.target.value === 'other') {
+                          updatePassenger(idx, 'type', 'external');
+                        } else {
+                          updatePassenger(idx, 'profile_id', e.target.value);
+                        }
+                      }}
+                      className="w-full pl-3 pr-8 py-2 rounded-lg border border-gray-200 text-sm mb-2 focus:ring-2 focus:ring-blue-100 outline-none"
+                    >
+                      <option value="other">ระบุเอง (อื่นๆ)</option>
+                      {profiles.map(pro => (
+                        <option key={pro.id} value={pro.id}>{pro.full_name}</option>
+                      ))}
+                    </select>
+
+                    {p.type === 'external' && (
+                      <input
+                        type="text"
+                        placeholder="ชื่อ-นามสกุล"
+                        value={p.name}
+                        onChange={(e) => updatePassenger(idx, 'name', e.target.value)}
+                        className="w-full pl-3 py-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-blue-100 outline-none"
+                      />
+                    )}
+                    {p.type === 'profile' && (
+                      <div className="pl-3 py-2 text-sm font-semibold text-gray-700 bg-gray-50 rounded-lg border border-gray-100">
+                        {p.name}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Position */}
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="ตำแหน่ง"
+                      value={p.position}
+                      onChange={(e) => updatePassenger(idx, 'position', e.target.value)}
+                      readOnly={p.type === 'profile'}
+                      className={`w-full pl-3 py-2 rounded-lg border border-gray-200 text-sm focus:ring-2 focus:ring-blue-100 outline-none ${p.type === 'profile' ? 'bg-gray-50 text-gray-500' : ''}`}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="relative">
             <label className={labelClasses}>วัตถุประสงค์ (Purpose)</label>

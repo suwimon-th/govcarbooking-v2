@@ -14,7 +14,9 @@ import {
   User,
   FileText,
   Gauge,
-  Printer
+  Printer,
+  FileDown,
+  FileText as FileDoc
 } from "lucide-react";
 import { generateBookingDocument } from "@/lib/documentGenerator";
 
@@ -43,8 +45,10 @@ export interface BookingRow {
   start_at: string | null;
   end_at: string | null;
   status: string;
+  is_ot: boolean;
   destination: string | null;
   passenger_count: number | null;
+  passengers: { type: string; name: string; position: string }[] | null;
 
   requester_id: string;
   driver_id: string | null;
@@ -94,6 +98,9 @@ function AdminRequestsContent() {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState(initialStatus);
 
+  // Bulk Select State
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
   // Filter Logic
   const filteredRows = rows.filter((r) => {
     const s = search.toLowerCase();
@@ -124,8 +131,10 @@ function AdminRequestsContent() {
         start_at,
         end_at,
         status,
+        is_ot,
         destination,
         passenger_count,
+        passengers,
 
         start_mileage,
         end_mileage,
@@ -165,7 +174,7 @@ function AdminRequestsContent() {
     loadData();
   };
 
-  const handlePrint = async (booking: BookingRow) => {
+  const handlePrintWord = async (booking: BookingRow) => {
     await generateBookingDocument({
       request_code: booking.request_code,
       created_at: booking.created_at,
@@ -179,7 +188,46 @@ function AdminRequestsContent() {
       destination: booking.destination || "",
       passenger_count: booking.passenger_count || 1,
       requester_position: booking.requester?.position || null,
+      passengers: booking.passengers || undefined,
     });
+  };
+
+  const handlePrintPDF = (id: string) => {
+    window.open(`/admin/print-request/${id}`, '_blank');
+  };
+
+  // Bulk Actions
+  const toggleSelect = (id: string) => {
+    const next = new Set(selectedIds);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    setSelectedIds(next);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredRows.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredRows.map(r => r.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`ต้องการลบรายการที่เลือก ${selectedIds.size} รายการหรือไม่?`)) return;
+
+    const ids = Array.from(selectedIds);
+    const { error } = await supabase.from("bookings").delete().in("id", ids);
+
+    if (error) {
+      alert("เกิดข้อผิดพลาดในการลบ: " + error.message);
+    } else {
+      setSelectedIds(new Set());
+      loadData();
+    }
   };
 
   return (
@@ -232,6 +280,36 @@ function AdminRequestsContent() {
         </div>
       </div>
 
+      {/* ================= BULK DELETE ACTION BAR ================= */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white text-gray-800 px-6 py-4 rounded-2xl shadow-xl z-50 border border-gray-100 flex items-center gap-6 animate-in slide-in-from-bottom-5 duration-200">
+          <div className="flex items-center gap-2">
+            <div className="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">
+              {selectedIds.size}
+            </div>
+            <span className="font-medium text-sm">รายการที่เลือก</span>
+          </div>
+
+          <div className="h-6 w-px bg-gray-200"></div>
+
+          <button
+            onClick={handleBulkDelete}
+            className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors text-sm font-semibold"
+          >
+            <Trash2 className="w-4 h-4" />
+            ลบที่เลือก
+          </button>
+
+          <button
+            onClick={() => setSelectedIds(new Set())}
+            className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 ml-2"
+          >
+            <Trash2 className="w-5 h-5 rotate-45" /> {/* Close icon lookalike */}
+          </button>
+        </div>
+      )}
+
+
       {loading ? (
         <div className="text-center py-20 text-gray-500 animate-pulse">
           กำลังโหลดข้อมูล...
@@ -240,20 +318,58 @@ function AdminRequestsContent() {
         <>
           {/* ================= Mobile List (Cards) ================= */}
           <div className="grid grid-cols-1 gap-4 md:hidden">
-            {filteredRows.map(b => (
-              <div key={b.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-3 relative overflow-hidden">
+            {/* Mobile Select All Toolbar (Modern Sticky) */}
+            <div className="sticky top-16 z-20 -mx-4 px-4 py-3 bg-white/95 backdrop-blur-sm border-b border-gray-100 flex items-center justify-between mb-4 shadow-sm transition-all duration-300">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    checked={filteredRows.length > 0 && selectedIds.size === filteredRows.length}
+                    onChange={toggleSelectAll}
+                    className="peer sr-only"
+                    id="mobile-select-all"
+                  />
+                  <div
+                    onClick={toggleSelectAll}
+                    className={`w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 cursor-pointer`}
+                  ></div>
+                </div>
+                <label htmlFor="mobile-select-all" className="text-sm font-bold text-gray-700 cursor-pointer select-none">
+                  เลือกทั้งหมด
+                </label>
+              </div>
 
-                {/* Header: Status & Code */}
-                <div className="flex justify-between items-start">
-                  <div className="flex items-center gap-2 text-blue-900 font-bold">
-                    <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
-                      <Car className="w-4 h-4" />
-                    </div>
-                    <span>{b.request_code}</span>
+              <div className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg border border-blue-100">
+                {selectedIds.size} / {filteredRows.length}
+              </div>
+            </div>
+
+            {filteredRows.map(b => (
+              <div key={b.id} className={`bg-white p-4 rounded-xl shadow-sm border ${selectedIds.has(b.id) ? 'border-blue-500 ring-1 ring-blue-500' : 'border-gray-100'} flex flex-col gap-3 relative overflow-hidden transition-all duration-200`}>
+
+                {/* Selection Overlay for Mobile */}
+                <div className="absolute top-3 right-3 z-10">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(b.id)}
+                    onChange={() => toggleSelect(b.id)}
+                    className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                </div>
+
+                {/* Header: Code & Status */}
+                <div className="flex items-start gap-3 pr-8 mb-1">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 shrink-0 shadow-sm border border-blue-100">
+                    <Car className="w-5 h-5" />
                   </div>
-                  <span className={`px-2 py-1 rounded text-[10px] font-bold border ${getStatusColor(b.status)}`}>
-                    {getStatusLabel(b.status)}
-                  </span>
+                  <div className="flex flex-col items-start">
+                    <span className="text-blue-900 font-bold text-base leading-tight">
+                      {b.request_code}
+                    </span>
+                    <span className={`mt-1 inline-flex px-2.5 py-0.5 rounded-md text-[10px] font-bold border ${getStatusColor(b.status)}`}>
+                      {getStatusLabel(b.status)}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Details */}
@@ -271,7 +387,7 @@ function AdminRequestsContent() {
                     <div className="flex flex-col text-xs text-gray-600">
                       <span className="flex items-center gap-1">
                         เริ่ม: {formatThaiDateTime(b.start_at)}
-                        {b.start_at && isOffHours(b.start_at) && <span className="text-amber-600 font-bold" title="นอกเวลาราชการ">OT</span>}
+                        {b.is_ot && <span className="text-white bg-amber-500 px-1.5 py-0.5 rounded text-[10px] font-bold shadow-sm">OT</span>}
                       </span>
                       {b.end_at && <span>ถึง: {formatThaiDateTime(b.end_at)}</span>}
                     </div>
@@ -295,10 +411,16 @@ function AdminRequestsContent() {
                 {/* Action Buttons */}
                 <div className="flex gap-2 pt-2 border-t mt-1">
                   <button
-                    onClick={() => handlePrint(b)}
-                    className="py-2 px-3 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-600 text-xs font-medium flex items-center justify-center gap-1 hover:bg-indigo-100 shadow-sm transition-colors"
+                    onClick={() => handlePrintWord(b)}
+                    className="py-2 px-3 rounded-lg bg-blue-50 border border-blue-100 text-blue-600 text-xs font-medium flex items-center justify-center gap-1 hover:bg-blue-100 shadow-sm transition-colors"
                   >
-                    <Printer className="w-3.5 h-3.5" /> พิมพ์
+                    <FileDoc className="w-3.5 h-3.5" /> Word
+                  </button>
+                  <button
+                    onClick={() => handlePrintPDF(b.id)}
+                    className="py-2 px-3 rounded-lg bg-red-50 border border-red-100 text-red-600 text-xs font-medium flex items-center justify-center gap-1 hover:bg-red-100 shadow-sm transition-colors"
+                  >
+                    <FileDown className="w-3.5 h-3.5" /> PDF
                   </button>
 
                   <button
@@ -331,6 +453,14 @@ function AdminRequestsContent() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 text-gray-600 uppercase text-xs tracking-wider">
                   <tr>
+                    <th className="px-4 py-4 text-center w-10">
+                      <input
+                        type="checkbox"
+                        checked={filteredRows.length > 0 && selectedIds.size === filteredRows.length}
+                        onChange={toggleSelectAll}
+                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                    </th>
                     <th className="px-6 py-4 text-left font-semibold">รายละเอียดงาน</th>
                     <th className="px-6 py-4 text-left font-semibold">วันและเวลา</th>
                     <th className="px-6 py-4 text-left font-semibold">คนขับ / รถ</th>
@@ -343,7 +473,7 @@ function AdminRequestsContent() {
                 <tbody className="divide-y divide-gray-100">
                   {filteredRows.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="text-center py-10 text-gray-500">
+                      <td colSpan={7} className="text-center py-10 text-gray-500">
                         ไม่พบคำขอตามเงื่อนไข
                       </td>
                     </tr>
@@ -351,8 +481,23 @@ function AdminRequestsContent() {
                     filteredRows.map((b) => (
                       <tr
                         key={b.id}
-                        className="hover:bg-blue-50/30 transition-colors duration-150"
+                        className={`transition-colors duration-150 ${selectedIds.has(b.id) ? 'bg-blue-50/50' : 'hover:bg-blue-50/30'}`}
+                        onClick={(e) => {
+                          // Click row to toggle selection (if not clicking interactive elements)
+                          const target = e.target as HTMLElement;
+                          if (target.closest('button') || target.closest('a') || target.closest('input')) return;
+                          toggleSelect(b.id);
+                        }}
                       >
+                        <td className="px-4 py-4 align-top text-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(b.id)}
+                            onChange={() => toggleSelect(b.id)}
+                            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 mt-3"
+                          />
+                        </td>
+
                         {/* งาน (Request Icon + Details) */}
                         <td className="px-6 py-4 align-top">
                           <div className="flex items-start gap-3">
@@ -360,9 +505,9 @@ function AdminRequestsContent() {
                               <Car className="w-5 h-5" />
                             </div>
                             <div>
-                              <div className="font-bold text-gray-900 text-sm">{b.request_code}</div>
-                              <div className="flex items-center gap-1.5 text-gray-500 text-xs mt-1">
-                                <User className="w-3 h-3" />
+                              <div className="font-bold text-gray-900 text-sm whitespace-nowrap">{b.request_code}</div>
+                              <div className="flex items-center gap-1.5 text-gray-500 text-xs mt-1 whitespace-nowrap">
+                                <User className="w-3 h-3 shrink-0" />
                                 {b.requester?.full_name || "-"}
                               </div>
                               {b.purpose && (
@@ -374,17 +519,31 @@ function AdminRequestsContent() {
                           </div>
                         </td>
 
-                        {/* เวลา */}
+                        {/* เวลา (Split Date/Time) */}
                         <td className="px-6 py-4 align-top">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2 text-gray-700 font-medium">
-                              <Calendar className="w-3.5 h-3.5 text-blue-500" />
-                              <span>{formatThaiDateTime(b.start_at)}</span>
+                          <div className="space-y-1.5">
+                            {/* Start Date */}
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-2 text-gray-900 font-bold text-xs">
+                                <Calendar className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                                <span className="whitespace-nowrap">{formatThaiDateTime(b.start_at).split(" | ")[0]}</span>
+                              </div>
+                              <div className="flex items-center gap-2 pl-[22px] text-xs font-medium text-gray-500">
+                                <span>{formatThaiDateTime(b.start_at).split(" | ")[1]}</span>
+                                {b.is_ot && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-200">
+                                    OT
+                                  </span>
+                                )}
+                              </div>
                             </div>
+
+                            {/* End Date */}
                             {b.end_at && (
-                              <div className="flex items-center gap-2 text-gray-400 text-xs pl-[22px]">
-                                <span className="text-[10px] bg-gray-100 px-1 rounded">ถึง</span>
-                                <span>{formatThaiDateTime(b.end_at)}</span>
+                              <div className="flex flex-col pt-1 border-t border-dashed border-gray-100 mt-1">
+                                <div className="pl-[22px] text-[10px] text-gray-400">
+                                  <span>ถึง {formatThaiDateTime(b.end_at)}</span>
+                                </div>
                               </div>
                             )}
                           </div>
@@ -440,11 +599,18 @@ function AdminRequestsContent() {
                         <td className="px-6 py-4 align-top text-center">
                           <div className="flex items-center justify-center gap-2">
                             <button
-                              onClick={() => handlePrint(b)}
-                              className="p-2 text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors tooltip tooltip-top"
-                              title="พิมพ์ใบขออนุญาต"
+                              onClick={() => handlePrintWord(b)}
+                              className="p-2 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors tooltip tooltip-top"
+                              title="พิมพ์ Word"
                             >
-                              <Printer className="w-4 h-4" />
+                              <FileDoc className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handlePrintPDF(b.id)}
+                              className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors tooltip tooltip-top"
+                              title="พิมพ์ PDF"
+                            >
+                              <FileDown className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => setEditItem(b)}

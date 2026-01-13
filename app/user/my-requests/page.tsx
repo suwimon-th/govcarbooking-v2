@@ -46,6 +46,7 @@ type MyRequest = {
   driver_id?: string; // Optional if needed
   destination?: string;
   passenger_count?: number;
+  passengers?: { type: string; name: string; position: string }[];
 };
 
 /* =========================
@@ -153,6 +154,7 @@ export default function MyRequestsPage() {
       destination: item.destination,
       passenger_count: item.passenger_count,
       requester_position: item.requester?.position || null,
+      passengers: item.passengers,
     });
   };
 
@@ -305,8 +307,8 @@ export default function MyRequestsPage() {
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-50/50 border-b border-gray-100">
-                  <th className="px-8 py-5 text-left text-[11px] font-black text-gray-400 uppercase tracking-[2px]">รายละเอียดการจอง</th>
-                  <th className="px-8 py-5 text-left text-[11px] font-black text-gray-400 uppercase tracking-[2px]">วันและเวลาที่จอง</th>
+                  <th className="px-8 py-5 text-left text-[11px] font-black text-gray-400 uppercase tracking-[2px]">รายละเอียดการขอใช้รถ</th>
+                  <th className="px-8 py-5 text-left text-[11px] font-black text-gray-400 uppercase tracking-[2px]">วันและเวลาที่ขอใช้รถ</th>
                   <th className="px-8 py-5 text-left text-[11px] font-black text-gray-400 uppercase tracking-[2px]">รถที่ได้รับมอบหมาย</th>
                   <th className="px-8 py-5 text-center text-[11px] font-black text-gray-400 uppercase tracking-[2px]">สถานะ</th>
                   <th className="px-8 py-5 text-center text-[11px] font-black text-gray-400 uppercase tracking-[2px]">จัดการ</th>

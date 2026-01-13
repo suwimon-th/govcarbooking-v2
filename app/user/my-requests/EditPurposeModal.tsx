@@ -67,7 +67,7 @@ export default function EditPurposeModal({ booking, onClose, onUpdated }: Props)
                     <div>
                         <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                             <Pencil className="w-5 h-5 text-blue-600" />
-                            แก้ไขข้อมูลการจอง
+                            แก้ไขข้อมูลการขอใช้รถ
                         </h2>
                         <p className="text-sm text-gray-500 mt-1">
                             รหัสงาน: <span className="font-mono font-medium text-gray-700">{booking.request_code}</span>

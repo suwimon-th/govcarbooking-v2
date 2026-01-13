@@ -12,9 +12,12 @@ export async function POST(req: Request) {
             driver_id,
             vehicle_id,
             purpose,
+            destination,
+            passenger_count,
             start_at,
             end_at,
             status,
+            is_ot,
         } = body;
 
         if (!id) {
@@ -36,9 +39,12 @@ export async function POST(req: Request) {
                 driver_id: driver_id || null,
                 vehicle_id: vehicle_id || null,
                 purpose,
+                destination,
+                passenger_count,
                 start_at: start_at || null,
                 end_at: end_at || null,
                 status,
+                is_ot,
             })
             .eq("id", id);
 

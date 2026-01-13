@@ -12,7 +12,8 @@ import {
   CheckCircle2,
   AlertCircle,
   Gauge,
-  ArrowRight
+  ArrowRight,
+  BookOpen
 } from "lucide-react";
 
 type Booking = {
@@ -297,6 +298,12 @@ export default function MileageClient() {
               </>
             )}
           </button>
+        </div>
+
+        <div className="flex justify-center gap-4 text-sm text-gray-500 mt-8">
+          <a href="/manual" target="_blank" className="flex items-center gap-1 hover:text-blue-600 transition-colors">
+            <BookOpen className="w-4 h-4" /> คู่มือการใช้งาน
+          </a>
         </div>
 
         <p className="text-center text-xs text-gray-400">

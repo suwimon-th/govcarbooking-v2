@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>คู่มือการใช้งานระบบการขอใช้รถส่วนกลาง (GovCarBooking)</title>
+<style>
+    body { font-family: "TH SarabunPSK", "Sarabun", sans-serif; font-size: 16pt; line-height: 1.5; color: #000; }
+    h1 { font-size: 24pt; font-weight: bold; color: #1E3A8A; margin-top: 20pt; }
+    h2 { font-size: 20pt; font-weight: bold; color: #1E40AF; margin-top: 16pt; border-bottom: 2px solid #EEE; padding-bottom: 5pt; }
+    h3 { font-size: 18pt; font-weight: bold; color: #374151; margin-top: 12pt; }
+    h4 { font-size: 16pt; font-weight: bold; margin-top: 10pt; }
+    p { margin-bottom: 8pt; }
+    ul, ol { margin-bottom: 8pt; }
+    li { margin-bottom: 4pt; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 16pt; }
+    th, td { border: 1px solid #000; padding: 8pt; vertical-align: top; }
+    th { background-color: #F3F4F6; font-weight: bold; text-align: left; }
+    .status-pending { background-color: #FEF9C3; color: #854D0E; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+    .status-approved { background-color: #DCFCE7; color: #166534; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+    .status-completed { background-color: #DBEAFE; color: #1E40AF; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+    .status-rejected { background-color: #FEE2E2; color: #991B1B; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+    .note { background-color: #F9FAFB; border: 1px dashed #D1D5DB; padding: 10pt; border-radius: 8px; font-style: italic; }
+</style>
+</head>
+<body>
+
+<center>
+    <h1>คู่มือการใช้งานระบบการขอใช้รถส่วนกลาง (GovCarBooking) ฉบับสมบูรณ์</h1>
+    <p><strong>Official Master Manual</strong></p>
+</center>
+
+<hr/>
+
+<h2>สารบัญ</h2>
+<ol>
+    <li><a href="#intro">บทนำ: โครงสร้างผู้ใช้งาน</a></li>
+    <li><a href="#part-a">PART A: สำหรับผู้ใช้งานทั่วไป (User)</a></li>
+    <li><a href="#part-b">PART B: สำหรับพนักงานขับรถ (Driver)</a></li>
+    <li><a href="#part-c">PART C: สำหรับเจ้าหน้าที่ดูแลระบบ (Admin)</a></li>
+    <li><a href="#appendix">ภาคผนวก: สัญลักษณ์และสถานะระบบ</a></li>
+</ol>
+
+<hr/>
+
+<h2 id="intro">1. บทนำ: โครงสร้างผู้ใช้งาน</h2>
+<p>ระบบแบ่งผู้ใช้งานเป็น 3 ระดับ:</p>
+<ol>
+    <li><strong>User</strong>: ข้าราชการ/เจ้าหน้าที่ทั่วไป &rarr; ทำหน้าที่ "จอง" และ "ดูสถานะ"</li>
+    <li><strong>Driver</strong>: พนักงานขับรถ &rarr; ทำหน้าที่ "รับงาน", "ลงบันทึกไมล์", "เบิกน้ำมัน"</li>
+    <li><strong>Admin</strong>: เจ้าหน้าที่ยานพาหนะ &rarr; ทำหน้าที่ "บริหารจัดการทั้งหมด"</li>
+</ol>
+
+<hr/>
+
+<h2 id="part-a">PART A: สำหรับผู้ใช้งานทั่วไป (User)</h2>
+
+<h3>A1. การเข้าสู่ระบบ</h3>
+<ul>
+    <li>เข้าเว็บไซต์ผ่าน Browser (Chrome, Safari, Edge)</li>
+    <li>กรอก <strong>Username</strong> และ <strong>Password</strong> ที่ได้รับจากเจ้าหน้าที่</li>
+    <li>กดปุ่ม "เข้าสู่ระบบ" (สีน้ำเงิน)</li>
+</ul>
+<p class="note">หมายเหตุ: กรณีลืมรหัสผ่าน ให้ติดต่อ Admin เพื่อทำการ Reset (ไม่มีปุ่มกดเองเพื่อความปลอดภัย)</p>
+
+<h3>A2. หน้าหลักและปฏิทิน (Dashboard)</h3>
+<p>เมื่อเข้ามาแล้ว จะพบกับ <strong>ปฏิทินการใช้รถ</strong></p>
+<ul>
+    <li><strong>Desktop (คอมพิวเตอร์)</strong>: แสดงตารางเต็มเดือน มีแถบสีคาดในวันที่รถไม่ว่าง</li>
+    <li><strong>Mobile (มือถือ)</strong>: แสดงปฏิทินย่อ (มีจุดสี) เมื่อแตะที่วันที่ รายการจองจะแสดงด้านล่าง</li>
+    <li><strong>การกรอง</strong>: สามารถกดปุ่มลูกศร <code>&lt; &gt;</code> เพื่อดูเดือนถัดไป/ย้อนหลังได้</li>
+</ul>
+
+<h3>A3. การการขอใช้รถ (Request Booking)</h3>
+<p><strong>Flow การจอง:</strong></p>
+<ol>
+    <li>กดปุ่ม <strong>"ขอใช้รถใหม่ (+)"</strong></li>
+    <li>ระบบจะเปิดแบบฟอร์ม ให้กรอกข้อมูลดังนี้:
+        <ul>
+            <li><strong>ผู้ขอ/ตำแหน่ง</strong>: ระบบดึงให้อัตโนมัติ (แก้ไขตำแหน่งได้)</li>
+            <li><strong>วันเดินทาง</strong>: เลือกวันที่ (ห้ามเลือกย้อนหลัง)</li>
+            <li><strong>เวลา</strong>: ระบุเวลาไป-กลับ</li>
+            <li><strong>เลือกรถ</strong>: กดเลือกจากรายการรูปรถ (จะมี Pop-up แสดงรถที่ว่างและไม่ว่าง)</li>
+            <li><strong>คนขับ (กรณี OT)</strong>: หากเลือกเวลานอกราชการ (ก่อน 08:00 หรือหลัง 16:00) ระบบจะบังคับให้เลือกคนขับ เพื่อให้แจ้งเตือน Line</li>
+            <li><strong>สถานที่/ภารกิจ</strong>: ระบุให้ชัดเจน</li>
+            <li><strong>ผู้โดยสาร</strong>: ระบุจำนวนและชื่อ (เลือกจากรายชื่อเจ้าหน้าที่ หรือพิมพ์ชื่อบุคคลภายนอก)</li>
+        </ul>
+    </li>
+    <li>กด <strong>"บันทึก"</strong> เมื่อเสร็จสิ้น สถานะจะเป็น <strong>"รออนุมัติ (Pending)"</strong></li>
+</ol>
+
+<h3>A4. การติดตามสถานะและประวัติ</h3>
+<ul>
+    <li>ดูที่หน้าปฏิทิน:
+        <ul>
+            <li><span class="status-pending">สีเหลือง Pending</span>: รอแอดมินดำเนินการ</li>
+            <li><span class="status-approved">สีเขียว Approved</span>: ได้รับรถแล้ว (คลิกดูรายละเอียดจะเห็นชื่อคนขับและเบอร์โทร)</li>
+            <li><span class="status-rejected">สีแดง Rejected</span>: คำขอถูกปฏิเสธ (ดูเหตุผลในรายละเอียด)</li>
+        </ul>
+    </li>
+</ul>
+
+<h3>A5. การแจ้งปัญหา (Report Issue)</h3>
+<ul>
+    <li>หากพบปัญหาเกี่ยวกับรถ (เช่น แอร์ไม่เย็น, รถเสีย, ความสะอาด)</li>
+    <li>กดปุ่ม <strong>"แจ้งปัญหา"</strong> (ไอคอนตกใจ &#9888;) ที่เมนูช่วยเหลือ หรือในรายละเอียดรถ</li>
+    <li>ระบุรายละเอียดและแนบรูปภาพ (ถ้ามี) เรื่องจะถูกส่งตรงถึง Admin ทันที</li>
+</ul>
+
+<hr/>
+
+<h2 id="part-b">PART B: สำหรับพนักงานขับรถ (Driver)</h2>
+
+<h3>B1. การรับงานและการแจ้งเตือน (Line)</h3>
+<ul>
+    <li><strong>การเชื่อมต่อ</strong>: พนักงานขับรถต้องทำการ "Link Account" กับ LINE OA ของระบบ (สแกน QR Code ที่ Admin ออกให้)</li>
+    <li><strong>เมื่อมีงานเข้า</strong>: ระบบจะเด้งแจ้งเตือนผ่าน LINE บอกรายละเอียด (วันที่, เวลา, สถานที่, ผู้จอง)</li>
+</ul>
+
+<h3>B2. การบันทึกเลขไมล์ (Mileage)</h3>
+<p>เป็นหน้าที่สำคัญที่ต้องทำ <strong>ทุกครั้งที่ออกรถ</strong>:</p>
+<ol>
+    <li><strong>ขาไป (Start)</strong>:
+        <ul>
+            <li>เข้าระบบ Driver &gt; เมนู <strong>"บันทึกไมล์เริ่ม"</strong></li>
+            <li>เลือกงานที่กำลังจะไป > กรอกเลขไมล์หน้าปัดปัจจุบัน &gt; กดบันทึก</li>
+        </ul>
+    </li>
+    <li><strong>ขากลับ (End)</strong>:
+        <ul>
+            <li>เมื่อส่งผู้โดยสารเสร็จ > เข้าระบบ &gt; เมนู <strong>"บันทึกไมล์จบ"</strong></li>
+            <li>กรอกเลขไมล์สิ้นสุด > ระบบจะคำนวณระยะทางรวม (Trip Distance) ให้ทันที</li>
+        </ul>
+    </li>
+</ol>
+
+<h3>B3. การขอเบิกน้ำมัน (Fuel Request)</h3>
+<ul>
+    <li>เมื่อเติมน้ำมัน ให้เข้าเมนู <strong>"แจ้งเติมน้ำมัน"</strong></li>
+    <li>ถ่ายรูปใบเสร็จ หรือระบุจำนวนลิตร/ราคา</li>
+    <li>กดส่ง &rarr; รายการจะไปโผล่ที่หน้าจอ Admin เพื่อรออนุมัติเบิกจ่าย</li>
+</ul>
+
+<hr/>
+
+<h2 id="part-c">PART C: สำหรับเจ้าหน้าที่ดูแลระบบ (Admin)</h2>
+
+<h3>C1. ภาพรวมและสถิติ (Overview)</h3>
+<ul>
+    <li>หน้า Dashboard จะสรุปสถานะรถวันนี้ (ว่างกี่คัน, ใช้งานกี่คัน)</li>
+    <li>กราฟสรุปยอดการใช้รถรายเดือน</li>
+</ul>
+
+<h3>C2. การจัดการคำขอ (Requests Management)</h3>
+<p>หน้านี้คือหัวใจสำคัญของ Admin:</p>
+
+<h4>Flow: อนุมัติงาน (Approval)</h4>
+<ol>
+    <li>ไปที่เมนู <strong>"รายการจอง"</strong></li>
+    <li>ดูรายการที่เป็น <span class="status-pending">Pending</span> &rarr; กดปุ่ม <strong>"จัดการ (ดินสอ)"</strong></li>
+    <li>ตรวจสอบรายละเอียด (วันที่, รถที่ User เลือกมา)</li>
+    <li><strong>Action</strong>:
+        <ul>
+            <li>หากรถว่าง: กดเปลี่ยนสถานะเป็น <strong>Approved</strong></li>
+            <li>หากรถไม่ว่าง: สามารถ "เปลี่ยนรถ" ให้ User ได้ แล้วจึง Approve</li>
+            <li>หากไม่มีรถ: กด <strong>Rejected</strong> พร้อมระบุเหตุผล</li>
+        </ul>
+    </li>
+    <li><strong>Assign Driver</strong>: เลือกคนขับให้งานนี้ (ระบบจะช่วยกรองคนขับที่ว่างให้)</li>
+</ol>
+
+<h4>Flow: การพิมพ์เอกสาร (Document)</h4>
+<ul>
+    <li>เมื่อ Approve แล้ว จะมีปุ่มโผล่ขึ้นมา:
+        <ul>
+            <li>&#128196; <strong>Word</strong>: ดาวน์โหลดแบบฟอร์ม "ใบขออนุญาตใช้รถ" (แบบ 3) ไปแก้ไขจัดหน้าได้</li>
+            <li>&#128196; <strong>PDF</strong>: ดาวน์โหลดแบบพร้อมพิมพ์ (Format ราชการ: ตราครุฑ, เส้นประ, ฟอนต์ TH Sarabun)</li>
+        </ul>
+    </li>
+</ul>
+
+<h3>C3. การเบิกน้ำมัน (Fuel Management)</h3>
+<ul>
+    <li>ไปที่เมนู <strong>"จัดการน้ำมัน"</strong> (Fuel)</li>
+    <li>ตรวจสอบรายการที่ Driver ส่งเข้ามา</li>
+    <li>เปลี่ยนสถานะ:
+        <ul>
+            <li><strong>In Progress</strong>: รับเรื่องแล้ว กำลังทำเบิก</li>
+            <li><strong>Completed</strong>: เบิกจ่ายเสร็จสิ้น (ปิดงาน)</li>
+        </ul>
+    </li>
+</ul>
+
+<h3>C4. รายงาน (Reports)</h3>
+<ul>
+    <li>เมนู <strong>"รายงานการใช้รถ"</strong></li>
+    <li><strong>ตัวกรอง</strong>: เลือก เดือน/ปี หรือ เลือกเฉพาะทะเบียนรถ</li>
+    <li><strong>ผลลัพธ์</strong>: ตารางแสดง วันที่, เวลา, ผู้ใช้, ภารกิจ, เลขไมล์ (ไป-กลับ), ระยะทางรวม, คนขับ</li>
+    <li><strong>Export</strong>:
+        <ul>
+            <li>ปุ่ม <strong>excel (CSV)</strong>: โหลดไปทำตารางต่อได้</li>
+            <li>ปุ่ม <strong>Print</strong>: พิมพ์หน้ารายงานสรุปพร้อมช่องเซ็นชื่อท้ายกระดาษ</li>
+        </ul>
+    </li>
+</ul>
+
+<h3>C5. การจัดการข้อมูลหลัก (Master Data)</h3>
+
+<h4>รถยนต์ (Vehicles)</h4>
+<ul>
+    <li><strong>เพิ่มรถใหม่</strong>: ใส่ทะเบียน, ยี่ห้อ, ประเภท (รถตู้/กระบะ), <strong>สีที่แสดงในปฏิทิน</strong></li>
+    <li><strong>สถานะรถ</strong>:
+        <ul>
+            <li>Active: พร้อมใช้</li>
+            <li>Repair: ส่งซ่อม (ระบบจะบล็อกไม่ให้จอง)</li>
+            <li>Inactive: งดใช้ชั่วคราว</li>
+        </ul>
+    </li>
+</ul>
+
+<h4>พนักงานขับรถ (Drivers)</h4>
+<ul>
+    <li><strong>เพิ่มคนขับ</strong>: ใส่ชื่อ-สกุล, เบอร์โทร</li>
+    <li><strong>สถานะการทำงาน</strong>:
+        <ul>
+            <li>Available: ว่าง</li>
+            <li>Busy: ติดภารกิจ</li>
+            <li>Off: ลา/หยุด</li>
+        </ul>
+    </li>
+    <li><strong>Connect Line</strong>: ดูสถานะว่าคนขับผูก Line แล้วหรือยัง ถ้ายังให้กดปุ่ม Copy Link ส่งให้เขา</li>
+</ul>
+
+<h4>ผู้ใช้งาน (Users)</h4>
+<ul>
+    <li>สร้าง Username/Password ให้เจ้าหน้าที่</li>
+    <li><strong>Role</strong>: กำหนดว่าเป็น USER หรือ ADMIN</li>
+    <li><strong>Reset Password</strong>: ใช้เมื่อ User ลืมรหัสผ่าน</li>
+</ul>
+
+<hr/>
+
+<h2 id="appendix">ภาคผนวก: สัญลักษณ์และสถานะระบบ</h2>
+
+<table>
+    <thead>
+        <tr>
+            <th>สถานะ (Status)</th>
+            <th>สี (Color)</th>
+            <th>ความหมาย</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>Pending</strong></td>
+            <td><span class="status-pending">สีเหลือง</span></td>
+            <td>รอการอนุมัติจาก Admin</td>
+        </tr>
+        <tr>
+            <td><strong>Approved</strong></td>
+            <td><span class="status-approved">สีเขียว</span></td>
+            <td>อนุมัติแล้ว (มีรถและคนขับ)</td>
+        </tr>
+        <tr>
+            <td><strong>Completed</strong></td>
+            <td><span class="status-completed">สีฟ้า</span></td>
+            <td>ภารกิจเสร็จสิ้น (บันทึกเลขไมล์แล้ว)</td>
+        </tr>
+        <tr>
+            <td><strong>Rejected</strong></td>
+            <td><span class="status-rejected">สีแดง</span></td>
+            <td>คำขอถูกปฏิเสธ</td>
+        </tr>
+        <tr>
+            <td><strong>Cancelled</strong></td>
+            <td>สีเทา</td>
+            <td>ผู้ใช้ยกเลิกคำขอเอง</td>
+        </tr>
+    </tbody>
+</table>
+
+<br>
+
+<table>
+    <thead>
+        <tr>
+            <th>สถานะรถ/คนขับ</th>
+            <th>ความหมาย</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>Active / Available</strong></td>
+            <td>พร้อมให้บริการ</td>
+        </tr>
+        <tr>
+            <td><strong>Repair</strong></td>
+            <td>รถอยู่ระหว่างซ่อมบำรุง (ห้ามจอง)</td>
+        </tr>
+        <tr>
+            <td><strong>Busy</strong></td>
+            <td>คนขับติดภารกิจอื่นซ้อนอยู่</td>
+        </tr>
+    </tbody>
+</table>
+
+<br/>
+<center>
+    <p><em>จัดทำโดย: ทีมพัฒนาระบบการขอใช้รถส่วนกลาง</em></p>
+</center>
+
+</body>
+</html>

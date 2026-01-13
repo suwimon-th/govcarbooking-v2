@@ -27,9 +27,13 @@ interface BookingItem {
   status: string;
   vehicle_id: string;
   requester_name: string;
+  is_ot: boolean;
   vehicles: {
     color: string;
     plate_number: string;
+  } | null;
+  drivers: {
+    full_name: string;
   } | null;
 }
 
@@ -45,11 +49,18 @@ export async function GET() {
         status,
         vehicle_id,
         requester_name,
+        driver_id,
+        is_ot,
         vehicles (
           color,
           plate_number
+        ),
+        drivers (
+          full_name
         )
       `)
+      .neq("status", "CANCELLED")
+      .neq("status", "REJECTED")
       .returns<BookingItem[]>();
 
     if (error) {
@@ -77,8 +88,10 @@ export async function GET() {
         vehicle_id: item.vehicle_id,
         vehicle_color: item.vehicles?.color ?? "#9CA3AF",
         vehicle_plate: item.vehicles?.plate_number ?? "-",
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        driver_name: (item.drivers as any)?.full_name ?? null,
         requester_name: item.requester_name,
-        is_off_hours: isOffHours(start),
+        is_off_hours: item.is_ot, // ✅ Use explicit DB value
       };
     });
 
