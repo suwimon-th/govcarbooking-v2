@@ -115,7 +115,7 @@ export default function ReportIssueModal({ open, onClose }: ReportIssueModalProp
                             <h4 className="text-xl font-bold text-gray-800">แจ้งปัญหาสำเร็จ</h4>
                             <p className="text-gray-500 mt-2">
                                 ระบบได้บันทึกข้อมูลเรียบร้อยแล้ว<br />
-                                เจ้าหน้าที่จะติดต่อกลับให้เร็วที่สุดครับ
+                                เจ้าหน้าที่จะติดต่อกลับให้เร็วที่สุด
                             </p>
                             <button
                                 onClick={onClose}
