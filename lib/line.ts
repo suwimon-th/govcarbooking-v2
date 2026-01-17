@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { isOffHours } from "./statusHelper";
 
-const BASE_URL = "https://govcarbooking-v2-suwimon-ths-projects.vercel.app";
+const BASE_URL = "https://govcarbooking-v2.vercel.app";
 
 // ======================================================
 // PUSH MESSAGE
