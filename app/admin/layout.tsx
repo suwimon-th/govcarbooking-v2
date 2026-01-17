@@ -48,6 +48,36 @@ export default function AdminLayout({
 
   const currentTitle = breadcrumbTitles[pathname] ?? "";
 
+  const [pendingCount, setPendingCount] = useState(0);
+
+  // Fetch Pending Count
+  useEffect(() => {
+    const fetchPending = async () => {
+      const { count } = await supabase
+        .from("bookings")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "REQUESTED");
+
+      setPendingCount(count || 0);
+    };
+
+    fetchPending();
+
+    // Realtime subscription
+    const channel = supabase
+      .channel("admin_badge")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "bookings" },
+        () => fetchPending()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   // ===== Legacy Logout (keeps compatibility) =====
   const handleLogout = async (): Promise<void> => {
     try {
@@ -103,14 +133,22 @@ export default function AdminLayout({
               onClick={() => setMobileMenuOpen(true)}
             >
               <Menu className="w-6 h-6" />
+              {pendingCount > 0 && (
+                <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full"></span>
+              )}
             </button>
 
             {/* Desktop Menu */}
             <div className="hidden md:flex items-center gap-1 text-sm font-medium text-gray-600">
 
               {/* 1. Main */}
-              <Link href="/admin/requests" className="hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-lg flex items-center gap-2 transition-colors">
+              <Link href="/admin/requests" className="hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-lg flex items-center gap-2 transition-colors relative">
                 <FileText className="w-4 h-4" /> คำขอใช้รถ
+                {pendingCount > 0 && (
+                  <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center shadow-sm">
+                    {pendingCount}
+                  </span>
+                )}
               </Link>
               <Link href="/calendar" className="hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-lg flex items-center gap-2 transition-colors" target="_blank">
                 <Calendar className="w-4 h-4" /> ปฏิทิน
@@ -237,7 +275,18 @@ export default function AdminLayout({
               {/* Group 1: Main */}
               <div className="space-y-1">
                 <Link href="/admin/requests" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2 hover:bg-blue-50 text-gray-700 rounded-lg font-medium">
-                  <FileText className="w-5 h-5 text-blue-500" /> คำขอใช้รถ
+                  <div className="relative">
+                    <FileText className="w-5 h-5 text-blue-500" />
+                    {pendingCount > 0 && (
+                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border border-white"></span>
+                    )}
+                  </div>
+                  คำขอใช้รถ
+                  {pendingCount > 0 && (
+                    <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full ml-auto">
+                      {pendingCount}
+                    </span>
+                  )}
                 </Link>
                 <Link href="/calendar" onClick={() => setMobileMenuOpen(false)} target="_blank" className="flex items-center gap-3 px-3 py-2 hover:bg-blue-50 text-gray-700 rounded-lg font-medium">
                   <Calendar className="w-5 h-5 text-blue-500" /> ปฏิทินงาน

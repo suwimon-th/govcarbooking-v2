@@ -452,7 +452,7 @@ export function flexAdminNotifyNewBooking(booking: any) {
             action: {
               type: "uri",
               label: "📍 มอบหมายคนขับรถ",
-              uri: `${BASE_URL}/admin/requests`,
+              uri: `${BASE_URL}/admin/requests?id=${booking.id}`,
             },
           },
           {
