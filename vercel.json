@@ -2,7 +2,7 @@
     "crons": [
         {
             "path": "/api/cron/remind-pending",
-            "schedule": "0 10 * * *"
+            "schedule": "30 9 * * *"
         },
         {
             "path": "/api/cron/reset-drivers",

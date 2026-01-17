@@ -479,6 +479,9 @@ export function flexReminderPendingJob(bookings: any[]) {
     type: "box",
     layout: "vertical",
     margin: "md",
+    paddingAll: "10px",
+    backgroundColor: "#f8fafc",
+    cornerRadius: "8px",
     contents: [
       {
         type: "text",
@@ -495,8 +498,23 @@ export function flexReminderPendingJob(bookings: any[]) {
         margin: "xs",
         wrap: true,
       },
+      {
+        type: "button",
+        style: "primary",
+        height: "sm",
+        color: "#EF4444",
+        margin: "sm",
+        action: {
+          type: "uri",
+          label: "📝 บันทึกเลขไมล์",
+          uri: `${BASE_URL}/driver/start-mileage?booking=${b.id}`,
+        },
+      },
     ],
   }));
+
+  // If there is at least one booking, use the first one for the main button, or keep it generic
+  const firstBookingId = bookings.length > 0 ? bookings[0].id : "";
 
   return {
     type: "flex",
@@ -525,7 +543,7 @@ export function flexReminderPendingJob(bookings: any[]) {
         contents: [
           {
             type: "text",
-            text: "ท่านยังมีงานที่ยังไม่ได้บันทึกเลขไมล์ปิดงาน กรุณาตรวจสอบและดำเนินการให้เรียบร้อยครับ",
+            text: "ท่านยังมีงานที่ยังไม่ได้บันทึกเลขไมล์ปิดงาน กรุณาเลือกงานด้านล่างเพื่อบันทึกข้อมูลครับ",
             size: "sm",
             color: "#333333",
             wrap: true,
@@ -541,18 +559,7 @@ export function flexReminderPendingJob(bookings: any[]) {
         contents: [
           {
             type: "button",
-            style: "primary",
-            color: "#EF4444",
-            action: {
-              type: "uri",
-              label: "📋 ไปที่รายการงานของฉัน",
-              uri: `${BASE_URL}/driver/start-mileage`,
-            },
-          },
-          {
-            type: "button",
             style: "secondary",
-            margin: "sm",
             action: {
               type: "uri",
               label: "📅 ดูตารางการใช้รถ",

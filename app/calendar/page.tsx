@@ -330,21 +330,25 @@ export default function PublicCalendarPage() {
                         {vehicles.map((v) => (
                             <div key={v.id} className="flex items-center gap-1.5">
                                 <span className="w-3 h-3 rounded-full" style={{ backgroundColor: v.color || '#9CA3AF' }}></span>
-                                <span className="text-xs text-gray-600">{v.plate_number ? `รถ ${v.plate_number}` : 'รถอื่นๆ'}</span>
+                                <span className="text-xs text-gray-600 whitespace-nowrap">{v.plate_number ? `รถ ${v.plate_number}` : 'รถอื่นๆ'}</span>
                             </div>
                         ))}
                         {/* Cancelled Legend */}
                         <div className="flex items-center gap-1.5">
+                            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: '#22C55E' }}></span>
+                            <span className="text-xs text-gray-600 whitespace-nowrap">เสร็จสิ้น</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
                             <span className="w-3 h-3 rounded-full" style={{ backgroundColor: '#9CA3AF' }}></span>
-                            <span className="text-xs text-gray-600">ยกเลิก</span>
+                            <span className="text-xs text-gray-600 whitespace-nowrap">ยกเลิก</span>
                         </div>
                     </div>
 
                     <Link
                         href="/login"
-                        className="flex items-center gap-2 bg-[#1E40AF] hover:bg-blue-800 text-white px-5 py-2.5 rounded-lg shadow-md transition-all font-medium"
+                        className="group flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-2.5 rounded-full shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transform hover:-translate-y-0.5 transition-all duration-200 font-bold tracking-wide whitespace-nowrap"
                     >
-                        <LogIn className="w-5 h-5" />
+                        <LogIn className="w-5 h-5 group-hover:scale-110 transition-transform" />
                         เข้าสู่ระบบ
                     </Link>
 
@@ -433,13 +437,17 @@ export default function PublicCalendarPage() {
                 {vehicles.map((v) => (
                     <div key={v.id} className="flex items-center gap-1 bg-white px-2 py-1 rounded-full shadow-sm text-[10px] text-gray-600 border border-gray-100">
                         <span className="w-2 h-2 rounded-full" style={{ backgroundColor: v.color || '#9CA3AF' }}></span>
-                        <span>{v.plate_number ? `รถ ${v.plate_number}` : 'รถอื่นๆ'}</span>
+                        <span className="whitespace-nowrap">{v.plate_number ? `รถ ${v.plate_number}` : 'รถอื่นๆ'}</span>
                     </div>
                 ))}
                 {/* Cancelled Legend */}
                 <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-full shadow-sm text-[10px] text-gray-600 border border-gray-100">
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#22C55E' }}></span>
+                    <span className="whitespace-nowrap">เสร็จสิ้น</span>
+                </div>
+                <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-full shadow-sm text-[10px] text-gray-600 border border-gray-100">
                     <span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#9CA3AF' }}></span>
-                    <span>ยกเลิก</span>
+                    <span className="whitespace-nowrap">ยกเลิก</span>
                 </div>
             </div>
 
