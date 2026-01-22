@@ -25,18 +25,26 @@ function padTime(t: string) {
    รถ B: ENV-69/001, ENV-69/002
 ---------------------------- */
 async function generateRequestCode(vehicleId: string) {
-  const now = new Date();
-  const yearBE = now.getFullYear() + 543;
-  const shortYear = String(yearBE).slice(-2); // "69"
+  // 1. Fetch vehicle plate number
+  const { data: vehicle } = await supabase
+    .from("vehicles")
+    .select("plate_number")
+    .eq("id", vehicleId)
+    .single();
 
-  // Format เดิม: ENV-69/
-  const prefix = `ENV-${shortYear}/`;
+  const plate = vehicle?.plate_number || "";
+  // Extract only digits from plate number (e.g. "ฮฮ 3605" -> "3605")
+  const digits = plate.replace(/\D/g, "");
+  // Take last 2 digits (e.g. "3605" -> "05")
+  const plateSuffix = digits.slice(-2) || "00";
 
-  // 1. Find last code with this prefix *AND* this vehicle_id
+  const prefix = `ENV-${plateSuffix}/`;
+
+  // 2. Find last code with this prefix AND this vehicle_id
   const { data } = await supabase
     .from("bookings")
     .select("request_code")
-    .eq("vehicle_id", vehicleId) // Filter by vehicle!
+    .eq("vehicle_id", vehicleId)
     .like("request_code", `${prefix}%`)
     .order("created_at", { ascending: false })
     .limit(1);
@@ -45,10 +53,9 @@ async function generateRequestCode(vehicleId: string) {
 
   if (data && data.length > 0) {
     const last = data[0].request_code;
-    // Format: ENV-69/0001
     const parts = last.split("/");
     if (parts.length === 2) {
-      const numPart = parts[1]; // "0001"
+      const numPart = parts[1]; // "001"
       const parsed = Number(numPart);
       if (!isNaN(parsed)) {
         running = parsed + 1;
@@ -56,7 +63,6 @@ async function generateRequestCode(vehicleId: string) {
     }
   }
 
-  // User asked for "001-009". So 3 digits padding.
   const run3 = String(running).padStart(3, "0");
   return `${prefix}${run3}`;
 }
