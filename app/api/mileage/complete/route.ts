@@ -79,26 +79,35 @@ export async function POST(req: Request) {
       // ไม่ return error เพราะงานหลัก update สำเร็จแล้ว แค่ log พลาด
     }
 
-    // 3) รีเซ็ตสถานะคนขับกลับเป็น AVAILABLE และ เวียนคิว
+    // 3) รีเซ็ตสถานะคนขับกลับเป็น AVAILABLE และ เวียนคิว (Renormalize 1..N)
     if (booking.driver_id) {
-      const { data: maxOrderData } = await supabase
-        .from("drivers")
-        .select("queue_order")
-        .order("queue_order", { ascending: false })
-        .limit(1)
-        .single();
-
-      const nextOrder = (maxOrderData?.queue_order ?? 0) + 1;
-
-      const { error: driverErr } = await supabase
+      // 3.1) Set Current Driver to Last (Use temp high number)
+      // Or simply set to 100000 then re-sort.
+      await supabase
         .from("drivers")
         .update({
           status: "AVAILABLE",
-          queue_order: nextOrder
+          queue_order: 999999 // Push to back temporarily
         })
         .eq("id", booking.driver_id);
 
-      if (driverErr) console.error("Update Driver Status Error:", driverErr);
+      // 3.2) Fetch All Active & Available Drivers (Sorted)
+      const { data: allDrivers } = await supabase
+        .from("drivers")
+        .select("id")
+        .eq("is_active", true)
+        .eq("status", "AVAILABLE")
+        .order("queue_order", { ascending: true });
+
+      // 3.3) Renumber sequence 1, 2, 3...
+      if (allDrivers && allDrivers.length > 0) {
+        for (let i = 0; i < allDrivers.length; i++) {
+          await supabase
+            .from("drivers")
+            .update({ queue_order: i + 1 })
+            .eq("id", allDrivers[i].id);
+        }
+      }
     }
 
     // --------------------------

@@ -56,7 +56,11 @@ export default function DriversPage() {
     const { data, error } = await supabase
       .from("drivers")
       .select("*")
-      .order("created_at", { ascending: false });
+      // Sort: Active First -> Available First -> LOWEST Queue First
+      .order("active", { ascending: false })
+      .order("status", { ascending: true }) // AVAILABLE < BUSY < OFF (Approx) but better relies on client sort or custom logic if needed. 
+      // Actually, simple queue order is best if managed correctly.
+      .order("queue_order", { ascending: true });
 
     if (!error && data) {
       setRows(data as DriverRow[]);
@@ -251,7 +255,7 @@ export default function DriversPage() {
             <div className="flex justify-between items-start">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 font-bold shrink-0">
-                  <User className="w-5 h-5" />
+                  #{d.queue_order || '-'}
                 </div>
                 <div>
                   <div className="font-bold text-gray-900">{d.full_name}</div>
@@ -320,6 +324,7 @@ export default function DriversPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-gray-600 uppercase text-xs tracking-wider">
               <tr>
+                <th className="px-6 py-4 text-left font-semibold">คิว</th>
                 <th className="px-6 py-4 text-left font-semibold">ชื่อคนขับ</th>
                 <th className="px-6 py-4 text-left font-semibold">สถานะการทำงาน</th>
                 <th className="px-6 py-4 text-center font-semibold">Active</th>
@@ -332,6 +337,10 @@ export default function DriversPage() {
             <tbody className="divide-y divide-gray-100">
               {filtered.map((d) => (
                 <tr key={d.id} className="hover:bg-blue-50/30 transition-colors">
+                  <td className="px-6 py-4 align-top">
+                    <span className="font-bold text-gray-400">#{d.queue_order || '-'}</span>
+                  </td>
+
                   <td className="px-6 py-4 align-top">
                     <div className="flex items-start gap-3">
                       <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 shrink-0">
