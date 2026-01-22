@@ -5,6 +5,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import EditBookingModal from "./EditBookingModal";
+import DriverQueueModal from "./DriverQueueModal";
 import { getStatusLabel, getStatusColor, isOffHours } from "@/lib/statusHelper";
 import {
   Calendar,
@@ -100,6 +101,8 @@ function AdminRequestsContent() {
 
   // Bulk Select State
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [nextDriver, setNextDriver] = useState<{ name: string, id: string } | null>(null);
+  const [isDriverQueueModalOpen, setIsDriverQueueModalOpen] = useState(false);
 
   // Filter Logic
   const filteredRows = rows.filter((r) => {
@@ -154,8 +157,23 @@ function AdminRequestsContent() {
     setLoading(false);
   };
 
+  const loadNextQueue = async () => {
+    try {
+      const res = await fetch("/api/admin/get-next-queue");
+      const json = await res.json();
+      if (json.driver) {
+        setNextDriver({ name: json.driver.name, id: json.driver.id });
+      } else {
+        setNextDriver(null);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     loadData();
+    loadNextQueue();
   }, []);
 
   // Auto-open modal if ID is present
@@ -231,6 +249,11 @@ function AdminRequestsContent() {
     }
   };
 
+  const handleHeaderQueueClick = async () => {
+    // Open Modal directly (no booking selection required)
+    setIsDriverQueueModalOpen(true);
+  };
+
   return (
     <div className="p-4 md:p-8 max-w-[1400px] mx-auto min-h-screen bg-gray-50/50">
 
@@ -243,6 +266,26 @@ function AdminRequestsContent() {
           <p className="text-gray-500 text-sm mt-1">
             รายการคำขอทั้งหมด {rows.length} รายการ
           </p>
+        </div>
+
+
+        {/* Highlight Next Queue */}
+        <div className="flex-1 flex justify-center md:justify-start md:pl-12">
+          <button
+            onClick={handleHeaderQueueClick}
+            className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl shadow-lg shadow-blue-200 flex items-center gap-4 animate-in fade-in zoom-in-95 duration-300 border border-blue-400/30 hover:scale-105 active:scale-95 transition-all text-left"
+          >
+            <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
+              <User className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] uppercase font-bold text-blue-100 tracking-wider">คิวถัดไป (Next Queue)</span>
+              <span className="text-lg font-bold truncate max-w-[200px] leading-tight">
+                {nextDriver?.name || "ไม่มีคนขับว่าง"}
+              </span>
+              <span className="text-[10px] text-blue-200 mt-0.5 font-normal">คลิกเพื่อเลือกคนขับ...</span>
+            </div>
+          </button>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
@@ -639,6 +682,18 @@ function AdminRequestsContent() {
           booking={editItem}
           onClose={() => setEditItem(null)}
           onUpdated={loadData}
+        />
+      )}
+
+      {isDriverQueueModalOpen && (
+        <DriverQueueModal
+          bookingIds={Array.from(selectedIds)}
+          onClose={() => setIsDriverQueueModalOpen(false)}
+          onSuccess={() => {
+            setSelectedIds(new Set());
+            loadData();
+            loadNextQueue();
+          }}
         />
       )}
     </div>

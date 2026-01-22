@@ -16,7 +16,8 @@ import {
   MapPin,
   Users,
   Save,
-  CheckCircle2
+  CheckCircle2,
+  Sparkles
 } from "lucide-react";
 
 // =======================
@@ -150,6 +151,33 @@ export default function EditBookingModal({
     } catch (err) {
       console.error("Network error:", err);
       alert("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAutoAssign = async () => {
+    if (!confirm("ต้องการมอบหมายให้คนขับคิวถัดไปรับงานนี้ใช่หรือไม่? (ระบบจะหมุนคิวอัตโนมัติ)")) return;
+
+    setLoading(true);
+    try {
+      const res = await fetch("/api/admin/assign-next-driver", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ booking_id: booking.id }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        alert(json.error || "ทำรายการไม่สำเร็จ");
+      } else {
+        alert(`มอบหมายงานให้: ${json.driver_name} เรียบร้อยแล้ว`);
+        onUpdated();
+        onClose();
+      }
+    } catch (err) {
+      console.error(err);
+      alert("เกิดข้อผิดพลาดในการเชื่อมต่อเครือข่าย");
     } finally {
       setLoading(false);
     }
@@ -369,8 +397,16 @@ export default function EditBookingModal({
 
               {/* คนขับ */}
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
-                  <User className="w-3.5 h-3.5 text-gray-400" /> พนักงานขับรถ
+                <label className="text-sm font-medium text-gray-700 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5"><User className="w-3.5 h-3.5 text-gray-400" /> พนักงานขับรถ</span>
+                  <button
+                    type="button"
+                    onClick={handleAutoAssign}
+                    disabled={loading}
+                    className="text-[10px] bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-2 py-0.5 rounded-full hover:shadow transition-transform hover:scale-105 flex items-center gap-1"
+                  >
+                    <Sparkles className="w-3 h-3" /> Auto Assign (Next Queue)
+                  </button>
                 </label>
                 <div className="relative">
                   <select

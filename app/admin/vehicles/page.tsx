@@ -31,6 +31,7 @@ interface VehicleRow {
   remark: string | null;
   created_at: string | null;
   color: string | null;
+  last_request_code?: string; // Add this
 }
 
 type ToastType = "success" | "error" | "info";
@@ -58,7 +59,7 @@ export default function VehiclesPage() {
 
   // ---------- Load Data ----------
   const loadData = async () => {
-    const { data, error } = await supabase
+    const { data: vehicles, error } = await supabase
       .from("vehicles")
       .select(
         "id, plate_number, brand, model, type, status, remark, created_at, color"
@@ -71,7 +72,25 @@ export default function VehiclesPage() {
       return;
     }
 
-    setRows((data ?? []) as VehicleRow[]);
+    // Fetch Last Request Code for each vehicle
+    const vehiclesWithCode = await Promise.all(
+      (vehicles || []).map(async (v) => {
+        const { data: booking } = await supabase
+          .from("bookings")
+          .select("request_code")
+          .eq("vehicle_id", v.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        return {
+          ...v,
+          last_request_code: booking?.request_code || "-"
+        };
+      })
+    );
+
+    setRows(vehiclesWithCode as VehicleRow[]);
   };
 
   useEffect(() => {
@@ -252,6 +271,13 @@ export default function VehiclesPage() {
             </div>
 
             <div className="bg-gray-50/50 rounded-lg p-3 space-y-2 text-sm border border-gray-100">
+              {/* Mobile: Last Request Code */}
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-500">เลขล่าสุด:</span>
+                <span className="text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded">
+                  {v.last_request_code || "-"}
+                </span>
+              </div>
               <div className="flex justify-between text-xs">
                 <span className="text-gray-500">ประเภท:</span>
                 <span className="text-gray-900 font-medium">
@@ -294,6 +320,7 @@ export default function VehiclesPage() {
             <thead className="bg-gray-50 text-gray-600 uppercase text-xs tracking-wider">
               <tr>
                 <th className="px-6 py-4 text-left font-semibold">รถยนต์</th>
+                <th className="px-6 py-4 text-left font-semibold">เลขล่าสุด</th>
                 <th className="px-6 py-4 text-left font-semibold">ประเภท</th>
                 <th className="px-6 py-4 text-left font-semibold">สถานะ</th>
                 <th className="px-6 py-4 text-center font-semibold">หมายเหตุ</th>
@@ -321,6 +348,13 @@ export default function VehiclesPage() {
                         </div>
                       </div>
                     </div>
+                  </td>
+
+                  {/* Last Request Code Cell */}
+                  <td className="px-6 py-4 align-top">
+                    <span className="inline-block bg-blue-50 text-blue-700 text-xs font-bold px-2 py-1 rounded border border-blue-100">
+                      {v.last_request_code || "-"}
+                    </span>
                   </td>
 
                   <td className="px-6 py-4 align-top">
@@ -371,7 +405,7 @@ export default function VehiclesPage() {
 
               {filteredRows.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="p-10 text-center text-gray-500">
+                  <td colSpan={6} className="p-10 text-center text-gray-500">
                     ไม่พบข้อมูลรถ
                   </td>
                 </tr>

@@ -16,6 +16,7 @@ import { getStatusLabel, getStatusColor } from "@/lib/statusHelper";
 import { HelpCircle, Fuel, AlertTriangle, MessageCircle } from "lucide-react";
 import FuelRequestModal from "@/app/components/FuelRequestModal";
 import ReportIssueModal from "@/app/components/ReportIssueModal";
+import PublicQueueCard from "@/app/components/PublicQueueCard";
 
 /* ----------------------------------------------------
    TYPES
@@ -259,7 +260,12 @@ export default function UserPage() {
                         <Link href="/user/request"><Plus className="w-6 h-6" /></Link>
                     </div>
                 </div>
+                {/* Glass Queue Card inside Header */}
+                <div className="mt-6">
+                    <PublicQueueCard theme="glass" />
+                </div>
             </div>
+
 
             {/* Desktop: Standard Clean Header */}
             <div className="hidden md:flex flex-row justify-between items-center py-6 px-8 max-w-[1200px] mx-auto w-full">
@@ -270,95 +276,101 @@ export default function UserPage() {
                     </h1>
                     <p className="text-gray-500 mt-1">ดูตารางและขอใช้รถราชการ</p>
                 </div>
-                <div className="flex items-center gap-4">
-                    {/* LEGEND ON DESKTOP HEADER */}
-                    <div className="hidden lg:flex items-center gap-3 mr-4">
-                        {vehicles.map((v) => (
-                            <div key={v.id} className="flex items-center gap-1.5">
-                                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: v.color || '#9CA3AF' }}></span>
-                                <span className="text-xs text-gray-600 whitespace-nowrap">{v.plate_number ? `รถ ${v.plate_number}` : 'รถอื่นๆ'}</span>
+                <div className="flex flex-col items-end">
+                    <div className="flex items-center gap-4">
+                        {/* LEGEND ON DESKTOP HEADER */}
+                        <div className="hidden lg:flex items-center gap-3 mr-4">
+                            {vehicles.map((v) => (
+                                <div key={v.id} className="flex items-center gap-1.5">
+                                    <span className="w-3 h-3 rounded-full" style={{ backgroundColor: v.color || '#9CA3AF' }}></span>
+                                    <span className="text-xs text-gray-600 whitespace-nowrap">{v.plate_number ? `รถ ${v.plate_number}` : 'รถอื่นๆ'}</span>
+                                </div>
+                            ))}
+                            {/* Cancelled Legend */}
+                            <div className="flex items-center gap-1.5">
+                                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: '#22C55E' }}></span>
+                                <span className="text-xs text-gray-600 whitespace-nowrap">เสร็จสิ้น</span>
                             </div>
-                        ))}
-                        {/* Cancelled Legend */}
-                        <div className="flex items-center gap-1.5">
-                            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: '#22C55E' }}></span>
-                            <span className="text-xs text-gray-600 whitespace-nowrap">เสร็จสิ้น</span>
+                            <div className="flex items-center gap-1.5">
+                                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: '#9CA3AF' }}></span>
+                                <span className="text-xs text-gray-600 whitespace-nowrap">ยกเลิก</span>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: '#9CA3AF' }}></span>
-                            <span className="text-xs text-gray-600 whitespace-nowrap">ยกเลิก</span>
+
+                        <Link
+                            href="/user/request"
+                            className="flex items-center gap-2 bg-[#1E40AF] hover:bg-blue-800 text-white px-5 py-2.5 rounded-lg shadow-md transition-all font-medium"
+                        >
+                            <Plus className="w-5 h-5" />
+                            ขอใช้รถใหม่
+                        </Link>
+
+                        {/* Help Button with Dropdown */}
+                        <div className="relative" ref={helpMenuRef}>
+                            <button
+                                onClick={() => setHelpMenuOpen(!helpMenuOpen)}
+                                className="flex items-center gap-2 bg-rose-50 border border-rose-100 hover:bg-rose-100 text-rose-700 px-4 py-2.5 rounded-lg shadow-sm transition-all font-medium whitespace-nowrap"
+                            >
+                                <HelpCircle className="w-4 h-4" />
+                                ความช่วยเหลือ
+                            </button>
+
+                            {helpMenuOpen && (
+                                <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-50 animate-in fade-in zoom-in-95 duration-200">
+                                    <button
+                                        onClick={() => {
+                                            setHelpMenuOpen(false);
+                                            setFuelModalOpen(true);
+                                        }}
+                                        className="flex items-center gap-3 w-full px-4 py-3 hover:bg-rose-50 rounded-lg transition-colors text-left group"
+                                    >
+                                        <div className="bg-rose-100 text-rose-600 p-2 rounded-lg group-hover:bg-white group-hover:shadow-sm transition-all">
+                                            <Fuel className="w-5 h-5" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-bold text-gray-800">เบิกน้ำมันเชื้อเพลิง</span>
+                                            <span className="text-[10px] text-gray-500">สำหรับพนักงานขับรถ</span>
+                                        </div>
+                                    </button>
+
+                                    <button
+                                        onClick={() => {
+                                            setHelpMenuOpen(false);
+                                            setReportModalOpen(true);
+                                        }}
+                                        className="flex items-center gap-3 w-full px-4 py-3 hover:bg-amber-50 rounded-lg transition-colors text-left group"
+                                    >
+                                        <div className="bg-amber-100 text-amber-600 p-2 rounded-lg group-hover:bg-white group-hover:shadow-sm transition-all">
+                                            <AlertTriangle className="w-5 h-5" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-bold text-gray-800">แจ้งปัญหาการใช้รถ</span>
+                                            <span className="text-[10px] text-gray-500">สำหรับแจ้งซ่อม/ปัญหา</span>
+                                        </div>
+                                    </button>
+
+                                    <a
+                                        href="https://line.me/R/ti/p/@420uicrg"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-3 w-full px-4 py-3 hover:bg-green-50 rounded-lg transition-colors text-left group"
+                                        onClick={() => setHelpMenuOpen(false)}
+                                    >
+                                        <div className="bg-green-100 text-green-600 p-2 rounded-lg group-hover:bg-white group-hover:shadow-sm transition-all">
+                                            <MessageCircle className="w-5 h-5" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-bold text-gray-800">ติดต่อเรา</span>
+                                            <span className="text-[10px] text-gray-500">Line ID: @420uicrg</span>
+                                        </div>
+                                    </a>
+                                </div>
+                            )}
                         </div>
                     </div>
 
-                    <Link
-                        href="/user/request"
-                        className="flex items-center gap-2 bg-[#1E40AF] hover:bg-blue-800 text-white px-5 py-2.5 rounded-lg shadow-md transition-all font-medium"
-                    >
-                        <Plus className="w-5 h-5" />
-                        ขอใช้รถใหม่
-                    </Link>
-
-                    {/* Help Button with Dropdown */}
-                    <div className="relative" ref={helpMenuRef}>
-                        <button
-                            onClick={() => setHelpMenuOpen(!helpMenuOpen)}
-                            className="flex items-center gap-2 bg-rose-50 border border-rose-100 hover:bg-rose-100 text-rose-700 px-4 py-2.5 rounded-lg shadow-sm transition-all font-medium"
-                        >
-                            <HelpCircle className="w-4 h-4" />
-                            ความช่วยเหลือ
-                        </button>
-
-                        {helpMenuOpen && (
-                            <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-50 animate-in fade-in zoom-in-95 duration-200">
-                                <button
-                                    onClick={() => {
-                                        setHelpMenuOpen(false);
-                                        setFuelModalOpen(true);
-                                    }}
-                                    className="flex items-center gap-3 w-full px-4 py-3 hover:bg-rose-50 rounded-lg transition-colors text-left group"
-                                >
-                                    <div className="bg-rose-100 text-rose-600 p-2 rounded-lg group-hover:bg-white group-hover:shadow-sm transition-all">
-                                        <Fuel className="w-5 h-5" />
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-sm font-bold text-gray-800">เบิกน้ำมันเชื้อเพลิง</span>
-                                        <span className="text-[10px] text-gray-500">สำหรับพนักงานขับรถ</span>
-                                    </div>
-                                </button>
-
-                                <button
-                                    onClick={() => {
-                                        setHelpMenuOpen(false);
-                                        setReportModalOpen(true);
-                                    }}
-                                    className="flex items-center gap-3 w-full px-4 py-3 hover:bg-amber-50 rounded-lg transition-colors text-left group"
-                                >
-                                    <div className="bg-amber-100 text-amber-600 p-2 rounded-lg group-hover:bg-white group-hover:shadow-sm transition-all">
-                                        <AlertTriangle className="w-5 h-5" />
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-sm font-bold text-gray-800">แจ้งปัญหาการใช้รถ</span>
-                                        <span className="text-[10px] text-gray-500">สำหรับแจ้งซ่อม/ปัญหา</span>
-                                    </div>
-                                </button>
-
-                                <a
-                                    href="https://line.me/R/ti/p/@420uicrg"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center gap-3 w-full px-4 py-3 hover:bg-green-50 rounded-lg transition-colors text-left group"
-                                    onClick={() => setHelpMenuOpen(false)}
-                                >
-                                    <div className="bg-green-100 text-green-600 p-2 rounded-lg group-hover:bg-white group-hover:shadow-sm transition-all">
-                                        <MessageCircle className="w-5 h-5" />
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-sm font-bold text-gray-800">ติดต่อเรา</span>
-                                        <span className="text-[10px] text-gray-500">Line ID: @420uicrg</span>
-                                    </div>
-                                </a>
-                            </div>
-                        )}
+                    <div className="mt-3">
+                        <PublicQueueCard />
                     </div>
                 </div>
             </div>
@@ -721,5 +733,6 @@ export default function UserPage() {
                 detail={selected}
             />
         </div>
+
     );
 }

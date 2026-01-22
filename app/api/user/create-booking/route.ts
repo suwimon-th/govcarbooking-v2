@@ -15,20 +15,30 @@ function padTime(t: string) {
    YY = ปี พ.ศ. 2 หลัก (เช่น 2569 -> 69)
    XXXX = รันต่อเนื่องทั้งปี
 ---------------------------- */
-async function generateRequestCode() {
+/* ---------------------------
+   สร้างเลขคำขอ ENV-YY/XXXX
+   YY = ปี พ.ศ. 2 หลัก (เช่น 2569 -> 69)
+   XXXX = รันต่อเนื่องตามรถแต่ละคัน (ไม่รวมทะเบียนใน prefix)
+   
+   เช่น 
+   รถ A: ENV-69/001, ENV-69/002
+   รถ B: ENV-69/001, ENV-69/002
+---------------------------- */
+async function generateRequestCode(vehicleId: string) {
   const now = new Date();
   const yearBE = now.getFullYear() + 543;
   const shortYear = String(yearBE).slice(-2); // "69"
+
+  // Format เดิม: ENV-69/
   const prefix = `ENV-${shortYear}/`;
 
-  // หาเลขล่าสุดของปีนี้
+  // 1. Find last code with this prefix *AND* this vehicle_id
   const { data } = await supabase
     .from("bookings")
     .select("request_code")
+    .eq("vehicle_id", vehicleId) // Filter by vehicle!
     .like("request_code", `${prefix}%`)
-    .order("created_at", { ascending: false }) // ควรใช้ created_at หรือ id เพื่อความชัวร์ (หรือ length ของ string)
-    // แต่ถ้า format คงที่ order request_code ก็ได้: ENV-69/0001 < ENV-69/0002
-    .order("request_code", { ascending: false })
+    .order("created_at", { ascending: false })
     .limit(1);
 
   let running = 1;
@@ -39,12 +49,16 @@ async function generateRequestCode() {
     const parts = last.split("/");
     if (parts.length === 2) {
       const numPart = parts[1]; // "0001"
-      running = Number(numPart) + 1;
+      const parsed = Number(numPart);
+      if (!isNaN(parsed)) {
+        running = parsed + 1;
+      }
     }
   }
 
-  const run4 = String(running).padStart(4, "0");
-  return `${prefix}${run4}`;
+  // User asked for "001-009". So 3 digits padding.
+  const run3 = String(running).padStart(3, "0");
+  return `${prefix}${run3}`;
 }
 
 export async function POST(req: Request) {
@@ -143,7 +157,7 @@ export async function POST(req: Request) {
         .eq("id", requester_id);
     }
 
-    const request_code = await generateRequestCode();
+    const request_code = await generateRequestCode(vehicle_id);
 
     // ✅ Calculate is_ot automatically
     // Logic: Weekend (Sat/Sun) OR Time < 08:30 OR Time >= 16:30
@@ -156,8 +170,8 @@ export async function POST(req: Request) {
 
     // Time check
     const timeVal = sh * 60 + sm;
-    const startWork = 8 * 60 + 30; // 08:30
-    const endWork = 16 * 60 + 30;  // 16:30
+    const startWork = 8 * 60; // 08:00
+    const endWork = 16 * 60;  // 16:00
 
     const isOT = isWeekend || timeVal < startWork || timeVal >= endWork;
 

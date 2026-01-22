@@ -56,7 +56,8 @@ export async function GET() {
           plate_number
         ),
         drivers (
-          full_name
+          full_name,
+          phone
         )
       `)
       .neq("status", "CANCELLED")
@@ -90,6 +91,8 @@ export async function GET() {
         vehicle_plate: item.vehicles?.plate_number ?? "-",
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         driver_name: (item.drivers as any)?.full_name ?? null,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        driver_phone: (item.drivers as any)?.phone ?? null,
         requester_name: item.requester_name,
         is_off_hours: item.is_ot, // ✅ Use explicit DB value
       };
