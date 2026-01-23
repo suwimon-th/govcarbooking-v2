@@ -206,8 +206,8 @@ export default function UserPage() {
 
     useEffect(() => {
         loadVehicles();
-        // loadBookings is now triggered by Calendar's datesSet
-    }, [loadVehicles]);
+        loadBookings(); // Fallback: Load all bookings initially to ensure data appears
+    }, [loadVehicles, loadBookings]);
 
     /* Filter Logic */
     const filteredEvents = events.filter(evt => {

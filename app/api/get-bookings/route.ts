@@ -68,12 +68,14 @@ export async function GET(req: Request) {
       .neq("status", "REJECTED");
 
     // ✅ Optimization: Filter by date range if provided
+    /* 
     if (startParam && endParam) {
       // Filter bookings that overlap with the range or start within the range
       // Identifying overlapping ranges: StartA <= EndB AND EndA >= StartB
       // But simpler for this context: start_at >= startParam AND start_at <= endParam (Showing bookings starting in this month)
       query = query.gte("start_at", startParam).lte("start_at", endParam);
     }
+    */
 
     const { data, error } = await query.returns<BookingItem[]>();
 

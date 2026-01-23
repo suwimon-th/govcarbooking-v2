@@ -52,12 +52,10 @@ function formatTime(dateStr: string) {
 export default function MonthlyBookingList({ events, currentMonthStart, currentMonthEnd, currentViewTitle, onItemClick }: Props) {
 
     // Filter events for current view
-    const filtered = events.filter(e =>
-        currentMonthStart &&
-        currentMonthEnd &&
-        new Date(e.start) >= currentMonthStart &&
-        new Date(e.start) < currentMonthEnd
-    ).sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+    // Filter events for current view
+    // Note: events are already filtered by date range from the API (loadBookings)
+    // We just sort them here validation.
+    const filtered = [...events].sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
 
     if (filtered.length === 0) {
         return (
@@ -121,14 +119,18 @@ export default function MonthlyBookingList({ events, currentMonthStart, currentM
                                             `}
                                         >
                                             {/* Time */}
-                                            <div className="w-24 flex-shrink-0 flex flex-col items-start">
+                                            <div className="w-24 flex-shrink-0 flex flex-col items-start justify-center min-h-[40px]">
                                                 <div className="flex items-center gap-1.5">
                                                     {isOff && <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100">OT</span>}
                                                     <span className={`text-sm font-bold ${isOff ? 'text-amber-700' : 'text-gray-900'}`}>
                                                         {formatTime(evt.start)}
                                                     </span>
                                                 </div>
-                                                {evt.end && <span className="text-xs text-gray-400 mt-0.5">ถึง {formatTime(evt.end)}</span>}
+                                                {evt.end ? (
+                                                    <span className="text-xs text-gray-400 mt-0.5">ถึง {formatTime(evt.end)}</span>
+                                                ) : (
+                                                    <span className="text-xs text-transparent mt-0.5 select-none">-</span>
+                                                )}
                                                 {isOff && <span className="text-[9px] text-amber-500 mt-1">นอกเวลา</span>}
                                             </div>
 
