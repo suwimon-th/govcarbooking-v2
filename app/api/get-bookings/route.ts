@@ -37,9 +37,13 @@ interface BookingItem {
   } | null;
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const { data, error } = await supabase
+    const { searchParams } = new URL(req.url);
+    const startParam = searchParams.get("start");
+    const endParam = searchParams.get("end");
+
+    let query = supabase
       .from("bookings")
       .select(`
         id,
@@ -61,8 +65,17 @@ export async function GET() {
         )
       `)
       .neq("status", "CANCELLED")
-      .neq("status", "REJECTED")
-      .returns<BookingItem[]>();
+      .neq("status", "REJECTED");
+
+    // ✅ Optimization: Filter by date range if provided
+    if (startParam && endParam) {
+      // Filter bookings that overlap with the range or start within the range
+      // Identifying overlapping ranges: StartA <= EndB AND EndA >= StartB
+      // But simpler for this context: start_at >= startParam AND start_at <= endParam (Showing bookings starting in this month)
+      query = query.gte("start_at", startParam).lte("start_at", endParam);
+    }
+
+    const { data, error } = await query.returns<BookingItem[]>();
 
     if (error) {
       console.error("GET_BOOKINGS_ERROR:", error);
