@@ -184,6 +184,14 @@ export default function RequestForm({
   }, []);
 
   const isOffHours = () => {
+    // 1. Check Weekend (Sat/Sun)
+    if (date) {
+      const d = new Date(date);
+      const day = d.getDay(); // 0=Sun, 6=Sat
+      if (day === 0 || day === 6) return true;
+    }
+
+    // 2. Check Time
     if (!startTime) return false;
     const hour = parseInt(startTime.split(":")[0], 10);
     return hour < 8 || hour >= 16;
