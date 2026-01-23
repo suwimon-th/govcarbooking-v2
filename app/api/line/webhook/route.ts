@@ -132,6 +132,18 @@ export async function POST(req: Request) {
         // ป้องกันกดซ้ำ
         if (booking.status === "ACCEPTED" || booking.status === "COMPLETED") {
           console.log("⚠ งานนี้เคยถูกกดรับแล้ว");
+          // ส่งข้อความแจ้งเตือนคนขับว่ารับงานไปแล้ว
+          await fetch("https://api.line.me/v2/bot/message/push", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${ACCESS_TOKEN}`,
+            },
+            body: JSON.stringify({
+              to: userId,
+              messages: [{ type: "text", text: "🎗️ งานนี้คุณรับไปเรียบร้อยแล้วครับ สามารถดำเนินการต่อได้เลย" }]
+            }),
+          });
           return NextResponse.json({ ok: true });
         }
 

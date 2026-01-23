@@ -1,4 +1,4 @@
- 
+
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -59,7 +59,7 @@ export async function POST(req: Request) {
       .from("bookings")
       .update({
         status: "ACCEPTED",
-        driver_accepted_at: new Date().toISOString(),
+        // driver_accepted_at: new Date().toISOString(), // ❌ Column does not exist in DB
         driver_attempts: (booking.driver_attempts || 0) + 1,
       })
       .eq("id", bookingId);
