@@ -18,10 +18,19 @@ export async function POST(req: Request) {
             end_at,
             status,
             is_ot,
+            start_mileage,
+            end_mileage, // New
         } = body;
 
         if (!id) {
             return NextResponse.json({ error: "Missing ID" }, { status: 400 });
+        }
+
+        // Calculate Distance
+        let distance = null;
+        if (typeof start_mileage === 'number' && typeof end_mileage === 'number') {
+            const d = end_mileage - start_mileage;
+            if (d >= 0) distance = d;
         }
 
         // 1) ดึงข้อมูลเดิมก่อน update (เพื่อเทียบว่า driver เปลี่ยนไหม)
@@ -45,6 +54,9 @@ export async function POST(req: Request) {
                 end_at: end_at || null,
                 status,
                 is_ot,
+                start_mileage: start_mileage ?? null,
+                end_mileage: end_mileage ?? null,
+                distance: distance,
             })
             .eq("id", id);
 

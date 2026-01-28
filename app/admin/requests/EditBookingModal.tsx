@@ -86,6 +86,8 @@ export default function EditBookingModal({
     end_at: booking.end_at ?? "",
     status: booking.status,
     is_ot: booking.is_ot || false,
+    start_mileage: booking.start_mileage || "",
+    end_mileage: booking.end_mileage || "",
   });
 
   // ===============================
@@ -113,11 +115,7 @@ export default function EditBookingModal({
     loadLists();
   }, []);
 
-  // ===============================
-  // SAVE HANDLER
-  // ===============================
-
-  const handleSave = async (): Promise<void> => {
+  const handleSave = async (forceStatus?: string): Promise<void> => {
     setLoading(true);
     try {
       const res = await fetch("/api/admin/update-booking", {
@@ -133,8 +131,10 @@ export default function EditBookingModal({
           passenger_count: formData.passenger_count,
           start_at: formData.start_at || null,
           end_at: formData.end_at || null,
-          status: formData.status,
+          status: forceStatus || formData.status,
           is_ot: formData.is_ot,
+          start_mileage: formData.start_mileage ? Number(formData.start_mileage) : null,
+          end_mileage: formData.end_mileage ? Number(formData.end_mileage) : null,
         }),
       });
 
@@ -154,6 +154,15 @@ export default function EditBookingModal({
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCompleteJob = () => {
+    if (!formData.end_mileage) {
+      if (!confirm("ยังไม่ได้ระบุ 'เลขไมล์เมื่อถึง' ต้องการจบงานเลยหรือไม่?")) return;
+    } else {
+      if (!confirm("ต้องการ 'จบงาน' ใช่หรือไม่?")) return;
+    }
+    handleSave("COMPLETED");
   };
 
   const handleAutoAssign = async () => {
@@ -196,10 +205,6 @@ export default function EditBookingModal({
     return v.name ?? "ไม่ทราบชื่อรถ";
   };
 
-  // ===============================
-  // UI
-  // ===============================
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
       <div
@@ -208,6 +213,7 @@ export default function EditBookingModal({
       >
 
         {/* HEADER */}
+        {/* ... (keep header) ... */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100">
           <div>
             <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
@@ -230,6 +236,7 @@ export default function EditBookingModal({
         <div className="flex-1 overflow-y-auto p-6 space-y-8">
 
           {/* SECTION 1: ข้อมูลการขอใช้รถ */}
+          {/* ... (Keep Section 1 content same as before until before Section 2) ... */}
           <div className="space-y-4">
             <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
               <FileText className="w-4 h-4" /> ข้อมูลทั่วไป
@@ -456,40 +463,93 @@ export default function EditBookingModal({
                   </div>
                 </div>
               </div>
-
             </div>
+          </div>
+
+          <div className="h-px bg-gray-100"></div>
+
+          {/* SECTION 3: บันทึกระยะทาง (MILEAGE) */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+              <Activity className="w-4 h-4" /> บันทึกการเดินทาง (Mileage)
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+              {/* Start Mileage */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-gray-700">เลขไมล์เริ่มต้น</label>
+                <input
+                  type="number"
+                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all font-mono"
+                  value={formData.start_mileage}
+                  onChange={(e) => setFormData((p) => ({ ...p, start_mileage: e.target.value }))}
+                  placeholder="เช่น 150240"
+                />
+              </div>
+
+              {/* End Mileage */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-gray-700">เลขไมล์เมื่อถึง</label>
+                <input
+                  type="number"
+                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all font-mono"
+                  value={formData.end_mileage}
+                  onChange={(e) => setFormData((p) => ({ ...p, end_mileage: e.target.value }))}
+                  placeholder="เช่น 150300"
+                />
+              </div>
+            </div>
+
+            {/* Show Distance if available */}
+            {formData.start_mileage && formData.end_mileage && Number(formData.end_mileage) >= Number(formData.start_mileage) && (
+              <div className="text-sm text-green-600 bg-green-50 px-3 py-2 rounded-lg border border-green-100 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4" />
+                ระยะทางรวม: <strong>{Number(formData.end_mileage) - Number(formData.start_mileage)} กม.</strong>
+              </div>
+            )}
           </div>
 
         </div>
 
         {/* FOOTER */}
-        <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={loading}
-            className="px-5 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-600 font-medium hover:bg-gray-50 hover:text-gray-800 transition-colors text-sm shadow-sm"
-          >
-            ยกเลิก
-          </button>
+        <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl flex justify-between gap-3">
 
           <button
             type="button"
-            onClick={handleSave}
+            onClick={handleCompleteJob}
             disabled={loading}
-            className="px-5 py-2.5 rounded-xl bg-blue-600 text-white font-medium hover:bg-blue-700 transition-all shadow-md hover:shadow-lg active:scale-95 text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-5 py-2.5 rounded-xl bg-green-600 text-white font-medium hover:bg-green-700 transition-all shadow-md hover:shadow-lg active:scale-95 text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                กำลังบันทึก...
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4" /> บันทึกการเปลี่ยนแปลง
-              </>
-            )}
+            <CheckCircle2 className="w-4 h-4" /> จบงาน
           </button>
+
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={loading}
+              className="px-5 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-600 font-medium hover:bg-gray-50 hover:text-gray-800 transition-colors text-sm shadow-sm"
+            >
+              ยกเลิก
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSave()}
+              disabled={loading}
+              className="px-5 py-2.5 rounded-xl bg-blue-600 text-white font-medium hover:bg-blue-700 transition-all shadow-md hover:shadow-lg active:scale-95 text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  กำลังบันทึก...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" /> บันทึกการเปลี่ยนแปลง
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
       </div>
