@@ -243,7 +243,6 @@ const generateFromCode = async (booking: BookingData) => {
                             new TextRun({ children: ["\t"], ...fontStyle, underline: { type: UnderlineType.DOTTED, color: "000000" } }),
                             new TextRun({ text: " ตำแหน่ง ", ...fontStyle }),
                             new TextRun({ text: `  ${booking.requester_position || "-"}  `, ...fontStyle, underline: { type: UnderlineType.DOTTED, color: "000000" } }),
-                            new TextRun({ children: ["\t"], ...fontStyle, underline: { type: UnderlineType.DOTTED, color: "000000" } }),
                         ],
                         spacing: { after: 100 },
                     }),
