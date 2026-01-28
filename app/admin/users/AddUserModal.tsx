@@ -150,6 +150,7 @@ export default function AddUserModal({ onClose, onAdded, onSuccess, onError }: P
             >
               <option value="USER">USER</option>
               <option value="ADMIN">ADMIN</option>
+              <option value="TESTER">TESTER (ผู้ใช้ทดสอบ)</option>
             </select>
           </div>
 

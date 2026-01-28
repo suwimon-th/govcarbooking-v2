@@ -291,12 +291,9 @@ export function flexAssignDriver(booking: any, vehicle: any, driver: any) {
             style: "primary",
             color: "#4CAF50",
             action: {
-              type: "postback",
-              label: "✔ รับงาน",
-              data: JSON.stringify({
-                type: "ACCEPT_JOB",
-                booking_id: booking.id,
-              }),
+              type: "uri",
+              label: "✔ รับงาน / จัดการงาน",
+              uri: `${BASE_URL}/driver/tasks/${booking.id}?driver_id=${driver.id}`,
             },
           },
           {

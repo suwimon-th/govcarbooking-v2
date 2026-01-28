@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import { Calendar, Clock, MapPin, User, Building, Car, AlertTriangle, CheckCircle2, ChevronRight, Loader2, X, FileText, List } from "lucide-react";
 import { generateBookingDocument } from "@/lib/documentGenerator";
+import Swal from 'sweetalert2';
 
 interface Vehicle {
   id: string;
@@ -77,7 +78,11 @@ export default function RequestForm({
   // Load Profiles
   useEffect(() => {
     const loadProfiles = async () => {
-      const { data } = await supabase.from("profiles").select("id, full_name, position").order("full_name");
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, full_name, position")
+        .eq("role", "USER") // Filter only USER role
+        .order("full_name");
       setProfiles(data || []);
     };
     loadProfiles();
@@ -236,27 +241,70 @@ export default function RequestForm({
     try {
       setSubmitState("submitting");
 
-      const res = await fetch("/api/user/create-booking", {
+      const payload = {
+        requester_id: requesterId,
+        requester_name: requesterName,
+        department_id: 1,
+        vehicle_id: vehicleId,
+        date,
+        start_time: startTime,
+        end_time: endTime || null,
+        purpose,
+        driver_id: isOffHours() ? driverId : null,
+        passenger_count: parseInt(passengerCount) || 1,
+        destination: destination,
+        position: position,
+        passengers: passengers,
+      };
+
+      let res = await fetch("/api/user/create-booking", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          requester_id: requesterId,
-          requester_name: requesterName,
-          department_id: 1,
-          vehicle_id: vehicleId,
-          date,
-          start_time: startTime,
-          end_time: endTime || null,
-          purpose,
-          driver_id: isOffHours() ? driverId : null,
-          passenger_count: parseInt(passengerCount) || 1,
-          destination: destination,
-          position: position,
-          passengers: passengers,
-        }),
+        body: JSON.stringify(payload),
       });
 
-      const json = await res.json().catch(() => ({}));
+      let json = await res.json().catch(() => ({}));
+
+      // ✅ Handle Double Booking Confirmation
+      if (res.status === 409 && json.code === 'DOUBLE_BOOKING') {
+        // Show native confirm dialog
+        // Show SweetAlert2 confirmation
+        const result = await Swal.fire({
+          title: 'ยืนยันการจองซ้อน',
+          text: "ช่วงเวลานี้มีการจองอยู่แล้ว คุณต้องการจองซ้ำหรือไม่?",
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonText: 'ยืนยันจองซ้ำ',
+          cancelButtonText: 'ยกเลิก',
+          reverseButtons: true,
+          focusCancel: true,
+          customClass: {
+            popup: 'rounded-3xl shadow-xl border border-gray-100',
+            title: 'text-xl font-bold text-gray-900 font-sans',
+            htmlContainer: 'text-gray-500 text-sm font-medium font-sans mt-2',
+            confirmButton: 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-blue-200 hover:shadow-blue-300 hover:scale-[1.02] transition-all',
+            cancelButton: 'bg-gray-100 text-gray-700 px-6 py-3 rounded-xl font-bold hover:bg-gray-200 transition-all',
+            actions: 'gap-4 mt-4'
+          },
+          buttonsStyling: false
+        });
+        const isConfirmed = result.isConfirmed;
+
+        if (isConfirmed) {
+          // Retry with force_booking = true
+          setMessage("กำลังบันทึกการจอง (ยืนยันพิเศษ)...");
+          res = await fetch("/api/user/create-booking", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...payload, force_booking: true }),
+          });
+          json = await res.json().catch(() => ({}));
+        } else {
+          setSubmitState("idle");
+          setMessage(""); // Clear message
+          return;
+        }
+      }
 
       if (!res.ok) {
         setSubmitState("error");

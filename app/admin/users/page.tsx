@@ -127,6 +127,9 @@ export default function UsersPage() {
     if (role === 'ADMIN') {
       return <span className="inline-flex items-center gap-1 bg-purple-100 text-purple-700 px-2 py-0.5 rounded-md text-xs font-bold border border-purple-200"><ShieldCheck className="w-3 h-3" /> {role}</span>
     }
+    if (role === 'TESTER') {
+      return <span className="inline-flex items-center gap-1 bg-amber-100 text-amber-700 px-2 py-0.5 rounded-md text-xs font-bold border border-amber-200"><Shield className="w-3 h-3" /> {role}</span>
+    }
     return <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 px-2 py-0.5 rounded-md text-xs font-bold border border-gray-200"><User className="w-3 h-3" /> {role}</span>
   }
 

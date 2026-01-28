@@ -248,10 +248,7 @@ export default function UserPage() {
 
         // Desktop: Click date -> Create Request for that date immediately
         if (!isMobile) {
-            // If already in 'day' mode, just stay. If in 'month' mode, switch to 'day'? 
-            // OR: Standard behavior: Click date -> Filter daily list
-            setViewMode('day'); // Auto switch to day view for better UX
-            // router.push(`/user/request?date=${info.dateStr}`); // OLD BEHAVIOR
+            router.push(`/user/request?date=${info.dateStr}`);
         }
     };
 

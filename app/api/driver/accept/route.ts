@@ -5,13 +5,17 @@ import { supabase } from "@/lib/supabaseClient";
 export async function POST(req: Request) {
   try {
     const { bookingId, driverId } = await req.json();
+    console.log("ACCEPT API PAYLOAD:", { bookingId, driverId });
 
     // ------------------------------
     // Validate Input
     // ------------------------------
-    if (!bookingId || !driverId) {
+    // ------------------------------
+    // Validate Input
+    // ------------------------------
+    if (!bookingId) {
       return NextResponse.json(
-        { error: "ข้อมูลไม่ครบถ้วน (bookingId, driverId)" },
+        { error: "ข้อมูลไม่ครบถ้วน (bookingId)" },
         { status: 400 }
       );
     }
@@ -33,9 +37,9 @@ export async function POST(req: Request) {
     }
 
     // ------------------------------
-    // เช็คว่าถูกคนขับไหม
+    // เช็คว่าถูกคนขับไหม (ถ้ามีคนขับ assign ไว้แล้ว)
     // ------------------------------
-    if (booking.driver_id !== driverId) {
+    if (booking.driver_id && booking.driver_id !== driverId) {
       return NextResponse.json(
         { error: "คุณไม่ใช่พนักงานขับรถที่รับงานนี้" },
         { status: 403 }
@@ -45,7 +49,8 @@ export async function POST(req: Request) {
     // ------------------------------
     // ป้องกันรับงานซ้ำ
     // ------------------------------
-    if (booking.status !== "ASSIGNED") {
+    // Allow ASSIGNED or REQUESTED (Self-Claim)
+    if (booking.status !== "ASSIGNED" && booking.status !== "REQUESTED") {
       return NextResponse.json(
         { error: "งานนี้ถูกดำเนินการไปแล้ว" },
         { status: 400 }
@@ -59,7 +64,7 @@ export async function POST(req: Request) {
       .from("bookings")
       .update({
         status: "ACCEPTED",
-        // driver_accepted_at: new Date().toISOString(), // ❌ Column does not exist in DB
+        driver_id: driverId, // ✅ Update driver_id (for claim case)
         driver_attempts: (booking.driver_attempts || 0) + 1,
       })
       .eq("id", bookingId);

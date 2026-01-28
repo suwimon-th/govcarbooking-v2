@@ -111,40 +111,13 @@ export async function POST(req: Request) {
     }
 
     // --------------------------
-    // 4) ส่ง LINE แจ้งงานเสร็จ
+    // 4) ส่ง LINE แจ้งงานเสร็จ -> ❌ ยกเลิกตาม Requirement (แสดงบนเว็บแทน)
     // --------------------------
-    let lineStatus = "ไม่ได้ส่ง LINE";
-    try {
-      if (!process.env.LINE_CHANNEL_ACCESS_TOKEN) {
-        console.warn("⚠️ Missing LINE_CHANNEL_ACCESS_TOKEN env variable");
-        lineStatus = "ไม่พบ Token LINE บน Server";
-      } else {
-        const { data: driver } = await supabase
-          .from("drivers")
-          .select("line_user_id, full_name")
-          .eq("id", booking.driver_id)
-          .single();
-
-        if (driver?.line_user_id) {
-          console.log("📨 Sending JOB COMPLETED to:", driver.line_user_id);
-
-          await sendLinePush(driver.line_user_id, [
-            flexJobCompleted(booking, {
-              start: Number(startMileage),
-              end: Number(endMileage),
-              distance: Number(distance)
-            })
-          ]);
-          lineStatus = "ส่งสำเร็จ";
-        } else {
-          console.warn("⚠️ No driver LINE ID found");
-          lineStatus = "ไม่พบ LINE ID ของคนขับ";
-        }
-      }
-    } catch (err) {
-      console.error("❌ LINE Sending Error:", err);
-      lineStatus = "ส่งไม่สำเร็จ (Error)";
-    }
+    /*
+    let lineStatus = "ไม่ได้ส่ง LINE (User Request)";
+    // ... (Code Removed)
+    */
+    const lineStatus = "Disabled by User Request";
 
     return NextResponse.json({
       success: true,
