@@ -72,7 +72,7 @@ function wrapLayout(title: string, color: string, content: string) {
   `;
 }
 
-export function generateBookingEmailHtml(booking: any, date: string, time: string) {
+export function generateBookingEmailHtml(booking: any, date: string, time: string, nextDriver: string | null = null) {
   const content = `
     <div style="margin-bottom: 20px; text-align: center;">
       <p style="font-size: 16px; margin: 0;">มีการบันทึกคำขอใช้รถใหม่เข้ามาในระบบ</p>
@@ -95,10 +95,16 @@ export function generateBookingEmailHtml(booking: any, date: string, time: strin
         <span class="info-label">สถานที่ไป</span>
         <span class="info-value">${booking.destination}</span>
       </div>
-      <div class="info-row" style="border-bottom: none;">
+      <div class="info-row" ${nextDriver ? '' : 'style="border-bottom: none;"'}>
         <span class="info-label">วัตถุประสงค์</span>
         <span class="info-value">${booking.purpose}</span>
       </div>
+      ${nextDriver ? `
+      <div class="info-row" style="border-bottom: none; border-top: 1px dashed #cbd5e1; margin-top: 8px; padding-top: 12px;">
+        <span class="info-label" style="color: #059669;">คนขับคิวถัดไป</span>
+        <span class="info-value" style="color: #059669; font-weight: bold;">${nextDriver}</span>
+      </div>
+      ` : ''}
     </div>
 
     <a href="${BASE_URL}/admin/requests?id=${booking.id}&status=REQUESTED" class="btn">
