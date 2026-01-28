@@ -50,7 +50,7 @@ function wrapLayout(title: string, color: string, content: string) {
         .info-row { border-bottom: 1px solid #e5e7eb; padding: 12px 0; display: flex; justify-content: space-between; }
         .info-label { font-weight: bold; color: #6b7280; }
         .info-value { font-weight: 500; color: #111827; text-align: right; }
-        .btn { display: block; width: 100%; text-align: center; background-color: ${color}; color: white; padding: 14px 0; text-decoration: none; border-radius: 8px; font-weight: bold; margin-top: 24px; }
+        .btn { display: block; width: 100%; text-align: center; background-color: ${color}; color: #ffffff !important; padding: 14px 0; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin-top: 24px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); }
         .footer { padding: 20px; text-align: center; font-size: 12px; color: #9ca3af; background-color: #f9fafb; }
       </style>
     </head>
