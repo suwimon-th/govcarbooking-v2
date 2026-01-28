@@ -12,9 +12,9 @@ export async function GET() {
             purpose: "เข้าร่วมประชุมคณะกรรมการนโยบายรถราชการ วาระพิเศษ",
         };
 
-        // 2. Generate Beautiful HTML
-        const html = generateBookingEmailHtml(mockBooking, "29 ม.ค. 2569", "09:30");
-        const subject = "✨ [Test] ตัวอย่างอีเมลแจ้งเตือนการจองรถ (แบบใหม่)";
+        // 2. Generate Beautiful HTML with Next Driver
+        const html = generateBookingEmailHtml(mockBooking, "29 ม.ค. 2569", "09:30", "นายสมศักดิ์ รักงาน (ว่าง)");
+        const subject = "✨ [Test] ตัวอย่างอีเมล + แนะนำคนขับ";
 
         console.log("📨 Sending beautiful test email...");
         const success = await sendAdminEmail(subject, html);

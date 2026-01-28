@@ -284,8 +284,21 @@ export async function POST(req: Request) {
       notifications.push((async () => {
         try {
           console.log(`📧 [EMAIL] Sending to Admin...`);
+
+          // Fetch Next Queue Driver
+          // Criteria: status='AVAILABLE' OR status='BUSY' (assuming busy drivers return to queue, but simple queue is usually AVAILABLE)
+          // Sort by last_job_date ASC
+          const { data: nextDrivers } = await supabase
+            .from("drivers")
+            .select("full_name")
+            .eq("status", "AVAILABLE")
+            .order("last_job_date", { ascending: true })
+            .limit(1);
+
+          const nextDriverName = (nextDrivers && nextDrivers.length > 0) ? nextDrivers[0].full_name : "ไม้มีคนขับว่าง";
+
           const subject = `🔔 มีการจองรถใหม่: ${data.request_code}`;
-          const html = generateBookingEmailHtml(data, date, start_time);
+          const html = generateBookingEmailHtml(data, date, start_time, nextDriverName);
           await sendAdminEmail(subject, html);
         } catch (err) {
           console.error("❌ [EMAIL] Admin error:", err);
