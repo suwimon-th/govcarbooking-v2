@@ -1,5 +1,8 @@
 "use client";
 
+import { useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
+import { X, UserPlus, User, Phone, FileText, CheckCircle2, Power } from "lucide-react";
 import Swal from "sweetalert2";
 
 interface Props {
@@ -186,7 +189,5 @@ export default function AddDriverModal({ onClose, onAdded, onError }: Props) {
 
       </div>
     </div>
-  );
-}
   );
 }

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { X, Car, Tag, Plus, Palette } from "lucide-react";
+import Swal from "sweetalert2";
 
 interface Props {
   onClose: () => void;
@@ -35,7 +36,12 @@ export default function AddVehicleModal({
 
   const handleSave = async () => {
     if (!form.plate_number || !form.brand || !form.model) {
-      onError("กรุณากรอกทะเบียนรถ, ยี่ห้อ และรุ่นให้ครบ");
+      Swal.fire({
+        title: "ข้อมูลไม่ครบถ้วน",
+        text: "กรุณากรอกทะเบียนรถ, ยี่ห้อ และรุ่นให้ครบ",
+        icon: "warning",
+        confirmButtonText: "ตกลง"
+      });
       return;
     }
 
@@ -60,7 +66,12 @@ export default function AddVehicleModal({
 
     if (error) {
       console.error(error);
-      onError("เพิ่มข้อมูลรถล้มเหลว");
+      Swal.fire({
+        title: "ผิดพลาด",
+        text: "เพิ่มข้อมูลรถล้มเหลว",
+        icon: "error",
+        confirmButtonText: "ตกลง"
+      });
       return;
     }
 
@@ -68,86 +79,88 @@ export default function AddVehicleModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-[999] p-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[999] p-4 flex items-center justify-center bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300">
       <div
-        className="bg-white w-full max-w-xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200"
+        className="w-full max-w-xl bg-white/95 rounded-[2.5rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.2)] border border-white/50 flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-300"
         onClick={(e) => e.stopPropagation()}
       >
 
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-100">
+        <div className="flex items-center justify-between p-8 border-b border-slate-100 bg-gradient-to-r from-blue-50/50 to-transparent">
           <div>
-            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-              <Plus className="w-6 h-6 text-blue-600" />
+            <h2 className="text-2xl font-black text-slate-800 flex items-center gap-3">
+              <div className="p-2.5 bg-blue-100 rounded-2xl">
+                <Plus className="w-6 h-6 text-blue-600" />
+              </div>
               เพิ่มรถราชการใหม่
             </h2>
-            <p className="text-sm text-gray-500 mt-1">กรอกข้อมูลเพื่อลงทะเบียนรถใหม่</p>
+            <p className="text-sm text-slate-500 mt-2">กรอกข้อมูลเพื่อลงทะเบียนรถใหม่เข้าสู่ระบบ</p>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+            className="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-red-50 hover:text-red-500 transition-all active:scale-90"
           >
-            <X className="w-5 h-5" />
+            <X className="w-6 h-6" />
           </button>
         </div>
 
         {/* Form Content */}
-        <div className="p-6 overflow-y-auto space-y-6">
+        <div className="p-8 overflow-y-auto space-y-8">
 
           {/* Plate Number */}
-          <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100/50">
-            <label className="block text-sm font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
-              <Car className="w-4 h-4 text-blue-500" /> ทะเบียนรถ <span className="text-red-500">*</span>
+          <div className="bg-blue-50 p-6 rounded-[2rem] border border-blue-100 shadow-sm">
+            <label className="text-sm font-bold text-blue-800 mb-3 flex items-center gap-2 px-1">
+              <Car className="w-4 h-4" /> ป้ายทะเบียนรถ <span className="text-red-500">*</span>
             </label>
             <input
               value={form.plate_number}
               onChange={(e) => update("plate_number", e.target.value)}
               placeholder="เช่น 1กข 1234"
-              className="w-full border-gray-200 rounded-lg p-2.5 text-lg font-mono font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none border shadow-sm placeholder:text-gray-300"
+              className="w-full bg-white border-blue-200 rounded-2xl py-4 px-5 text-2xl font-black text-blue-900 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none border shadow-inner placeholder:text-blue-100 text-center font-mono tracking-wider"
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-slate-700 px-1">
                 ยี่ห้อ <span className="text-red-500">*</span>
               </label>
               <input
                 value={form.brand}
                 onChange={(e) => update("brand", e.target.value)}
                 placeholder="เช่น Toyota"
-                className="w-full border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none border transition-all"
+                className="w-full bg-slate-50 border-slate-200 rounded-2xl py-3 px-4 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 focus:bg-white outline-none border transition-all text-slate-700"
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-slate-700 px-1">
                 รุ่น <span className="text-red-500">*</span>
               </label>
               <input
                 value={form.model}
                 onChange={(e) => update("model", e.target.value)}
                 placeholder="เช่น Alphard"
-                className="w-full border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none border transition-all"
+                className="w-full bg-slate-50 border-slate-200 rounded-2xl py-3 px-4 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 focus:bg-white outline-none border transition-all text-slate-700"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5 flex items-center gap-1.5">
-                <Tag className="w-4 h-4 text-gray-400" /> ประเภท
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-slate-700 flex items-center gap-2 px-1">
+                <Tag className="w-4 h-4 text-slate-400" /> ประเภทรถ
               </label>
               <input
                 value={form.type}
                 onChange={(e) => update("type", e.target.value)}
                 placeholder="เช่น รถตู้"
-                className="w-full border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none border transition-all"
+                className="w-full bg-slate-50 border-slate-200 rounded-2xl py-3 px-4 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 focus:bg-white outline-none border transition-all text-slate-700"
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-slate-700 px-1">
                 สถานะเริ่มต้น
               </label>
               <select
@@ -155,7 +168,7 @@ export default function AddVehicleModal({
                 onChange={(e) =>
                   update("status", e.target.value as VehicleStatus)
                 }
-                className="w-full border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none border bg-white"
+                className="w-full bg-slate-50 border-slate-200 rounded-2xl py-3 px-4 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 focus:bg-white outline-none border transition-all text-slate-700 appearance-none cursor-pointer"
               >
                 <option value="ACTIVE">พร้อมใช้งาน (ACTIVE)</option>
                 <option value="INACTIVE">งดใช้ชั่วคราว (INACTIVE)</option>
@@ -164,21 +177,22 @@ export default function AddVehicleModal({
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">หมายเหตุ</label>
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-slate-700 px-1">หมายเหตุ</label>
             <textarea
               value={form.remark}
               onChange={(e) => update("remark", e.target.value)}
-              className="w-full border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none border transition-all min-h-[80px]"
+              placeholder="ระบุหมายเหตุเพิ่มเติมถ้ามี..."
+              className="w-full bg-slate-50 border-slate-200 rounded-2xl py-3 px-4 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 focus:bg-white outline-none border transition-all text-slate-700 min-h-[100px] resize-none"
               rows={3}
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-1.5">
-              <Palette className="w-4 h-4 text-gray-400" /> สีประจำรถ
+          <div className="space-y-4">
+            <label className="text-sm font-bold text-slate-700 flex items-center gap-2 px-1">
+              <Palette className="w-4 h-4 text-slate-400" /> เลือกสีประจำรถ
             </label>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-4">
               {[
                 "#3B82F6", // Blue
                 "#EF4444", // Red
@@ -187,17 +201,17 @@ export default function AddVehicleModal({
                 "#22C55E", // Green
                 "#F97316", // Orange
                 "#EC4899", // Pink
-                "#6B7280", // Gray
+                "#64748b", // Slate
               ].map((c) => (
                 <button
                   key={c}
                   type="button"
                   onClick={() => update("color", c)}
-                  className={`w-10 h-10 rounded-full border-2 transition-all flex items-center justify-center ${form.color === c ? "border-gray-600 scale-110 shadow-md ring-2 ring-gray-200" : "border-transparent hover:opacity-100 hover:scale-105"
+                  className={`w-12 h-12 rounded-2xl border-4 transition-all flex items-center justify-center shadow-sm ${form.color === c ? "border-slate-800 scale-110 shadow-lg" : "border-white hover:border-slate-200 hover:scale-105"
                     }`}
                   style={{ backgroundColor: c }}
                 >
-                  {form.color === c && <div className="w-2 h-2 bg-white rounded-full" />}
+                  {form.color === c && <div className="w-2.5 h-2.5 bg-white rounded-full shadow-sm" />}
                 </button>
               ))}
             </div>
@@ -205,10 +219,10 @@ export default function AddVehicleModal({
         </div>
 
         {/* Footer */}
-        <div className="p-5 border-t border-gray-100 bg-gray-50 rounded-b-2xl flex justify-end gap-3">
+        <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3 px-8">
           <button
             onClick={onClose}
-            className="px-6 py-2.5 rounded-xl bg-white border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 focus:ring-2 focus:ring-gray-100 transition-all"
+            className="px-8 py-3 rounded-2xl bg-white border border-slate-200 text-slate-600 font-bold hover:bg-slate-100 active:scale-95 transition-all text-sm shadow-sm"
           >
             ยกเลิก
           </button>
@@ -216,10 +230,16 @@ export default function AddVehicleModal({
           <button
             onClick={handleSave}
             disabled={loading}
-            className="px-6 py-2.5 rounded-xl bg-blue-600 text-white font-medium hover:bg-blue-700 shadow-md shadow-blue-200 focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 disabled:opacity-60 disabled:shadow-none transition-all flex items-center gap-2"
+            className="px-8 py-3 rounded-2xl bg-blue-600 text-white font-bold hover:bg-blue-700 active:scale-95 shadow-lg shadow-blue-200 disabled:opacity-50 transition-all flex items-center gap-2 text-sm"
           >
-            {loading && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-            {loading ? "กำลังบันทึก..." : "เพิ่มรถ"}
+            {loading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                กำลังบันทึก...
+              </>
+            ) : (
+              <>เพิ่มรถใหม่</>
+            )}
           </button>
         </div>
 
