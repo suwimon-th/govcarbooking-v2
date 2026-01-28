@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { X, UserPlus, User, CreditCard, Key, Shield } from "lucide-react";
 import Swal from "sweetalert2";
 
 interface Props {
@@ -11,7 +13,6 @@ interface Props {
 
 export default function AddUserModal({ onClose, onAdded, onSuccess, onError }: Props) {
   const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
 
   const [form, setForm] = useState({
     full_name: "",
@@ -26,8 +27,6 @@ export default function AddUserModal({ onClose, onAdded, onSuccess, onError }: P
   };
 
   const handleSave = async () => {
-    setErrorMsg("");
-
     if (!form.full_name || !form.username || !form.password) {
       const msg = "กรุณากรอกข้อมูลให้ครบถ้วน";
       Swal.fire({ title: "ข้อมูลไม่ครบ", text: msg, icon: "warning", confirmButtonText: "ตกลง" });
@@ -187,7 +186,5 @@ export default function AddUserModal({ onClose, onAdded, onSuccess, onError }: P
 
       </div>
     </div>
-  );
-}
   );
 }
