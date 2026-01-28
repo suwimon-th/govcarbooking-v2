@@ -309,6 +309,7 @@ export default function EditBookingModal({
                   className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
                   value={formData.destination}
                   onChange={(e) => setFormData((p) => ({ ...p, destination: e.target.value }))}
+                  placeholder="ระบุสถานที่..."
                 />
               </div>
 
@@ -320,6 +321,7 @@ export default function EditBookingModal({
                   rows={2}
                   value={formData.purpose}
                   onChange={(e) => setFormData((p) => ({ ...p, purpose: e.target.value }))}
+                  placeholder="รายละเอียดการเดินทาง..."
                 />
               </div>
 
