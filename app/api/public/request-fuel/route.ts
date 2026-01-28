@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseClient";
-import { sendLinePush, flexFuelRequest, sendLinePushWithFallback } from "@/lib/line";
+import { sendAdminEmail, generateFuelEmailHtml } from "@/lib/email";
 
 export async function POST(req: Request) {
     try {
@@ -25,26 +25,22 @@ export async function POST(req: Request) {
 
         if (dbError) {
             console.error("❌ [FUEL] DB Error:", dbError);
-            // We might still want to try sending the notification, or fail here. 
-            // Let's fail for now to ensure data consistency.
             return NextResponse.json(
                 { error: "บันทึกข้อมูลล้มเหลว" },
                 { status: 500 }
             );
         }
 
-        // 2. Send Notification to Admin
-        const adminLineId = process.env.ADMIN_LINE_USER_ID;
+        // 2. Send Notification to Admin (Email)
+        const adminEmail = process.env.ADMIN_EMAIL;
 
-        if (adminLineId) {
-            console.log(`📤 [FUEL] Sending request from ${driver_name} (${plate_number}) to Admin`);
-            const flex = flexFuelRequest(driver_name, plate_number);
-
-            const notifyMsg = `⛽️ มีการขอเบิกน้ำมัน\nทะเบียน: ${plate_number}\nผู้เบิก: ${driver_name}\n\n📍 จัดการรายการเบิก:\nhttps://govcarbooking-v2.vercel.app/admin/fuel`;
-
-            await sendLinePushWithFallback(adminLineId, [flex], notifyMsg);
+        if (adminEmail) {
+            console.log(`📧 [FUEL] Sending email from ${driver_name} to Admin`);
+            const subject = `⛽️ มีการขอเบิกน้ำมัน: ${plate_number}`;
+            const html = generateFuelEmailHtml(driver_name, plate_number);
+            await sendAdminEmail(subject, html);
         } else {
-            console.warn("⚠️ [FUEL] ADMIN_LINE_USER_ID not found. Notification skipped.");
+            console.warn("⚠️ [FUEL] ADMIN_EMAIL not found. Notification skipped.");
         }
 
         return NextResponse.json(

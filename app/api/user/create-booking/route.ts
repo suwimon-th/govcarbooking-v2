@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseClient";
-import { sendLinePush, flexAssignDriver, flexAdminNotifyNewBooking, sendLinePushWithFallback } from "@/lib/line";
+import { sendLinePush, flexAssignDriver } from "@/lib/line";
+import { sendAdminEmail, generateBookingEmailHtml } from "@/lib/email";
 
 /* ---------------------------
    helper: เติมวินาทีให้เวลา
@@ -265,51 +266,31 @@ export async function POST(req: Request) {
     }
 
     // ✅ 2) ส่ง LINE หาแอดมิน (ถ้ามี ADMIN_LINE_USER_ID)
-    const adminLineId = process.env.ADMIN_LINE_USER_ID;
+    // ✅ 2) ส่ง Email หาแอดมิน (แทน LINE OA ที่เต็ม / Notify ที่ปิดตัว)
+    // Check for Skip Condition: Advance + OT + Driver Selected
 
-    if (adminLineId) {
-      // Check for Skip Condition: Advance + OT + Driver Selected
-      // 1. isAdvance?
-      const isAdvance = date > today;
+    // Note: isOT and isAdvance were already calculated above at lines 170-182
+    // const isAdvance = date > today; (Already verified logic, using date comparison string vs string might be loose but date=YYYY-MM-DD vs today=YYYY-MM-DD works for equality, for > it works too)
 
-      // 2. isOT? (Weekend or <08:00 or >=16:00)
-      const dObj = new Date(date);
-      const day = dObj.getDay(); // 0-6
-      const [sh_check] = start_time.split(":").map(Number);
-      const isWeekend = day === 0 || day === 6;
-      const isOT = isWeekend || sh_check < 8 || sh_check >= 16;
+    const isAdvance = date > today;
+    // isOT is already calculated at line 182
 
-      // 3. hasDriver?
-      const hasDriver = !!driver_id;
+    const hasDriver = !!driver_id;
+    const shouldSkipAdmin = isAdvance && isOT && hasDriver;
 
-      // [DEBUG] Log all conditions
-      console.log(`[AdminNotify] Check: isAdvance=${isAdvance}, isOT=${isOT}, hasDriver=${hasDriver}, AdminID=${adminLineId ? 'Set' : 'Null'}`);
-
-      // Condition to SKIP admin notification
-      // คือ ถ้าเป็นการขอใช้รถล่วงหน้า (Advance) + เป็น OT + เลือกคนขับแล้ว (Driver Selected)
-      // กรณีนี้ คนขับรับรู้แล้ว (ได้ LINE) -> ไม่ต้องกวน Admin ให้กด Assign อีก
-      const shouldSkipAdmin = isAdvance && isOT && hasDriver;
-
-      if (shouldSkipAdmin) {
-        console.log("🚫 [NOTIFY] Skipping Admin Notification (Reason: Advance + OT + Driver Selected)");
-      } else {
-        // Normal Case: Send to Admin
-        notifications.push((async () => {
-          try {
-            console.log(`📤 [NOTIFY] Sending to Admin: ${adminLineId}`);
-            const adminFlex = flexAdminNotifyNewBooking(data);
-
-            // Construct Fallback Message (Text)
-            const notifyMsg = `🔔 มีการจองรถใหม่ (ล่วงหน้า)\nรหัส: ${data.request_code}\nวันที่: ${date} เวลา ${start_time}\nผู้ขอ: ${requester_name}\nไป: ${destination}\nวัตถุประสงค์: ${purpose}\n\n📍 กดเพื่อมอบหมายคนขับ:\nhttps://govcarbooking-v2.vercel.app/admin/requests?id=${data.id}&status=REQUESTED`;
-
-            await sendLinePushWithFallback(adminLineId, [adminFlex], notifyMsg);
-          } catch (err) {
-            console.error("❌ [NOTIFY] Admin error:", err);
-          }
-        })());
-      }
+    if (shouldSkipAdmin) {
+      console.log("🚫 [NOTIFY] Skipping Admin Email (Reason: Advance + OT + Driver Selected)");
     } else {
-      console.warn("⚠️ [NOTIFY] Skipping Admin: ADMIN_LINE_USER_ID not found in env");
+      notifications.push((async () => {
+        try {
+          console.log(`📧 [EMAIL] Sending to Admin...`);
+          const subject = `🔔 มีการจองรถใหม่: ${data.request_code}`;
+          const html = generateBookingEmailHtml(data, date, start_time);
+          await sendAdminEmail(subject, html);
+        } catch (err) {
+          console.error("❌ [EMAIL] Admin error:", err);
+        }
+      })());
     }
 
     // Wait for all notifications to complete (but don't fail the whole request if they fail)
