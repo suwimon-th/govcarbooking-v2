@@ -447,7 +447,7 @@ const generateFromCode = async (booking: BookingData) => {
                                                     children: [
                                                         new TextRun({ text: ".......................................................", ...fontStyle }),
                                                     ],
-                                                    spacing: { before: 200 }
+                                                    spacing: { before: 800 }
                                                 }),
                                                 new Paragraph({
                                                     alignment: AlignmentType.CENTER,
@@ -624,6 +624,7 @@ const generateFromCode = async (booking: BookingData) => {
                                                     children: [
                                                         new TextRun({ text: ".......................................................", ...fontStyle }),
                                                     ],
+                                                    spacing: { before: 800 }
                                                 }),
                                                 new Paragraph({
                                                     alignment: AlignmentType.CENTER,
