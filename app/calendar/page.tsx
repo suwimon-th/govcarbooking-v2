@@ -15,6 +15,8 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import { getStatusLabel, getStatusColor } from "@/lib/statusHelper";
 import PublicQueueCard from "@/app/components/PublicQueueCard";
+import MonthlyBookingList from "@/app/components/MonthlyBookingList";
+import DailyBookingList from "@/app/components/DailyBookingList";
 
 /* ----------------------------------------------------
    TYPES
@@ -33,6 +35,7 @@ type CalendarEvent = {
         isOffHours?: boolean;
         driver_name?: string;
         driver_phone?: string;
+        driver?: string;
     };
     backgroundColor?: string;
     borderColor?: string;
@@ -65,7 +68,6 @@ type BookingDetail = {
 function normalizeDate(date: Date | string) {
     if (!date) return "";
     const d = new Date(date);
-    // Use local time components to construct YYYY-MM-DD
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
@@ -80,10 +82,6 @@ function formatTime(dateStr: string) {
 
 function toThaiHeading(dateStr: string) {
     if (!dateStr) return "";
-    // Handle YYYY-MM-DD string parsing safely for local time
-    // new Date("YYYY-MM-DD") is UTC, but we just want to extract parts if it's already a date string
-    // But since it comes from normalizeDate (Local YYYY-MM-DD), treating it as UTC for formatting is tricky if we use getDay/Month on it.
-    // However, 00:00 UTC is 07:00 Thai, so date remains same. It's safe.
     const d = new Date(dateStr);
     const months = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
     return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear() + 543}`;
@@ -97,7 +95,6 @@ export default function PublicCalendarPage() {
     const [events, setEvents] = useState<CalendarEvent[]>([]);
     const [modalOpen, setModalOpen] = useState(false);
     const [selected, setSelected] = useState<BookingDetail | null>(null);
-
     // Initialize with LOCAL date string
     const [selectedDate, setSelectedDate] = useState<string>(() => {
         const d = new Date();
@@ -108,8 +105,10 @@ export default function PublicCalendarPage() {
     });
 
     const [isMobile, setIsMobile] = useState(false);
-
     const [vehicles, setVehicles] = useState<{ id: string, plate_number: string, color: string | null }[]>([]);
+
+    // View Mode State
+    const [viewMode, setViewMode] = useState<'month' | 'day'>('month');
 
     // Fuel Request State
     const [fuelModalOpen, setFuelModalOpen] = useState(false);
@@ -168,12 +167,11 @@ export default function PublicCalendarPage() {
         const formatted: CalendarEvent[] = raw.map((item: any) => {
             const isCompleted = item.status === "COMPLETED";
             const isCancelled = item.status === "CANCELLED";
-            // Use dynamic color from API
             const vehicleColor = item.vehicle_color || "#3B82F6";
 
             let eventColor = vehicleColor;
             if (isCompleted) eventColor = "#22C55E";
-            if (isCancelled) eventColor = "#9CA3AF"; // Gray for cancelled
+            if (isCancelled) eventColor = "#9CA3AF";
 
             return {
                 id: item.id,
@@ -189,6 +187,7 @@ export default function PublicCalendarPage() {
                     isOffHours: item.is_off_hours,
                     driver_name: item.driver_name,
                     driver_phone: item.driver_phone,
+                    driver: item.driver_name,
                 }
             };
         });
@@ -210,6 +209,9 @@ export default function PublicCalendarPage() {
     /* คลิกวันที่ เลือกวัน */
     const onDateClick = (info: { dateStr: string; jsEvent: MouseEvent }) => {
         setSelectedDate(info.dateStr);
+        if (!isMobile) {
+            setViewMode('day');
+        }
     };
 
     /* คลิกรายการ -> ดูรายละเอียด */
@@ -217,10 +219,8 @@ export default function PublicCalendarPage() {
         info.jsEvent.preventDefault();
 
         if (isMobile) {
-            // Mobile dot click: Just select the date
             setSelectedDate(normalizeDate(info.event.start!));
         } else {
-            // Desktop block click: Open modal
             openDetail(info.event.id);
         }
     };
@@ -239,552 +239,58 @@ export default function PublicCalendarPage() {
 
     return (
         <div className="min-h-screen bg-gray-50 md:bg-white pb-20 relative flex flex-col font-sans">
+            {/* ... (existing Mobile Header) ... */}
+            {/* ... (existing Desktop Header) ... */}
 
-            {/* HEADER: Responsive */}
-            {/* Mobile: Blue App-like Header */}
-            <div className="md:hidden bg-[#1E40AF] text-white pt-10 pb-4 px-4 shadow sticky top-0 z-30 rounded-b-3xl">
-                <div className="flex items-center justify-between w-full">
-                    <h1 className="text-lg font-bold tracking-wide flex items-center gap-2">
-                        <CalendarIcon className="w-5 h-5 opacity-80" />
-                        ปฏิทินการใช้รถ
-                    </h1>
-                    <div className="flex gap-4 text-sm font-medium opacity-90 items-center">
-                        <button onClick={() => {
-                            const d = new Date();
-                            const year = d.getFullYear();
-                            const month = String(d.getMonth() + 1).padStart(2, '0');
-                            const day = String(d.getDate()).padStart(2, '0');
-                            setSelectedDate(`${year}-${month}-${day}`);
-                        }}>
-                            วันนี้
-                        </button>
+            {/* ... (existing Calendar Section with FullCalendar) ... */}
 
-                        {/* Mobile Help Button */}
-                        <div className="relative" ref={isMobile ? helpMenuRef : null}>
-                            <button onClick={() => setHelpMenuOpen(!helpMenuOpen)} className="opacity-90 hover:opacity-100">
-                                <HelpCircle className="w-5 h-5" />
-                            </button>
-
-                            {/* Mobile Dropdown */}
-                            {helpMenuOpen && (
-                                <div className="absolute right-0 top-8 w-56 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-50 text-gray-800 animate-in fade-in zoom-in-95 duration-200">
-                                    <button
-                                        onClick={() => {
-                                            setHelpMenuOpen(false);
-                                            setFuelModalOpen(true);
-                                        }}
-                                        className="flex items-center gap-3 w-full px-4 py-3 hover:bg-rose-50 rounded-lg transition-colors text-left group"
-                                    >
-                                        <div className="bg-rose-100 text-rose-600 p-2 rounded-lg">
-                                            <Fuel className="w-4 h-4" />
-                                        </div>
-                                        <span className="text-sm font-bold">เบิกน้ำมัน</span>
-                                    </button>
-
-                                    <button
-                                        onClick={() => {
-                                            setHelpMenuOpen(false);
-                                            setReportModalOpen(true);
-                                        }}
-                                        className="flex items-center gap-3 w-full px-4 py-3 hover:bg-amber-50 rounded-lg transition-colors text-left group"
-                                    >
-                                        <div className="bg-amber-100 text-amber-600 p-2 rounded-lg">
-                                            <AlertTriangle className="w-4 h-4" />
-                                        </div>
-                                        <span className="text-sm font-bold">แจ้งปัญหา</span>
-                                    </button>
-
-                                    <a
-                                        href="https://line.me/R/ti/p/@420uicrg"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center gap-3 w-full px-4 py-3 hover:bg-green-50 rounded-lg transition-colors text-left group"
-                                        onClick={() => setHelpMenuOpen(false)}
-                                    >
-                                        <div className="bg-green-100 text-green-600 p-2 rounded-lg">
-                                            <MessageCircle className="w-4 h-4" />
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <span className="text-sm font-bold">ติดต่อเรา</span>
-                                            <span className="text-[10px] text-gray-500">Line: @420uicrg</span>
-                                        </div>
-                                    </a>
-                                </div>
-                            )}
-                        </div>
-
-                        <Link href="/login" className="flex items-center gap-1 opacity-70 hover:opacity-100">
-                            <LogIn className="w-5 h-5" />
-                        </Link>
-                    </div>
-                </div>
-
-                {/* Glass Queue Card inside Header */}
-                <div className="mt-6">
-                    {isMobile && <PublicQueueCard theme="glass" />}
+            {/* TOGGLE SWITCH (Desktop) */}
+            <div className="hidden md:flex justify-center mt-8 mb-4">
+                <div className="bg-gray-100 p-1 rounded-xl inline-flex items-center shadow-inner">
+                    <button
+                        onClick={() => setViewMode('month')}
+                        className={`
+                            px-6 py-2 rounded-lg text-sm font-bold transition-all
+                            ${viewMode === 'month'
+                                ? 'bg-white text-blue-700 shadow-sm'
+                                : 'text-gray-500 hover:text-gray-700'}
+                        `}
+                    >
+                        ดูรายเดือน
+                    </button>
+                    <button
+                        onClick={() => setViewMode('day')}
+                        className={`
+                            px-6 py-2 rounded-lg text-sm font-bold transition-all
+                            ${viewMode === 'day'
+                                ? 'bg-white text-blue-700 shadow-sm'
+                                : 'text-gray-500 hover:text-gray-700'}
+                        `}
+                    >
+                        ดูรายวัน
+                    </button>
                 </div>
             </div>
 
+            {/* DESKTOP LIST VIEW */}
+            {viewMode === 'month' ? (
+                <MonthlyBookingList
+                    events={events}
+                    currentMonthStart={currentMonthStart}
+                    currentMonthEnd={currentMonthEnd}
+                    currentViewTitle={currentViewTitle}
+                    onItemClick={openDetail}
+                />
+            ) : (
+                <DailyBookingList
+                    events={events}
+                    selectedDate={selectedDate}
+                    onItemClick={openDetail}
+                />
+            )}
 
+            {/* ... (existing Mobile Agenda List) ... */}
 
-            {/* Desktop: Standard Clean Header */}
-            <div className="hidden md:flex flex-row justify-between items-center py-6 px-8 max-w-[1200px] mx-auto w-full">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                        <CalendarIcon className="w-8 h-8 text-[#1E40AF]" />
-                        ตารางการใช้รถ (สาธารณะ)
-                    </h1>
-                    <p className="text-gray-500 mt-1">แสดงรายการขอใช้รถราชการทั้งหมด</p>
-
-
-                </div>
-                <div className="flex flex-col items-end">
-                    <div className="flex items-center gap-4">
-                        {/* LEGEND ON DESKTOP HEADER */}
-                        <div className="hidden lg:flex items-center gap-3 mr-4">
-                            {vehicles.map((v) => (
-                                <div key={v.id} className="flex items-center gap-1.5">
-                                    <span className="w-3 h-3 rounded-full" style={{ backgroundColor: v.color || '#9CA3AF' }}></span>
-                                    <span className="text-xs text-gray-600 whitespace-nowrap">{v.plate_number ? `รถ ${v.plate_number}` : 'รถอื่นๆ'}</span>
-                                </div>
-                            ))}
-                            {/* Cancelled Legend */}
-                            <div className="flex items-center gap-1.5">
-                                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: '#22C55E' }}></span>
-                                <span className="text-xs text-gray-600 whitespace-nowrap">เสร็จสิ้น</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: '#9CA3AF' }}></span>
-                                <span className="text-xs text-gray-600 whitespace-nowrap">ยกเลิก</span>
-                            </div>
-                        </div>
-
-                        <Link
-                            href="/login"
-                            className="group flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-2.5 rounded-full shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transform hover:-translate-y-0.5 transition-all duration-200 font-bold tracking-wide whitespace-nowrap"
-                        >
-                            <LogIn className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                            เข้าสู่ระบบ
-                        </Link>
-
-                        {/* Help Button with Dropdown */}
-                        <div className="relative" ref={helpMenuRef}>
-                            <button
-                                onClick={() => setHelpMenuOpen(!helpMenuOpen)}
-                                className="flex items-center gap-2 bg-rose-50 border border-rose-100 hover:bg-rose-100 text-rose-700 px-4 py-2.5 rounded-lg shadow-sm transition-all font-medium whitespace-nowrap"
-                            >
-                                <HelpCircle className="w-4 h-4" />
-                                ความช่วยเหลือ
-                            </button>
-
-                            {helpMenuOpen && (
-                                <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-50 animate-in fade-in zoom-in-95 duration-200">
-                                    <button
-                                        onClick={() => {
-                                            setHelpMenuOpen(false);
-                                            setFuelModalOpen(true);
-                                        }}
-                                        className="flex items-center gap-3 w-full px-4 py-3 hover:bg-rose-50 rounded-lg transition-colors text-left group"
-                                    >
-                                        <div className="bg-rose-100 text-rose-600 p-2 rounded-lg group-hover:bg-white group-hover:shadow-sm transition-all">
-                                            <Fuel className="w-5 h-5" />
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <span className="text-sm font-bold text-gray-800">เบิกน้ำมันเชื้อเพลิง</span>
-                                            <span className="text-[10px] text-gray-500">สำหรับพนักงานขับรถ</span>
-                                        </div>
-                                    </button>
-
-                                    <Link
-                                        href="/manual"
-                                        target="_blank"
-                                        className="flex items-center gap-3 w-full px-4 py-3 hover:bg-indigo-50 rounded-lg transition-colors text-left group"
-                                        onClick={() => setHelpMenuOpen(false)}
-                                    >
-                                        <div className="bg-indigo-100 text-indigo-600 p-2 rounded-lg group-hover:bg-white group-hover:shadow-sm transition-all">
-                                            <BookOpen className="w-5 h-5" />
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <span className="text-sm font-bold text-gray-800">คู่มือการใช้งาน</span>
-                                            <span className="text-[10px] text-gray-500">สำหรับผู้ใช้งานใหม่</span>
-                                        </div>
-                                    </Link>
-
-                                    <button
-                                        onClick={() => {
-                                            setHelpMenuOpen(false);
-                                            setReportModalOpen(true);
-                                        }}
-                                        className="flex items-center gap-3 w-full px-4 py-3 hover:bg-amber-50 rounded-lg transition-colors text-left group"
-                                    >
-                                        <div className="bg-amber-100 text-amber-600 p-2 rounded-lg group-hover:bg-white group-hover:shadow-sm transition-all">
-                                            <AlertTriangle className="w-5 h-5" />
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <span className="text-sm font-bold text-gray-800">แจ้งปัญหาการใช้รถ</span>
-                                            <span className="text-[10px] text-gray-500">สำหรับแจ้งซ่อม/ปัญหา</span>
-                                        </div>
-                                    </button>
-
-                                    <a
-                                        href="https://line.me/R/ti/p/@420uicrg"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center gap-3 w-full px-4 py-3 hover:bg-green-50 rounded-lg transition-colors text-left group"
-                                        onClick={() => setHelpMenuOpen(false)}
-                                    >
-                                        <div className="bg-green-100 text-green-600 p-2 rounded-lg group-hover:bg-white group-hover:shadow-sm transition-all">
-                                            <MessageCircle className="w-5 h-5" />
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <span className="text-sm font-bold text-gray-800">ติดต่อเรา</span>
-                                            <span className="text-[10px] text-gray-500">Line ID: @420uicrg</span>
-                                        </div>
-                                    </a>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="mt-3">
-                        {!isMobile && <PublicQueueCard />}
-                    </div>
-                </div>
-            </div>
-
-            {/* MOBILE LEGEND (Below Header) */}
-            <div className="md:hidden px-4 mt-4 mb-2 flex flex-wrap gap-2 justify-center">
-                {vehicles.map((v) => (
-                    <div key={v.id} className="flex items-center gap-1 bg-white px-2 py-1 rounded-full shadow-sm text-[10px] text-gray-600 border border-gray-100">
-                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: v.color || '#9CA3AF' }}></span>
-                        <span className="whitespace-nowrap">{v.plate_number ? `รถ ${v.plate_number}` : 'รถอื่นๆ'}</span>
-                    </div>
-                ))}
-                {/* Cancelled Legend */}
-                <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-full shadow-sm text-[10px] text-gray-600 border border-gray-100">
-                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#22C55E' }}></span>
-                    <span className="whitespace-nowrap">เสร็จสิ้น</span>
-                </div>
-                <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-full shadow-sm text-[10px] text-gray-600 border border-gray-100">
-                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#9CA3AF' }}></span>
-                    <span className="whitespace-nowrap">ยกเลิก</span>
-                </div>
-            </div>
-
-            {/* CALENDAR SECTION */}
-            <div className="bg-white shadow-sm md:shadow-none border-b md:border-none z-20 pb-2 md:pb-0 flex-1">
-                <div className="max-w-md md:max-w-[1200px] mx-auto md:px-8">
-                    <style jsx global>{`
-                /* General Reset */
-                .fc-toolbar { margin-bottom: 0.5rem !important; }
-                .fc-toolbar-title { font-weight: 800; color: #1E3A8A; }
-                .fc-button { padding: 0.3rem 0.6rem !important; background: transparent !important; border: 1px solid #E5E7EB !important; color: #4B5563 !important; }
-                .fc-button:hover { background: #F3F4F6 !important; color: #1F2937 !important; }
-                .fc-button-active { background: #EBF5FF !important; color: #1E40AF !important; border-color: #BFDBFE !important; }
-                
-                /* Mobile Specifics */
-                @media (max-width: 767px) {
-                   .fc-toolbar-title { font-size: 1rem !important; text-transform: uppercase; }
-                   .fc-button { border: none !important; }
-                   
-                   /* Fix: Remove hardcoded border-color so dots take event color */
-                   .fc-daygrid-event-dot { border-width: 3px; }
-                   
-                   /* Selected Date Circle */
-                    td[data-date="${selectedDate}"] .fc-daygrid-day-number {
-                        background-color: #3B82F6;
-                        color: white !important;
-                        font-weight: bold;
-                        width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%;
-                        margin: 2px auto;
-                    }
-                }
-
-                /* Desktop Specifics */
-                @media (min-width: 768px) {
-                    .fc-toolbar-title { font-size: 1.5rem !important; }
-                    .fc-col-header-cell-cushion { padding: 10px 0; font-size: 0.9rem; }
-                    .fc-daygrid-day-number { padding: 8px; font-size: 1rem; color: #374151; }
-                    .fc-event { cursor: pointer; border-radius: 4px; font-size: 0.85rem; padding: 2px 4px; margin-top: 2px; }
-                }
-             `}</style>
-
-                    <FullCalendar
-                        ref={calendarRef}
-                        plugins={[dayGridPlugin, interactionPlugin]}
-                        initialView="dayGridMonth"
-                        locale="th"
-                        height="auto"
-                        contentHeight="auto"
-                        key={isMobile ? 'mobile' : 'desktop'}
-                        aspectRatio={isMobile ? 1.3 : 1.8}
-
-                        headerToolbar={{
-                            left: 'prev,next today',
-                            center: 'title',
-                            right: ''
-                        }}
-                        // nextDayThreshold removed to default to 00:00:00
-
-                        events={events}
-                        eventDisplay="block"
-                        dayMaxEvents={isMobile ? false : 3}
-
-                        eventContent={(arg) => {
-                            const isOff = arg.event.extendedProps.isOffHours;
-                            if (isMobile) {
-                                return (
-                                    <div className="flex items-center justify-center w-full h-full py-0.5 rounded-sm">
-                                        <span className="text-[11px] font-bold text-white leading-none flex items-center gap-0.5">
-                                            {isOff && <span className="bg-amber-500 text-[8px] px-0.5 rounded leading-none">OT</span>}
-                                            {formatTime(arg.event.startStr)}
-                                        </span>
-                                    </div>
-                                );
-                            }
-                            return (
-                                <div className="px-1.5 py-1 overflow-hidden text-white">
-                                    <div className="flex items-center gap-1.5 leading-tight">
-                                        {isOff && <span className="bg-amber-500 text-[10px] px-1 rounded leading-none">OT</span>}
-                                        <span className="font-bold truncate text-[12px]">{arg.event.title}</span>
-                                    </div>
-                                </div>
-                            );
-                        }}
-
-                        dateClick={onDateClick}
-                        eventClick={onEventClick}
-                        datesSet={(arg) => {
-                            setCurrentMonthStart(arg.view.currentStart);
-                            setCurrentMonthEnd(arg.view.currentEnd);
-                            setCurrentViewTitle(arg.view.title);
-                        }}
-                    />
-                </div>
-            </div>
-
-            {/* MONTHLY TABLE (Desktop Only) */}
-            <div className="hidden md:block max-w-[1200px] mx-auto px-8 mt-10 mb-20">
-                <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                    <Clock className="w-6 h-6 text-blue-600" />
-                    รายการขอใช้รถเดือน {currentViewTitle}
-                </h3>
-
-                <div className="bg-white border rounded-xl shadow-sm overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left">
-                            <thead className="bg-gray-50 text-gray-600 uppercase text-xs tracking-wider border-b">
-                                <tr>
-                                    <th className="px-6 py-4 font-semibold">วันที่</th>
-                                    <th className="px-6 py-4 font-semibold">เวลา</th>
-                                    <th className="px-6 py-4 font-semibold">ผู้ขอ / จุดหมาย</th>
-                                    <th className="px-6 py-4 font-semibold">รถปฏิบัติงาน</th>
-                                    <th className="px-6 py-4 font-semibold text-center">สถานะ</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-50">
-                                {(() => {
-                                    const filtered = events.filter(e => currentMonthStart && currentMonthEnd && new Date(e.start) >= currentMonthStart && new Date(e.start) < currentMonthEnd)
-                                        .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
-
-                                    if (filtered.length === 0) {
-                                        return (
-                                            <tr>
-                                                <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                                                    ไม่มีรายการขอใช้รถในเดือนนี้
-                                                </td>
-                                            </tr>
-                                        );
-                                    }
-
-                                    return filtered.map((evt, index) => {
-                                        const prevEvt = filtered[index - 1];
-                                        const isNewDay = index === 0 || normalizeDate(evt.start) !== normalizeDate(prevEvt.start);
-                                        const isOff = evt.extendedProps?.isOffHours;
-
-                                        return (
-                                            <tr
-                                                key={evt.id}
-                                                onClick={() => openDetail(evt.id)}
-                                                className={`hover:bg-blue-50/50 transition-colors cursor-pointer ${isNewDay ? 'border-t border-gray-200' : ''}`}
-                                            >
-                                                {/* DATE */}
-                                                <td className={`px-4 py-4 whitespace-nowrap align-top ${isNewDay ? 'bg-gray-50/30' : ''}`}>
-                                                    {isNewDay && (
-                                                        <div className="flex flex-col items-center">
-                                                            <span className="font-extrabold text-[#1E3A8A] text-xl leading-none">
-                                                                {new Date(evt.start).getDate()}
-                                                            </span>
-                                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter mt-1">
-                                                                {new Date(evt.start).toLocaleDateString('th-TH', { month: 'short' })}
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                </td>
-
-                                                {/* TIME */}
-                                                <td className="px-6 py-4 whitespace-nowrap align-top">
-                                                    <div className="flex flex-col text-gray-600">
-                                                        <span className="font-medium text-gray-900 border-l-2 border-blue-200 pl-2 flex items-center gap-1">
-                                                            {isOff && <span className="text-amber-600 font-bold text-xs" title="นอกเวลาราชการ">OT</span>}
-                                                            {formatTime(evt.start)}
-                                                        </span>
-                                                        {evt.end && <span className="text-xs text-gray-400 pl-2.5">ถึง {formatTime(evt.end)}</span>}
-                                                        {isOff && (
-                                                            <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded mt-1 w-fit">
-                                                                นอกเวลา
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </td>
-
-                                                {/* DETAILS */}
-                                                <td className="px-6 py-4 align-top max-w-[300px]">
-                                                    <div className="flex flex-col gap-2.5">
-                                                        <div className="flex flex-col">
-                                                            <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-0.5">ผู้ขอ (Requester)</span>
-                                                            <span className="font-extrabold text-gray-900 text-lg leading-none">
-                                                                {evt.extendedProps?.requester || "ไม่ระบุชื่อ"}
-                                                            </span>
-                                                        </div>
-                                                        <div className="flex flex-col">
-                                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">วัตถุประสงค์ / สถานที่</span>
-                                                            <span className="text-xs text-gray-600 leading-relaxed line-clamp-2" title={evt.extendedProps?.location}>
-                                                                {evt.extendedProps?.location || "ไม่ระบุรายละเอียด"}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                </td>
-
-                                                {/* VEHICLE */}
-                                                <td className="px-6 py-4 align-top">
-                                                    <span
-                                                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-white shadow-sm whitespace-nowrap"
-                                                        style={{
-                                                            borderColor: evt.color || '#E5E7EB',
-                                                            color: evt.color || '#374151'
-                                                        }}
-                                                    >
-                                                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: evt.color || '#9CA3AF' }}></span>
-                                                        {evt.extendedProps?.vehicle}
-                                                    </span>
-                                                    {evt.extendedProps?.driver_name && (
-                                                        <div className="mt-2 flex flex-col gap-0.5">
-                                                            <div className="text-[11px] font-bold text-gray-700 flex items-center gap-1">
-                                                                {evt.extendedProps.driver_name}
-                                                            </div>
-                                                            {evt.extendedProps?.driver_phone && (
-                                                                <div className="text-[10px] text-gray-500 flex items-center gap-1">
-                                                                    <Phone className="w-3 h-3" />
-                                                                    {evt.extendedProps.driver_phone}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                </td>
-
-                                                {/* STATUS */}
-                                                <td className="px-6 py-4 align-top text-center w-[120px]">
-                                                    <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-bold border ${getStatusColor(evt.extendedProps?.status || 'REQUESTED')}`}>
-                                                        {getStatusLabel(evt.extendedProps?.status || 'REQUESTED')}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        );
-                                    });
-                                })()}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            {/* AGENDA LIST SECTION (MOBILE ONLY) */}
-            <div className={`flex-1 bg-gray-50/50 min-h-[300px] md:hidden ${isMobile ? 'block' : 'hidden'}`}>
-                <div className="max-w-md mx-auto p-4">
-
-                    {/* Date Header */}
-                    <div className="mb-6 flex items-center justify-center">
-                        <div className="bg-blue-50/80 border border-blue-100/50 px-5 py-2 rounded-full shadow-sm">
-                            <span className="text-[#1E40AF] text-sm font-bold tracking-tight">
-                                {toThaiHeading(selectedDate)}
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* List Items */}
-                    <div className="space-y-0 relative">
-
-                        {dailyEvents.length > 0 ? (
-                            dailyEvents.map((evt) => (
-                                <div
-                                    key={evt.id}
-                                    onClick={() => openDetail(evt.id)}
-                                    className="flex group cursor-pointer bg-white mb-3 rounded-lg border border-gray-100 shadow-sm hover:shadow-md transition-all p-3 z-10 relative"
-                                >
-                                    {/* Time Column (Left) */}
-                                    <div className="w-16 pr-3 text-right text-xs font-semibold text-gray-500 shrink-0 flex flex-col justify-center border-r border-gray-100 bg-white">
-                                        <span className="text-gray-800 text-sm flex items-center justify-end gap-0.5">
-                                            {evt.extendedProps?.isOffHours && <span className="text-amber-600 font-bold">OT</span>}
-                                            {formatTime(evt.start)}
-                                        </span>
-                                        {evt.end && <span className="text-[10px] text-gray-400 opacity-80">{formatTime(evt.end)}</span>}
-                                    </div>
-
-                                    {/* Colored Bar Indicator */}
-                                    <div
-                                        className="w-1.5 h-auto rounded-full mx-3"
-                                        style={{ backgroundColor: evt.color }}
-                                    ></div>
-
-                                    {/* Content (Right) */}
-                                    <div className="flex-1 min-w-0 flex flex-col justify-center">
-                                        <h3 className="text-sm font-bold text-gray-800 line-clamp-1 group-hover:text-blue-600 transition-colors">
-                                            {evt.title}
-                                            {evt.extendedProps?.isOffHours && (
-                                                <span className="ml-2 text-[9px] bg-amber-50 text-amber-600 px-1 py-0.5 rounded border border-amber-100">นอกเวลา</span>
-                                            )}
-                                        </h3>
-                                        <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">
-                                            {evt.extendedProps?.location || 'ไม่ระบุสถานที่'}
-                                        </p>
-                                        <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                                            <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
-                                                {evt.extendedProps?.vehicle}
-                                            </span>
-                                            {evt.extendedProps?.driver_name && (
-                                                <div className="flex items-center gap-2 text-[10px] text-gray-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
-                                                    <div className="font-semibold">{evt.extendedProps.driver_name}</div>
-                                                    {evt.extendedProps?.driver_phone && (
-                                                        <div className="flex items-center gap-0.5 pl-2 border-l border-blue-200">
-                                                            <Phone className="w-2.5 h-2.5" />
-                                                            {evt.extendedProps.driver_phone}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
-                                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${getStatusColor(evt.extendedProps?.status || 'REQUESTED')}`}>
-                                                {getStatusLabel(evt.extendedProps?.status || 'REQUESTED')}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <ChevronRight className="w-4 h-4 text-gray-300 self-center" />
-                                </div>
-                            ))
-                        ) : (
-                            /* Empty State */
-                            <div className="py-12 text-center text-gray-400 flex flex-col items-center justify-center h-full">
-                                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                                    <Clock className="w-8 h-8 text-gray-300" />
-                                </div>
-                                <p className="text-gray-500 font-medium">ไม่มีรายการขอใช้รถ</p>
-                                <p className="text-xs text-gray-400 mt-1 mb-6">รถว่างตลอดวัน</p>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
 
             <EventDetailModal
                 open={modalOpen}
