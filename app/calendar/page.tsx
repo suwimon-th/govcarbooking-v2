@@ -321,7 +321,7 @@ export default function PublicCalendarPage() {
 
                 {/* Glass Queue Card inside Header */}
                 <div className="mt-6">
-                    <PublicQueueCard theme="glass" />
+                    {isMobile && <PublicQueueCard theme="glass" />}
                 </div>
             </div>
 
@@ -447,7 +447,7 @@ export default function PublicCalendarPage() {
                     </div>
 
                     <div className="mt-3">
-                        <PublicQueueCard />
+                        {!isMobile && <PublicQueueCard />}
                     </div>
                 </div>
             </div>

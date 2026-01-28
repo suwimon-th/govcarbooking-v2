@@ -87,6 +87,9 @@ export async function POST(req: Request) {
 
     await sendLinePush(driver.line_user_id!, [messages]);
 
+    // ✅ Update Notification Status
+    await supabase.from("bookings").update({ is_line_notified: true }).eq("id", bookingId);
+
     return NextResponse.json({
       success: true,
       driver: driver.full_name,

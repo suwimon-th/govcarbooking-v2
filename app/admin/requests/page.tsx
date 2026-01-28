@@ -17,7 +17,9 @@ import {
   Gauge,
   Printer,
   FileDown,
-  FileText as FileDoc
+  FileText as FileDoc,
+  MessageCircle, // Added
+  CheckCircle2   // Added
 } from "lucide-react";
 import { generateBookingDocument } from "@/lib/documentGenerator";
 
@@ -58,6 +60,8 @@ export interface BookingRow {
   start_mileage: number | null;
   end_mileage: number | null;
   distance: number | null;
+
+  is_line_notified?: boolean; // Added
 
   requester: RequesterInfo | null;
   driver: DriverInfo | null;
@@ -138,6 +142,7 @@ function AdminRequestsContent() {
         destination,
         passenger_count,
         passengers,
+        is_line_notified,
 
         start_mileage,
         end_mileage,
@@ -248,6 +253,8 @@ function AdminRequestsContent() {
       loadData();
     }
   };
+
+
 
   const handleHeaderQueueClick = async () => {
     // Open Modal directly (no booking selection required)
@@ -444,6 +451,16 @@ function AdminRequestsContent() {
                     <div className="flex items-center gap-1.5 flex-1">
                       <div className={`w-2 h-2 rounded-full ${b.driver ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                       <span className="text-gray-700 truncate">{b.driver?.full_name || "ไม่มีคนขับ"}</span>
+                      {/* LINE Notification Indicator */}
+                      {b.driver && (
+                        <div className="ml-1" title={b.is_line_notified ? "แจ้งเตือน LINE แล้ว" : "ยังไม่ได้รับ LINE"}>
+                          {b.is_line_notified ? (
+                            <MessageCircle className="w-4 h-4 text-green-500 fill-green-100" />
+                          ) : (
+                            <MessageCircle className="w-4 h-4 text-gray-300" />
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div className="w-px h-4 bg-gray-200"></div>
                     <div className="flex-1 text-right text-gray-600 truncate">
@@ -601,6 +618,17 @@ function AdminRequestsContent() {
                               <span className={`text-sm ${b.driver ? "text-gray-900 font-medium" : "text-gray-400 italic"}`}>
                                 {b.driver?.full_name || "ยังไม่มีคนขับ"}
                               </span>
+
+                              {/* LINE Notification Indicator */}
+                              {b.driver && (
+                                <div className="ml-1" title={b.is_line_notified ? "แจ้งเตือน LINE แล้ว" : "ยังไม่ได้รับ LINE"}>
+                                  {b.is_line_notified ? (
+                                    <MessageCircle className="w-4 h-4 text-green-500 fill-green-100" />
+                                  ) : (
+                                    <MessageCircle className="w-4 h-4 text-gray-300" />
+                                  )}
+                                </div>
+                              )}
                             </div>
                             <div className="flex items-center gap-1.5 text-gray-500 text-xs pl-3.5">
                               <span>{vehicleDisplay(b.vehicle)}</span>

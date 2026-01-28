@@ -303,7 +303,7 @@ export default function UserPage() {
                 </div>
                 {/* Glass Queue Card inside Header */}
                 <div className="mt-6">
-                    <PublicQueueCard theme="glass" />
+                    {isMobile && <PublicQueueCard theme="glass" />}
                 </div>
             </div>
 
@@ -411,7 +411,7 @@ export default function UserPage() {
                     </div>
 
                     <div className="mt-3">
-                        <PublicQueueCard />
+                        {!isMobile && <PublicQueueCard />}
                     </div>
                 </div>
             </div>

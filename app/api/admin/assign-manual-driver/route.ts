@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseClient";
+import { sendLinePush, flexAssignDriver } from "@/lib/line";
 
 export async function POST(req: Request) {
     try {
@@ -23,6 +24,48 @@ export async function POST(req: Request) {
                 console.error("Update Booking Error", updateErr);
                 return NextResponse.json({ error: updateErr.message }, { status: 500 });
             }
+
+            // -------------------------------------------------------------
+            // NEW: Send LINE Notification to Driver
+            // -------------------------------------------------------------
+            // Fetch validation data for notification (need vehicle & driver info)
+            const { data: bookingsFull } = await supabase
+                .from("bookings")
+                .select(`
+                    *,
+                    vehicle: vehicle_id ( plate_number, brand, model ),
+                    driver: driver_id ( id, full_name, line_user_id )
+                `)
+                .in("id", booking_ids);
+
+            if (bookingsFull) {
+                for (const booking of bookingsFull) {
+                    // Check if driver has connected Line
+                    // booking.driver might be an object or array depending on relationship, 
+                    // but usually .single() isn't used here so it's a join. 
+                    // Supabase JS often returns single object for 1:1 or N:1 relation if configured, 
+                    // but let's safely cast.
+                    const drv = Array.isArray(booking.driver) ? booking.driver[0] : booking.driver;
+                    const veh = Array.isArray(booking.vehicle) ? booking.vehicle[0] : booking.vehicle;
+
+                    if (drv?.line_user_id) {
+                        console.log(`Preparing LINE msg for request ${booking.request_code} to ${drv.full_name}`);
+
+                        // Construct Flex Message
+                        const msg = flexAssignDriver(booking, veh, drv);
+
+                        // Send Push
+                        await sendLinePush(drv.line_user_id, [msg]);
+
+                        // ✅ Update Notification Status
+                        await supabase
+                            .from("bookings")
+                            .update({ is_line_notified: true })
+                            .eq("id", booking.id);
+                    }
+                }
+            }
+            // -------------------------------------------------------------
         }
 
         // 2. Rotate Queue for this driver

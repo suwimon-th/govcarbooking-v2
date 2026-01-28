@@ -29,10 +29,6 @@ export default function PublicQueueCard({ theme = 'light' }: Props) {
         };
 
         fetchNextQueue();
-
-        // Auto refresh every 30 seconds
-        const interval = setInterval(fetchNextQueue, 30000);
-        return () => clearInterval(interval);
     }, []);
 
     if (loading) return null; // Or a skeleton

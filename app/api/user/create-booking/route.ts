@@ -254,6 +254,9 @@ export async function POST(req: Request) {
             const flex = flexAssignDriver(data, vehicle, driver);
             console.log("📤 [NOTIFY] Sending to Driver:", driver.line_user_id);
             await sendLinePush(driver.line_user_id, [flex]);
+
+            // ✅ Update Notification Status
+            await supabase.from("bookings").update({ is_line_notified: true }).eq("id", data.id);
           }
         } catch (err) {
           console.error("❌ [NOTIFY] Driver error:", err);
