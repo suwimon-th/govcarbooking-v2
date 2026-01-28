@@ -70,7 +70,7 @@ export const generateBookingDocument = async (booking: BookingData) => {
 
 const generateFromCode = async (booking: BookingData) => {
     // Prepare Data
-    const bookingDate = new Date(booking.created_at || new Date());
+    const bookingDate = new Date(booking.start_at || booking.created_at || new Date());
     const reqDate = toThaiNum(bookingDate.getDate());
     const reqMonth = bookingDate.toLocaleDateString("th-TH", { month: "long" });
     const reqYear = toThaiNum(bookingDate.getFullYear() + 543);
@@ -623,7 +623,7 @@ const generateFromCode = async (booking: BookingData) => {
                                                 new Paragraph({
                                                     alignment: AlignmentType.CENTER,
                                                     children: [
-                                                        new TextRun({ text: "( ....................................................... )", ...fontStyle }),
+                                                        new TextRun({ text: ".......................................................", ...fontStyle }),
                                                     ],
                                                 }),
                                                 new Paragraph({
