@@ -52,6 +52,14 @@ function wrapLayout(title: string, color: string, content: string) {
         .info-value { font-weight: 500; color: #111827; text-align: right; }
         .btn { display: block; width: 100%; text-align: center; background-color: ${color}; color: #ffffff !important; padding: 14px 0; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin-top: 24px; box-shadow: 0 4px 6px rgba(0,0,0,0.15); }
         .footer { padding: 20px; text-align: center; font-size: 12px; color: #9ca3af; background-color: #f9fafb; }
+        
+        @media only screen and (max-width: 600px) {
+          .container { width: 100% !important; margin: 0 !important; border-radius: 0 !important; }
+          .content { padding: 24px 16px !important; }
+          .info-row { display: block !important; }
+          .info-label { display: block !important; margin-bottom: 4px !important; }
+          .info-value { display: block !important; text-align: left !important; }
+        }
       </style>
     </head>
     <body>
