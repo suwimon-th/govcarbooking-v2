@@ -11,25 +11,85 @@ export async function sendLinePush(to: string, messages: any[]) {
 
   if (!token) {
     console.error("❌ Missing LINE_CHANNEL_ACCESS_TOKEN");
-    return;
+    return false;
   }
 
   console.log(`📤 [LINE] Sending push to ${to}`, JSON.stringify(messages, null, 2));
 
-  const res = await fetch("https://api.line.me/v2/bot/message/push", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ to, messages }),
-  });
+  try {
+    const res = await fetch("https://api.line.me/v2/bot/message/push", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ to, messages }),
+    });
 
-  if (!res.ok) {
-    const errorText = await res.text();
-    console.error("❌ [LINE] PUSH ERROR:", errorText);
-  } else {
-    console.log("✅ [LINE] PUSH SUCCESS");
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error("❌ [LINE] PUSH ERROR:", errorText);
+      // Return false so we can handle fallback (especially for quota limit)
+      // Check if limit reached
+      if (errorText.includes("monthly limit")) {
+        throw new Error("QUOTA_LIMIT");
+      }
+      return false;
+    } else {
+      console.log("✅ [LINE] PUSH SUCCESS");
+      return true;
+    }
+  } catch (error: any) {
+    if (error.message === "QUOTA_LIMIT") throw error;
+    console.error("❌ [LINE] FETCH ERROR:", error);
+    return false;
+  }
+}
+
+export async function sendLineNotify(message: string) {
+  const token = process.env.LINE_NOTIFY_TOKEN;
+  if (!token) {
+    console.warn("⚠️ [LINE Notify] Token not found in LINE_NOTIFY_TOKEN");
+    return false;
+  }
+
+  try {
+    const res = await fetch("https://notify-api.line.me/api/notify", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Authorization": `Bearer ${token}`,
+      },
+      body: new URLSearchParams({ message }),
+    });
+
+    if (!res.ok) {
+      console.error("❌ [LINE Notify] Error:", await res.text());
+      return false;
+    }
+
+    console.log("✅ [LINE Notify] Sent Success");
+    return true;
+
+  } catch (e) {
+    console.error("❌ [LINE Notify] Network Error:", e);
+    return false;
+  }
+}
+
+export async function sendLinePushWithFallback(to: string, pushMessages: any[], notifyMessage: string) {
+  try {
+    // 1. Try sending rich Push Message
+    await sendLinePush(to, pushMessages);
+  } catch (e: any) {
+    // 2. Catch Error (specifically Quota Limit)
+    if (e.message === "QUOTA_LIMIT") {
+      console.warn("⚠️ [LINE] Quota Limit Reached! Falling back to LINE Notify...");
+      // 3. Fallback to Notify
+      await sendLineNotify(notifyMessage);
+    } else {
+      console.error("❌ [LINE] Unknown Error during push:", e);
+    }
   }
 }
 

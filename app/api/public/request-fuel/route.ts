@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseClient";
-import { sendLinePush, flexFuelRequest } from "@/lib/line";
+import { sendLinePush, flexFuelRequest, sendLinePushWithFallback } from "@/lib/line";
 
 export async function POST(req: Request) {
     try {
@@ -39,7 +39,10 @@ export async function POST(req: Request) {
         if (adminLineId) {
             console.log(`📤 [FUEL] Sending request from ${driver_name} (${plate_number}) to Admin`);
             const flex = flexFuelRequest(driver_name, plate_number);
-            await sendLinePush(adminLineId, [flex]);
+
+            const notifyMsg = `⛽️ มีการขอเบิกน้ำมัน\nทะเบียน: ${plate_number}\nผู้เบิก: ${driver_name}\n\n📍 จัดการรายการเบิก:\nhttps://govcarbooking-v2.vercel.app/admin/fuel`;
+
+            await sendLinePushWithFallback(adminLineId, [flex], notifyMsg);
         } else {
             console.warn("⚠️ [FUEL] ADMIN_LINE_USER_ID not found. Notification skipped.");
         }

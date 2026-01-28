@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseClient";
-import { sendLinePush, flexAssignDriver, flexAdminNotifyNewBooking } from "@/lib/line";
+import { sendLinePush, flexAssignDriver, flexAdminNotifyNewBooking, sendLinePushWithFallback } from "@/lib/line";
 
 /* ---------------------------
    helper: เติมวินาทีให้เวลา
@@ -298,7 +298,11 @@ export async function POST(req: Request) {
           try {
             console.log(`📤 [NOTIFY] Sending to Admin: ${adminLineId}`);
             const adminFlex = flexAdminNotifyNewBooking(data);
-            await sendLinePush(adminLineId, [adminFlex]);
+
+            // Construct Fallback Message (Text)
+            const notifyMsg = `🔔 มีการจองรถใหม่ (ล่วงหน้า)\nรหัส: ${data.request_code}\nวันที่: ${date} เวลา ${start_time}\nผู้ขอ: ${requester_name}\nไป: ${destination}\nวัตถุประสงค์: ${purpose}\n\n📍 กดเพื่อมอบหมายคนขับ:\nhttps://govcarbooking-v2.vercel.app/admin/requests?id=${data.id}&status=REQUESTED`;
+
+            await sendLinePushWithFallback(adminLineId, [adminFlex], notifyMsg);
           } catch (err) {
             console.error("❌ [NOTIFY] Admin error:", err);
           }
