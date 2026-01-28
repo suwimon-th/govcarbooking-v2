@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import Swal from "sweetalert2";
 import type { BookingRow } from "./page";
 import { bookingStatusMap, getStatusLabel, getStatusColor } from "@/lib/statusHelper";
 import {
@@ -156,17 +157,32 @@ export default function EditBookingModal({
     }
   };
 
-  const handleCompleteJob = () => {
-    if (!formData.end_mileage) {
-      if (!confirm("ยังไม่ได้ระบุ 'เลขไมล์เมื่อถึง' ต้องการจบงานเลยหรือไม่?")) return;
-    } else {
-      if (!confirm("ต้องการ 'จบงาน' ใช่หรือไม่?")) return;
+  const handleCompleteJob = async () => {
+    const result = await Swal.fire({
+      title: "ยืนยันการจบงาน?",
+      text: !formData.end_mileage ? "ยังไม่ได้ระบุ 'เลขไมล์เมื่อถึง' ต้องการจบงานเลยหรือไม่?" : "ต้องการ 'จบงาน' ใช่หรือไม่?",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "ยืนยัน",
+      cancelButtonText: "ยกเลิก",
+    });
+
+    if (result.isConfirmed) {
+      handleSave("COMPLETED");
     }
-    handleSave("COMPLETED");
   };
 
   const handleAutoAssign = async () => {
-    if (!confirm("ต้องการมอบหมายให้คนขับคิวถัดไปรับงานนี้ใช่หรือไม่? (ระบบจะหมุนคิวอัตโนมัติ)")) return;
+    const result = await Swal.fire({
+      title: "ยืนยันการมอบหมาย?",
+      text: "ต้องการมอบหมายให้คนขับคิวถัดไปรับงานนี้ใช่หรือไม่? (ระบบจะหมุนคิวอัตโนมัติ)",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "ยืนยัน",
+      cancelButtonText: "ยกเลิก",
+    });
+
+    if (!result.isConfirmed) return;
 
     setLoading(true);
     try {
@@ -178,15 +194,15 @@ export default function EditBookingModal({
 
       const json = await res.json();
       if (!res.ok) {
-        alert(json.error || "ทำรายการไม่สำเร็จ");
+        Swal.fire({ title: "ผิดพลาด", text: json.error || "ทำรายการไม่สำเร็จ", icon: "error", confirmButtonText: "ตกลง" });
       } else {
-        alert(`มอบหมายงานให้: ${json.driver_name} เรียบร้อยแล้ว`);
+        Swal.fire({ title: "สำเร็จ", text: `มอบหมายงานให้: ${json.driver_name} เรียบร้อยแล้ว`, icon: "success", confirmButtonText: "ตกลง" });
         onUpdated();
         onClose();
       }
     } catch (err) {
       console.error(err);
-      alert("เกิดข้อผิดพลาดในการเชื่อมต่อเครือข่าย");
+      Swal.fire({ title: "ผิดพลาด", text: "เกิดข้อผิดพลาดในการเชื่อมต่อเครือข่าย", icon: "error", confirmButtonText: "ตกลง" });
     } finally {
       setLoading(false);
     }
@@ -206,29 +222,31 @@ export default function EditBookingModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md p-4 animate-in fade-in duration-300">
       <div
-        className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200"
+        className="w-full max-w-2xl bg-white/90 rounded-[2rem] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] border border-white/40 flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-300"
         onClick={(e) => e.stopPropagation()}
       >
 
         {/* HEADER */}
-        {/* ... (keep header) ... */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-100">
+        <div className="flex items-center justify-between p-8 border-b border-gray-100 bg-gradient-to-r from-blue-50/50 to-transparent">
           <div>
-            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-              <PencilIcon className="w-5 h-5 text-blue-600" />
-              แก้ไขคำขอ
+            <h2 className="text-2xl font-black text-slate-800 flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-xl">
+                <PencilIcon className="w-6 h-6 text-blue-700" />
+              </div>
+              แก้ไขรายละเอียดคำขอ
             </h2>
-            <p className="text-sm text-gray-500 mt-1">
-              รหัสงาน: <span className="font-mono font-medium text-gray-700">{booking.request_code}</span>
+            <p className="text-sm text-slate-500 mt-2 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>
+              รหัสงาน: <span className="font-mono font-bold text-slate-700">{booking.request_code}</span>
             </p>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+            className="w-10 h-10 flex items-center justify-center rounded-2xl bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-500 transition-all active:scale-90"
           >
-            <X className="w-5 h-5" />
+            <X className="w-6 h-6" />
           </button>
         </div>
 

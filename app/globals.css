@@ -7,6 +7,9 @@
   --primary-light: #1565c0;
   --secondary: #ffc107;     /* เหลืองราชการ */
   --card-bg: #ffffff;
+  --glass: rgba(255, 255, 255, 0.85);
+  --shadow-premium: 0 10px 40px -10px rgba(13, 71, 161, 0.15), 0 4px 12px -2px rgba(13, 71, 161, 0.05);
+  --radius-xl: 1.5rem;      /* 24px */
 }
 
 body {
@@ -105,4 +108,74 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 .fc-event-title,
 .fc-event-time {
   text-shadow: none;
+}
+
+/* =========================================
+   PREMIUM MODAL & SWAL OVERRIDES
+   ========================================= */
+
+/* Backdrop blur for any custom modals using standard utility */
+.modal-backdrop {
+  backdrop-filter: blur(8px);
+  background-color: rgba(0, 0, 0, 0.4);
+}
+
+/* SweetAlert2 Premium Styling */
+.swal2-popup {
+  border-radius: var(--radius-xl) !important;
+  padding: 2.5rem !important;
+  font-family: var(--font-prompt), sans-serif !important;
+  box-shadow: var(--shadow-premium) !important;
+  border: 1px solid rgba(255, 255, 255, 0.5) !important;
+  background: var(--glass) !important;
+  backdrop-filter: blur(12px) !important;
+}
+
+.swal2-title {
+  color: #1e293b !important;
+  font-weight: 700 !important;
+  font-size: 1.5rem !important;
+  padding-bottom: 0.5rem !important;
+}
+
+.swal2-html-container {
+  color: #64748b !important;
+  font-weight: 400 !important;
+  line-height: 1.6 !important;
+  font-size: 1.05rem !important;
+}
+
+.swal2-confirm {
+  background: linear-gradient(135deg, #0d47a1 0%, #1565c0 100%) !important;
+  border-radius: 12px !important;
+  padding: 12px 32px !important;
+  font-weight: 600 !important;
+  box-shadow: 0 4px 12px rgba(13, 71, 161, 0.25) !important;
+  border: none !important;
+}
+
+.swal2-cancel {
+  border-radius: 12px !important;
+  padding: 12px 32px !important;
+  font-weight: 600 !important;
+  background: #f1f5f9 !important;
+  color: #64748b !important;
+  border: none !important;
+}
+
+.swal2-icon {
+  border-width: 3px !important;
+  margin-bottom: 1.5rem !important;
+}
+
+/* Micro-animations for buttons */
+.swal2-confirm:hover, 
+.swal2-cancel:hover {
+  transform: translateY(-2px);
+  transition: all 0.2s ease;
+}
+
+.swal2-confirm:active, 
+.swal2-cancel:active {
+  transform: translateY(0);
 }
