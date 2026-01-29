@@ -107,27 +107,41 @@ export async function POST(req: Request) {
                     }
 
                     if (finalDriver) {
+                        const notifyPromises = [];
+
                         // --- 3.2) LINE Notify ---
                         if (finalDriver.line_user_id) {
-                            try {
-                                const msg = flexAssignDriver(bookingFull, vehicleObj, finalDriver);
-                                await sendLinePush(finalDriver.line_user_id, [msg]);
-                                await supabase.from("bookings").update({ is_line_notified: true }).eq("id", id);
-                            } catch (err) {
-                                console.error("❌ [NOTIFY] LINE push error:", err);
-                            }
+                            const linePromise = (async () => {
+                                try {
+                                    const msg = flexAssignDriver(bookingFull, vehicleObj, finalDriver);
+                                    await sendLinePush(finalDriver.line_user_id, [msg]);
+                                    await supabase.from("bookings").update({ is_line_notified: true }).eq("id", id);
+                                    console.log("✅ [NOTIFY] LINE sent successfully");
+                                } catch (err) {
+                                    console.error("❌ [NOTIFY] LINE push error:", err);
+                                    throw err; // Re-throw to be caught by allSettled status
+                                }
+                            })();
+                            notifyPromises.push(linePromise);
                         }
 
                         // --- 3.3) Email Fallback (Admin) ---
-                        try {
-                            const taskLink = `${process.env.PUBLIC_DOMAIN || 'https://govcarbooking-v2.vercel.app'}/driver/tasks/${id}?driver_id=${finalDriver.id}`;
-                            const subject = `👨‍✈️ มอบหมายคนขับ: ${bookingFull.request_code} (${finalDriver.full_name})`;
-                            const html = generateDriverAssignmentEmailHtml(bookingFull, finalDriver, taskLink);
-                            await sendAdminEmail(subject, html);
-                            console.log("✅ [NOTIFY] Sent assignment email to admin");
-                        } catch (err) {
-                            console.error("❌ [NOTIFY] Admin email error:", err);
-                        }
+                        const emailPromise = (async () => {
+                            try {
+                                const taskLink = `${process.env.PUBLIC_DOMAIN || 'https://govcarbooking-v2.vercel.app'}/driver/tasks/${id}?driver_id=${finalDriver.id}`;
+                                const subject = `👨‍✈️ มอบหมายคนขับ: ${bookingFull.request_code} (${finalDriver.full_name})`;
+                                const html = generateDriverAssignmentEmailHtml(bookingFull, finalDriver, taskLink);
+                                await sendAdminEmail(subject, html);
+                                console.log("✅ [NOTIFY] Sent assignment email to admin");
+                            } catch (err) {
+                                console.error("❌ [NOTIFY] Admin email error:", err);
+                                throw err;
+                            }
+                        })();
+                        notifyPromises.push(emailPromise);
+
+                        // Wait for BOTH to finish (parallel execution)
+                        await Promise.allSettled(notifyPromises);
                     }
                 } catch (err) {
                     console.error("❌ [NOTIFY] Global notify error:", err);
