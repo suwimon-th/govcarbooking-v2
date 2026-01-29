@@ -683,7 +683,7 @@ export default function RequestForm({
                       <option value="other">ระบุเอง (อื่นๆ)</option>
                       {profiles.map(pro => (
                         <option key={pro.id} value={pro.id}>
-                          {pro.full_name} {pro.position ? `\u00A0\u00A0 ${pro.position}` : ""}
+                          {pro.full_name}
                         </option>
                       ))}
                     </select>
