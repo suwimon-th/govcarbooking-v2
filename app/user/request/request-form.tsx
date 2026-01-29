@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Calendar, Clock, MapPin, User, Building, Car, AlertTriangle, CheckCircle2, ChevronRight, Loader2, X, FileText, List } from "lucide-react";
 import { generateBookingDocument } from "@/lib/documentGenerator";
 import Swal from 'sweetalert2';
+import TimePicker24 from "@/app/components/TimePicker24";
 
 interface Vehicle {
   id: string;
@@ -524,13 +525,13 @@ export default function RequestForm({
             <div className="relative">
               <label className={labelClasses}>เวลาเริ่ม</label>
               <div className="relative">
-                <Clock className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
-                <input
-                  type="time"
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                  className={textInputClasses}
-                />
+                <Clock className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400 z-10" />
+                <div className="pl-10">
+                  <TimePicker24
+                    value={startTime}
+                    onChange={setStartTime}
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -539,13 +540,13 @@ export default function RequestForm({
             <div className="relative">
               <label className={labelClasses}>เวลาสิ้นสุด (ถ้ามี)</label>
               <div className="relative">
-                <Clock className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
-                <input
-                  type="time"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                  className={textInputClasses}
-                />
+                <Clock className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400 z-10" />
+                <div className="pl-10">
+                  <TimePicker24
+                    value={endTime}
+                    onChange={setEndTime}
+                  />
+                </div>
               </div>
             </div>
           </div>
