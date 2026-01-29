@@ -14,8 +14,13 @@ export async function sendAdminEmail(subject: string, htmlContent: string) {
   const adminEmail = process.env.ADMIN_EMAIL;
 
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS || !adminEmail) {
-    console.warn("⚠️ [EMAIL] Missing EMAIL_USER, EMAIL_PASS, or ADMIN_EMAIL env vars.");
-    return false;
+    const missing = [];
+    if (!process.env.EMAIL_USER) missing.push("EMAIL_USER");
+    if (!process.env.EMAIL_PASS) missing.push("EMAIL_PASS");
+    if (!adminEmail) missing.push("ADMIN_EMAIL");
+
+    console.warn(`⚠️ [EMAIL] Missing env vars: ${missing.join(", ")}`);
+    throw new Error(`Missing Email Config: ${missing.join(", ")}`);
   }
 
   try {
@@ -28,9 +33,9 @@ export async function sendAdminEmail(subject: string, htmlContent: string) {
 
     console.log("✅ [EMAIL] Sent:", info.messageId);
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error("❌ [EMAIL] Error sending email:", error);
-    return false;
+    throw new Error(`SMTP Error: ${error.message || error}`);
   }
 }
 
