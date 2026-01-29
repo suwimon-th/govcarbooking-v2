@@ -67,49 +67,47 @@ export async function POST(req: Request) {
       // Not returning 500 here because assignment already succeeded
     }
 
-    // 4) ส่งแจ้งเตือน (Async)
-    (async () => {
-      try {
-        // ดึงข้อมูลเพิ่มเพื่อความแม่นยำ
-        const { data: bookingFull } = await supabase
-          .from("bookings")
-          .select(`
-            *,
-            vehicle: vehicles ( plate_number )
-          `)
-          .eq("id", booking_id)
-          .single();
+    // 4) ส่งแจ้งเตือน (Await เพื่อความชัวร์ใน Serverless)
+    try {
+      // ดึงข้อมูลเพิ่มเพื่อความแม่นยำ
+      const { data: bookingFull } = await supabase
+        .from("bookings")
+        .select(`
+          *,
+          vehicle: vehicles ( plate_number )
+        `)
+        .eq("id", booking_id)
+        .single();
 
-        if (bookingFull) {
-          const vehicleObj = Array.isArray(bookingFull.vehicle) ? bookingFull.vehicle[0] : bookingFull.vehicle;
+      if (bookingFull) {
+        const vehicleObj = Array.isArray(bookingFull.vehicle) ? bookingFull.vehicle[0] : bookingFull.vehicle;
 
-          // --- 4.1) LINE Notify ---
-          if (driver.line_user_id) {
-            try {
-              const msg = flexAssignDriver(bookingFull, vehicleObj, driver);
-              await sendLinePush(driver.line_user_id, [msg]);
-
-              await supabase.from("bookings").update({ is_line_notified: true }).eq("id", booking_id);
-            } catch (err) {
-              console.error("❌ [NOTIFY] LINE push error:", err);
-            }
-          }
-
-          // --- 4.2) Email Fallback (Admin) ---
+        // --- 4.1) LINE Notify ---
+        if (driver.line_user_id) {
           try {
-            console.log(`📧 [EMAIL] Sending assignment fallback (Auto Assign) to Admin...`);
-            const taskLink = `${process.env.PUBLIC_DOMAIN || 'https://govcarbooking-v2.vercel.app'}/driver/tasks/${booking_id}?driver_id=${driverId}`;
-            const subject = `👨‍✈️ มอบหมายคนขับ (Auto): ${bookingFull.request_code} (${driver.full_name})`;
-            const html = generateDriverAssignmentEmailHtml(bookingFull, driver, taskLink);
-            await sendAdminEmail(subject, html);
+            const msg = flexAssignDriver(bookingFull, vehicleObj, driver);
+            await sendLinePush(driver.line_user_id, [msg]);
+
+            await supabase.from("bookings").update({ is_line_notified: true }).eq("id", booking_id);
           } catch (err) {
-            console.error("❌ [EMAIL] Admin assignment email error:", err);
+            console.error("❌ [NOTIFY] LINE push error:", err);
           }
         }
-      } catch (err) {
-        console.error("❌ [NOTIFY] Assignment notification error:", err);
+
+        // --- 4.2) Email Fallback (Admin) ---
+        try {
+          console.log(`📧 [EMAIL] Sending assignment fallback (Auto Assign) to Admin...`);
+          const taskLink = `${process.env.PUBLIC_DOMAIN || 'https://govcarbooking-v2.vercel.app'}/driver/tasks/${booking_id}?driver_id=${driverId}`;
+          const subject = `👨‍✈️ มอบหมายคนขับ (Auto): ${bookingFull.request_code} (${driver.full_name})`;
+          const html = generateDriverAssignmentEmailHtml(bookingFull, driver, taskLink);
+          await sendAdminEmail(subject, html);
+        } catch (err) {
+          console.error("❌ [EMAIL] Admin assignment email error:", err);
+        }
       }
-    })();
+    } catch (err) {
+      console.error("❌ [NOTIFY] Assignment notification error:", err);
+    }
 
     return NextResponse.json({
       success: true,
