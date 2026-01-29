@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseClient";
 import { sendLinePush, flexAssignDriver } from "@/lib/line";
-import { sendAdminEmail, generateDriverAssignmentEmailHtml } from "@/lib/email";
+import { sendAdminEmail, generateDriverAssignmentEmailHtml, generateBookingEmailHtml } from "@/lib/email";
 
 function nowThai(): string {
   const now = new Date();
@@ -57,6 +57,21 @@ export async function POST(req: Request) {
     const driver = drivers?.[0];
 
     if (!driver) {
+      // ⚠️ If no driver available, manual assignment is required.
+      // We MUST send the "New Booking" email here (Fallback), because `create-booking` silenced it.
+      try {
+        console.log("⚠️ [AUTO] No driver found. Sending fallback 'New Booking' email...");
+        // Construct date/time strings from booking data
+        const bookingDate = new Date(booking.start_at).toLocaleDateString("en-CA", { timeZone: "Asia/Bangkok" });
+        const bookingTime = new Date(booking.start_at).toLocaleTimeString("en-GB", { timeZone: "Asia/Bangkok", hour: '2-digit', minute: '2-digit' });
+
+        const subject = `🔔 มีการจองรถใหม่ (หาคนขับไม่เจอ): ${booking.request_code}`;
+        const html = generateBookingEmailHtml(booking, bookingDate, bookingTime);
+        await sendAdminEmail(subject, html);
+      } catch (emailErr) {
+        console.error("❌ [AUTO] Fallback Email Error:", emailErr);
+      }
+
       return NextResponse.json({ error: "No drivers available" }, { status: 500 });
     }
 

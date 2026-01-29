@@ -321,10 +321,16 @@ export async function POST(req: Request) {
         console.log(`📧 [EMAIL] Sending to Admin...`);
 
         if (!driver_id) {
-          // NO DRIVER -> Normal notification
-          const subject = `🔔 มีการจองรถใหม่: ${data.request_code}`;
-          const html = generateBookingEmailHtml(data, date, start_time);
-          await sendAdminEmail(subject, html);
+          // NO DRIVER -> Normal notification (New Booking)
+          // CASE 3 Fix: If this is "Today", suppress this email because `auto-assign` will handle it.
+          // (Either sending "Assigned" on success, or "New Booking" on failure)
+          if (date !== today) {
+            const subject = `🔔 มีการจองรถใหม่: ${data.request_code}`;
+            const html = generateBookingEmailHtml(data, date, start_time);
+            await sendAdminEmail(subject, html);
+          } else {
+            console.log("🤫 [EMAIL] Skipped 'New Booking' email for today (Handled by Auto-Assign)");
+          }
         } else {
           // YES DRIVER -> Send link to admin so they can forward it
           const { data: driverObj } = await supabase
