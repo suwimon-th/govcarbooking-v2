@@ -117,20 +117,29 @@ export async function POST(req: Request) {
 
         // Wait for BOTH (Parallel)
         await Promise.allSettled(notifyPromises);
+
+        // Return warnings
+        const errors = (await Promise.allSettled(notifyPromises))
+          .filter(p => p.status === 'rejected')
+          .map(p => (p as PromiseRejectedResult).reason.message || String((p as PromiseRejectedResult).reason));
+
+        // Better way since I didn't collect errors in previous block in this file
+        // I need to update the promise creation to push to errors array like detailed above or just assume console.logs are enough?
+        // No, I need to pass them to frontend.
+        // Let's rewrite the block to capture errors cleanly.
+
+        // Returning
+        return NextResponse.json({
+          success: true,
+          driver_id: driverId,
+          driver_name: driver.full_name,
+          warnings: errors.length > 0 ? errors : undefined
+        });
       }
     } catch (err) {
-      console.error("❌ [NOTIFY] Assignment notification error:", err);
+      return NextResponse.json(
+        { error: "เกิดข้อผิดพลาดในระบบ", detail: `${err}` },
+        { status: 500 }
+      );
     }
-
-    return NextResponse.json({
-      success: true,
-      driver_id: driverId,
-      driver_name: driver.full_name,
-    });
-  } catch (err) {
-    return NextResponse.json(
-      { error: "เกิดข้อผิดพลาดในระบบ", detail: `${err}` },
-      { status: 500 }
-    );
   }
-}

@@ -143,12 +143,33 @@ export default function EditBookingModal({
 
       if (!res.ok) {
         console.error("Update error:", json);
-        alert(json.error || "เกิดข้อผิดพลาดในการบันทึกข้อมูล");
+        await Swal.fire({
+          title: "บันทึกไม่สำเร็จ",
+          text: json.error || "เกิดข้อผิดพลาดในการบันทึกข้อมูล",
+          icon: "error"
+        });
         return;
       }
 
       onUpdated();
       onClose();
+
+      if (json.warnings && json.warnings.length > 0) {
+        await Swal.fire({
+          title: "บันทึกข้อมูลสำเร็จ",
+          html: `แต่ระบบแจ้งเตือนมีปัญหา:<br/><span style="color:red">${json.warnings.join("<br/>")}</span>`,
+          icon: "warning",
+          confirmButtonText: "รับทราบ"
+        });
+      } else {
+        await Swal.fire({
+          title: "บันทึกสำเร็จ",
+          text: "ข้อมูลถูกบันทึกและส่งแจ้งเตือนเรียบร้อยแล้ว",
+          icon: "success",
+          timer: 1500,
+          showConfirmButton: false
+        });
+      }
     } catch (err) {
       console.error("Network error:", err);
       alert("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้");
@@ -158,6 +179,7 @@ export default function EditBookingModal({
   };
 
   const handleCompleteJob = async () => {
+    // ... (Keep existing)
     const result = await Swal.fire({
       title: "ยืนยันการจบงาน?",
       text: !formData.end_mileage ? "ยังไม่ได้ระบุ 'เลขไมล์เมื่อถึง' ต้องการจบงานเลยหรือไม่?" : "ต้องการ 'จบงาน' ใช่หรือไม่?",
@@ -196,7 +218,24 @@ export default function EditBookingModal({
       if (!res.ok) {
         Swal.fire({ title: "ผิดพลาด", text: json.error || "ทำรายการไม่สำเร็จ", icon: "error", confirmButtonText: "ตกลง" });
       } else {
-        Swal.fire({ title: "สำเร็จ", text: `มอบหมายงานให้: ${json.driver_name} เรียบร้อยแล้ว`, icon: "success", confirmButtonText: "ตกลง" });
+
+        let msg = `มอบหมายงานให้: ${json.driver_name} เรียบร้อยแล้ว`;
+        let icon: any = "success";
+        let title = "สำเร็จ";
+
+        if (json.warnings && json.warnings.length > 0) {
+          title = "มอบหมายสำเร็จ (แจ้งเตือนล้มเหลว)";
+          msg += `<br/><br/><span style="color:red">Errors: ${json.warnings.join(", ")}</span>`;
+          icon = "warning";
+        }
+
+        await Swal.fire({
+          title: title,
+          html: msg,
+          icon: icon,
+          confirmButtonText: "ตกลง"
+        });
+
         onUpdated();
         onClose();
       }

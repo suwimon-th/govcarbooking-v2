@@ -75,27 +75,23 @@ export async function POST(req: Request) {
         const isCompleted = status === "COMPLETED";
 
         if (driver_id && (isDriverChanged || isStatusEligibleForNotify) && !isCompleted) {
-            // ทำงานแบบ Async เพื่อไม่ให้หน่วงหน้าเว็บ
-            (async () => {
-                try {
-                    console.log(`🔔 [NOTIFY] Starting notifications for booking ${id}...`);
+            try {
+                console.log(`🔔 [NOTIFY] Starting notifications for booking ${id}...`);
 
-                    // 3.1) ดึงข้อมูลครบๆ เพื่อสร้างข้อความแจ้งเตือน (Joins)
-                    const { data: bookingFull } = await supabase
-                        .from("bookings")
-                        .select(`
-                            *,
-                            vehicle: vehicles ( plate_number ),
-                            driver: drivers ( id, full_name, line_user_id )
-                        `)
-                        .eq("id", id)
-                        .single();
+                // 3.1) ดึงข้อมูลครบๆ เพื่อสร้างข้อความแจ้งเตือน (Joins)
+                const { data: bookingFull } = await supabase
+                    .from("bookings")
+                    .select(`
+                        *,
+                        vehicle: vehicles ( plate_number ),
+                        driver: drivers ( id, full_name, line_user_id )
+                    `)
+                    .eq("id", id)
+                    .single();
 
-                    if (!bookingFull) {
-                        console.error("❌ [NOTIFY] Could not fetch bookingFull for notifications");
-                        return;
-                    }
-
+                if (!bookingFull) {
+                    console.error("❌ [NOTIFY] Could not fetch bookingFull for notifications");
+                } else {
                     const vehicleObj = Array.isArray(bookingFull.vehicle) ? bookingFull.vehicle[0] : bookingFull.vehicle;
                     const driverObj = Array.isArray(bookingFull.driver) ? bookingFull.driver[0] : bookingFull.driver;
 
@@ -108,6 +104,7 @@ export async function POST(req: Request) {
 
                     if (finalDriver) {
                         const notifyPromises = [];
+                        const errors: string[] = [];
 
                         // --- 3.2) LINE Notify ---
                         if (finalDriver.line_user_id) {
@@ -117,9 +114,10 @@ export async function POST(req: Request) {
                                     await sendLinePush(finalDriver.line_user_id, [msg]);
                                     await supabase.from("bookings").update({ is_line_notified: true }).eq("id", id);
                                     console.log("✅ [NOTIFY] LINE sent successfully");
-                                } catch (err) {
-                                    console.error("❌ [NOTIFY] LINE push error:", err);
-                                    throw err; // Re-throw to be caught by allSettled status
+                                } catch (err: any) {
+                                    const errMsg = `LINE Error: ${err.message || err}`;
+                                    console.error("❌ [NOTIFY] " + errMsg);
+                                    errors.push(errMsg);
                                 }
                             })();
                             notifyPromises.push(linePromise);
@@ -133,20 +131,25 @@ export async function POST(req: Request) {
                                 const html = generateDriverAssignmentEmailHtml(bookingFull, finalDriver, taskLink);
                                 await sendAdminEmail(subject, html);
                                 console.log("✅ [NOTIFY] Sent assignment email to admin");
-                            } catch (err) {
-                                console.error("❌ [NOTIFY] Admin email error:", err);
-                                throw err;
+                            } catch (err: any) {
+                                const errMsg = `Email Error: ${err.message || err}`;
+                                console.error("❌ [NOTIFY] " + errMsg);
+                                errors.push(errMsg);
                             }
                         })();
                         notifyPromises.push(emailPromise);
 
                         // Wait for BOTH to finish (parallel execution)
                         await Promise.allSettled(notifyPromises);
+
+                        // Return success but with warnings if any
+                        return NextResponse.json({ success: true, warnings: errors.length > 0 ? errors : undefined });
                     }
-                } catch (err) {
-                    console.error("❌ [NOTIFY] Global notify error:", err);
                 }
-            })();
+            } catch (err) {
+                console.error("❌ [NOTIFY] Global notify error:", err);
+                return NextResponse.json({ success: true, warnings: ["Global Notify Error"] });
+            }
         }
 
         return NextResponse.json({ success: true });
