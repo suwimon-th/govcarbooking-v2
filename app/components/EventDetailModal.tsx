@@ -57,6 +57,13 @@ function formatDateTime(dt: string | null) {
   });
 }
 
+function formatDate(dt: string | null) {
+  if (!dt) return "-";
+  return new Date(dt).toLocaleString("th-TH", {
+    dateStyle: "medium",
+  });
+}
+
 export default function EventDetailModal({ open, detail, onClose }: Props) {
   if (!open) return null;
 
@@ -147,7 +154,9 @@ export default function EventDetailModal({ open, detail, onClose }: Props) {
                     </div>
                     <div>
                       <span className="text-gray-500 text-xs block mb-0.5">สิ้นสุด</span>
-                      <span className="font-medium text-gray-900">{formatDateTime(detail.end_at)}</span>
+                      <span className="font-medium text-gray-900">
+                        {detail.end_at ? formatDateTime(detail.end_at) : formatDate(detail.start_at)}
+                      </span>
                     </div>
                   </div>
                 </div>
