@@ -42,23 +42,26 @@ export async function POST(req: Request) {
             .single();
 
         // 2) Update ข้อมูล Booking
+        const updateData: any = {
+            requester_id,
+            purpose,
+            destination,
+            passenger_count,
+            status,
+            is_ot,
+            start_mileage: start_mileage ?? null,
+            end_mileage: end_mileage ?? null,
+            distance: distance,
+        };
+
+        if (driver_id !== undefined) updateData.driver_id = driver_id || null;
+        if (vehicle_id !== undefined) updateData.vehicle_id = vehicle_id || null;
+        if (start_at) updateData.start_at = start_at;
+        if (end_at) updateData.end_at = end_at;
+
         const { error } = await supabase
             .from("bookings")
-            .update({
-                requester_id,
-                driver_id: driver_id || null,
-                vehicle_id: vehicle_id || null,
-                purpose,
-                destination,
-                passenger_count,
-                start_at: start_at || null,
-                end_at: end_at || null,
-                status,
-                is_ot,
-                start_mileage: start_mileage ?? null,
-                end_mileage: end_mileage ?? null,
-                distance: distance,
-            })
+            .update(updateData)
             .eq("id", id);
 
         if (error) {
@@ -66,65 +69,70 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: error.message }, { status: 400 });
         }
 
-        // 3) เงื่อนไขการส่งแจ้งเตือน LINE
-        //    - ถ้าเปลี่ยน Driver หรือสถานะเปลี่ยนเป็น ASSIGNED/REQUESTED/APPROVED
-        //    - แต่ต้องไม่ส่งถ้าเป็น COMPLETED
+        // 3) เงื่อนไขการส่งแจ้งเตือน
         const isDriverChanged = driver_id && driver_id !== oldBooking?.driver_id;
         const isStatusEligibleForNotify = ["REQUESTED", "APPROVED", "ASSIGNED"].includes(status);
         const isCompleted = status === "COMPLETED";
 
-        // Logic: มี Driver + (Driverเปลี่ยน หรือ สถานะเปลี่ยนเป็นสถานะที่ควรแจ้ง) + ไม่ใช่ Completed
         if (driver_id && (isDriverChanged || isStatusEligibleForNotify) && !isCompleted) {
-            try {
-                // 3.1) ดึงข้อมูลครบๆ เพื่อสร้างข้อความแจ้งเตือน
-                const { data: bookingFull, error: fetchError } = await supabase
-                    .from("bookings")
-                    .select(`
-                        *,
-                        vehicle: vehicles ( plate_number ),
-                        driver: drivers ( id, full_name, line_user_id )
-                    `)
-                    .eq("id", id)
-                    .single();
+            // ทำงานแบบ Async เพื่อไม่ให้หน่วงหน้าเว็บ
+            (async () => {
+                try {
+                    console.log(`🔔 [NOTIFY] Starting notifications for booking ${id}...`);
 
-                if (fetchError || !bookingFull) {
-                    console.error("❌ [NOTIFY] Fetch booking details error:", fetchError);
-                } else {
+                    // 3.1) ดึงข้อมูลครบๆ เพื่อสร้างข้อความแจ้งเตือน (Joins)
+                    const { data: bookingFull } = await supabase
+                        .from("bookings")
+                        .select(`
+                            *,
+                            vehicle: vehicles ( plate_number ),
+                            driver: drivers ( id, full_name, line_user_id )
+                        `)
+                        .eq("id", id)
+                        .single();
+
+                    if (!bookingFull) {
+                        console.error("❌ [NOTIFY] Could not fetch bookingFull for notifications");
+                        return;
+                    }
+
                     const vehicleObj = Array.isArray(bookingFull.vehicle) ? bookingFull.vehicle[0] : bookingFull.vehicle;
                     const driverObj = Array.isArray(bookingFull.driver) ? bookingFull.driver[0] : bookingFull.driver;
 
-                    if (driverObj) {
-                        // --- 3.2) แจ้งเตือนทาง LINE (ถ้ามี line_user_id) ---
-                        if (driverObj.line_user_id) {
-                            try {
-                                const msg = flexAssignDriver(bookingFull, vehicleObj, driverObj);
-                                await sendLinePush(driverObj.line_user_id, [msg]);
-                                console.log("✅ Sent LINE to driver:", driverObj.full_name);
+                    // Fallback Driver Data if join failed but we have driver_id
+                    let finalDriver = driverObj;
+                    if (!finalDriver && driver_id) {
+                        const { data: d } = await supabase.from("drivers").select("*").eq("id", driver_id).single();
+                        finalDriver = d;
+                    }
 
-                                // Update Notification Status in DB
+                    if (finalDriver) {
+                        // --- 3.2) LINE Notify ---
+                        if (finalDriver.line_user_id) {
+                            try {
+                                const msg = flexAssignDriver(bookingFull, vehicleObj, finalDriver);
+                                await sendLinePush(finalDriver.line_user_id, [msg]);
                                 await supabase.from("bookings").update({ is_line_notified: true }).eq("id", id);
                             } catch (err) {
                                 console.error("❌ [NOTIFY] LINE push error:", err);
                             }
                         }
 
-                        // --- 3.3) แจ้งเตือนแอดมินทาง Email (เสมอเพื่อเป็น Fallback) ---
+                        // --- 3.3) Email Fallback (Admin) ---
                         try {
-                            console.log(`📧 [EMAIL] Sending assignment fallback to Admin...`);
-                            const subject = `👨‍✈️ มอบหมายคนขับ: ${bookingFull.request_code} (${driverObj.full_name})`;
-                            const taskLink = `${process.env.PUBLIC_DOMAIN || 'https://govcarbooking-v2.vercel.app'}/driver/tasks/${id}?driver_id=${driverObj.id}`;
-                            const html = generateDriverAssignmentEmailHtml(bookingFull, driverObj, taskLink);
+                            const taskLink = `${process.env.PUBLIC_DOMAIN || 'https://govcarbooking-v2.vercel.app'}/driver/tasks/${id}?driver_id=${finalDriver.id}`;
+                            const subject = `👨‍✈️ มอบหมายคนขับ: ${bookingFull.request_code} (${finalDriver.full_name})`;
+                            const html = generateDriverAssignmentEmailHtml(bookingFull, finalDriver, taskLink);
                             await sendAdminEmail(subject, html);
-                            console.log("✅ Sent Email fallback to admin");
+                            console.log("✅ [NOTIFY] Sent assignment email to admin");
                         } catch (err) {
-                            console.error("❌ [EMAIL] Admin fallback error:", err);
+                            console.error("❌ [NOTIFY] Admin email error:", err);
                         }
                     }
+                } catch (err) {
+                    console.error("❌ [NOTIFY] Global notify error:", err);
                 }
-            } catch (err) {
-                // กันไว้ไม่ให้ระบบใหญ่ล่มเพราะการแจ้งเตือน
-                console.error("❌ [NOTIFY] Global notify error:", err);
-            }
+            })();
         }
 
         return NextResponse.json({ success: true });
