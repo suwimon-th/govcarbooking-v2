@@ -311,7 +311,7 @@ export default function MyRequestsPage() {
                 <tr className="bg-gray-50/50 border-b border-gray-100">
                   <th className="px-8 py-5 text-left text-[11px] font-black text-gray-400 uppercase tracking-[2px]">รายละเอียดการขอใช้รถ</th>
                   <th className="px-8 py-5 text-left text-[11px] font-black text-gray-400 uppercase tracking-[2px]">วันและเวลาที่ขอใช้รถ</th>
-                  <th className="px-8 py-5 text-left text-[11px] font-black text-gray-400 uppercase tracking-[2px]">รถที่ได้รับมอบหมาย</th>
+                  <th className="px-8 py-5 text-left text-[11px] font-black text-gray-400 uppercase tracking-[2px]">รถและผู้ขับ</th>
                   <th className="px-8 py-5 text-center text-[11px] font-black text-gray-400 uppercase tracking-[2px]">สถานะ</th>
                   <th className="px-8 py-5 text-center text-[11px] font-black text-gray-400 uppercase tracking-[2px]">จัดการ</th>
                 </tr>
@@ -355,9 +355,19 @@ export default function MyRequestsPage() {
                     </td>
                     <td className="px-8 py-6">
                       {it.vehicle ? (
-                        <div className="flex flex-col">
-                          <span className="text-sm font-black text-gray-900 mb-1">{vehicleDisplay(it.vehicle)}</span>
-                          <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">{it.vehicle.brand} {it.vehicle.model}</span>
+                        <div className="flex flex-col gap-2">
+                          <div>
+                            <span className="text-sm font-black text-gray-900 mb-1 block">{vehicleDisplay(it.vehicle)}</span>
+                            <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">{it.vehicle.brand} {it.vehicle.model}</span>
+                          </div>
+                          {it.driver && (
+                            <div className="flex items-center gap-1.5 text-xs text-gray-600 bg-gray-50 w-fit px-2 py-1 rounded-lg border border-gray-100">
+                              <div className="w-4 h-4 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-2.5 h-2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+                              </div>
+                              <span className="font-bold">{it.driver.full_name}</span>
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <div className="inline-flex py-1.5 px-3 rounded-lg bg-gray-50 text-gray-400 text-xs font-medium border border-gray-100">
@@ -432,11 +442,19 @@ export default function MyRequestsPage() {
                     </p>
                   </div>
                   <div className="bg-gray-50 rounded-2xl p-3">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">รถที่ได้รับ</p>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">รถและผู้ขับ</p>
                     {it.vehicle ? (
                       <>
                         <p className="text-xs font-black text-gray-700">{it.vehicle.plate_number}</p>
                         <p className="text-[10px] text-gray-400 mt-1 truncate">{it.vehicle.brand}</p>
+                        {it.driver && (
+                          <div className="mt-2 pt-2 border-t border-gray-200 flex items-center gap-1.5">
+                            <div className="w-4 h-4 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-2.5 h-2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+                            </div>
+                            <span className="text-[10px] font-bold text-gray-600">{it.driver.full_name}</span>
+                          </div>
+                        )}
                       </>
                     ) : (
                       <p className="text-xs text-gray-400 font-medium">รอจัดรถ...</p>
