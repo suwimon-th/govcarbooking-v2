@@ -180,26 +180,43 @@ export function generateDriverAssignmentEmailHtml(booking: any, driver: any, tas
       <p style="font-size: 14px; color: #6b7280; margin-top: 4px;">กรุณาส่งลิงก์รับงานด้านล่างนี้ให้คนขับเพื่อดำเนินการต่อ</p>
     </div>
 
-    <div style="background-color: #f0f9ff; border-radius: 8px; padding: 16px; border: 1px solid #bae6fd;">
+    <div style="background-color: #f0f9ff; border-radius: 8px; padding: 20px; border: 1px solid #bae6fd;">
+      <!-- Driver Info -->
       <div class="info-row" style="border-color: #bae6fd;">
         <span class="info-label">พนักงานขับรถ</span>
-        <span class="info-value" style="color: #0369a1;">${driver.full_name || driver.name}</span>
+        <span class="info-value" style="color: #0369a1; font-size: 16px;">${driver.full_name || driver.name}</span>
       </div>
       <div class="info-row" style="border-color: #bae6fd;">
         <span class="info-label">รหัสใบจอง</span>
-        <span class="info-value">${booking.request_code}</span>
+        <span class="info-value" style="font-size: 16px;">${booking.request_code}</span>
       </div>
-      <div class="info-row" style="border: none;">
-        <span class="info-label">ลิงก์สำหรับคนขับ</span>
-        <span class="info-value" style="word-break: break-all; color: #2563eb; font-size: 12px; display: block; margin-top: 4px;">
-          <a href="${taskLink}">${taskLink}</a>
-        </span>
+
+      <!-- Main Action Button -->
+      <div style="text-align: center; margin: 24px 0;">
+        <a href="${taskLink}" style="background-color: #0284c7; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold; display: inline-block;">
+          เปิดลิงก์งาน (คลิก)
+        </a>
+      </div>
+
+      <!-- Quick Copy Section -->
+      <div style="margin-top: 24px; background-color: #ffffff; border: 2px dashed #cbd5e1; border-radius: 8px; padding: 16px;">
+        <p style="margin: 0 0 8px 0; font-size: 12px; color: #64748b; font-weight: bold; text-transform: uppercase;">
+          ✂️ สำหรับ Copy ส่งให้คนขับ (LINE/Chat)
+        </p>
+        <div style="font-family: monospace; font-size: 14px; color: #334155; line-height: 1.6; background: #f8fafc; padding: 12px; border-radius: 4px;">
+          🚗 <strong>มีงานใหม่!</strong><br>
+          คุณ: ${driver.full_name || driver.name}<br>
+          งาน: ${booking.request_code}<br>
+          <br>
+          👇 กดรับงานที่นี่:<br>
+          <a href="${taskLink}" style="color: #0284c7; word-break: break-all;">${taskLink}</a>
+        </div>
       </div>
     </div>
 
     <div style="margin-top: 24px; padding: 12px; background-color: #fffbeb; border-radius: 8px; border: 1px solid #fef3c7; font-size: 13px; color: #92400e;">
-      <strong>⚠️ คำแนะนำสำหรับแอดมิน:</strong><br>
-      เนื่องจากคนขับอาจไม่ได้รับแจ้งเตือนทาง LINE รบกวนแอดมินคัดลอกลิงก์สีฟ้าด้านบน ส่งให้คนขับผ่านช่องทางอื่น เพื่อให้คนขับสามารถกดรับงานและบันทึกเลขไมล์ได้ครับ
+      <strong>⚠️ คำแนะนำ:</strong><br>
+      แอดมินสามารถคัดลอกข้อความในกล่องเส้นประด้านบน ส่งให้คนขับทาง LINE หรือแชทส่วนตัวได้ทันทีครับ
     </div>
   `;
   return wrapLayout("👨‍✈️ ข้อมูลการมอบหมายงาน", "#0284c7", content); // Sky Blue Theme
