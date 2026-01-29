@@ -139,3 +139,31 @@ export function generateFuelEmailHtml(driverName: string, plateNumber: string) {
   `;
   return wrapLayout("⛽️ มีการขอเบิกน้ำมัน", "#E11D48", content); // Red Theme
 }
+
+export function generateIssueEmailHtml(reporterName: string, plateNumber: string, description: string) {
+  const content = `
+    <div style="margin-bottom: 20px; text-align: center;">
+      <p style="font-size: 16px; margin: 0;">มีการแจ้งปัญหาเกี่ยวกับรถราชการใหม่</p>
+    </div>
+
+    <div style="background-color: #fef3c7; border-radius: 8px; padding: 16px;">
+      <div class="info-row" style="border-color: #fde68a;">
+        <span class="info-label">ทะเบียนรถ</span>
+        <span class="info-value" style="color: #d97706;">${plateNumber || "ไม่ระบุ"}</span>
+      </div>
+      <div class="info-row" style="border-color: #fde68a;">
+        <span class="info-label">ผู้แจ้ง</span>
+        <span class="info-value">${reporterName}</span>
+      </div>
+      <div class="info-row" style="border: none;">
+        <span class="info-label">รายละเอียด</span>
+        <span class="info-value" style="text-align: left; display: block; margin-top: 8px;">${description}</span>
+      </div>
+    </div>
+
+    <a href="${BASE_URL}/admin/issues" class="btn" style="background-color: #d97706;">
+       ⚠️ ตรวจสอบรายการแจ้งปัญหา
+    </a>
+  `;
+  return wrapLayout("⚠️ แจ้งปัญหาการใช้รถ", "#D97706", content); // Amber Theme
+}

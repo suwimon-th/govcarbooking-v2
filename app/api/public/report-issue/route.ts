@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { sendAdminEmail, generateIssueEmailHtml } from "@/lib/email";
 
 export const dynamic = 'force-dynamic';
 
@@ -39,6 +40,16 @@ export async function POST(request: Request) {
         if (error) {
             console.error("Supabase Insert Error:", error);
             return NextResponse.json({ error: error.message }, { status: 500 });
+        }
+
+        // 2. Notify Admin via Email
+        try {
+            const subject = `⚠️ แจ้งปัญหาการใช้รถ: ${plate_number || "ไม่ระบุทะเบียน"}`;
+            const html = generateIssueEmailHtml(reporter_name, plate_number, description);
+            await sendAdminEmail(subject, html);
+        } catch (notifyErr) {
+            console.error("❌ [NOTIFY] Issue report email error:", notifyErr);
+            // Don't fail the request if notification fails
         }
 
         return NextResponse.json({ success: true, data });

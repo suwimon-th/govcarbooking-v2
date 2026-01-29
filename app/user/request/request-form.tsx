@@ -189,17 +189,21 @@ export default function RequestForm({
   }, []);
 
   const isOffHours = () => {
-    // 1. Check Weekend (Sat/Sun)
+    // 1. Check Weekend (Sat/Sun) using Bangkok time
     if (date) {
-      const d = new Date(date);
-      const day = d.getDay(); // 0=Sun, 6=Sat
+      // Use toLocaleString to get a date object that correctly reflects Bangkok day
+      const bangkokDate = new Date(new Date(date).toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
+      const day = bangkokDate.getDay(); // 0=Sun, 6=Sat
       if (day === 0 || day === 6) return true;
     }
 
-    // 2. Check Time
+    // 2. Check Time (08:00 - 16:00)
     if (!startTime) return false;
-    const hour = parseInt(startTime.split(":")[0], 10);
-    return hour < 8 || hour >= 16;
+    const [hour, minute] = startTime.split(":").map(Number);
+    const timeVal = hour * 60 + minute;
+    const startWork = 8 * 60; // 08:00
+    const endWork = 16 * 60;  // 16:00
+    return timeVal < startWork || timeVal >= endWork;
   };
 
   // Submit ฟอร์ม

@@ -319,11 +319,11 @@ export default function PublicCalendarPage() {
                         </Link>
                     </div>
                 </div>
+            </div>
 
-                {/* Glass Queue Card inside Header */}
-                <div className="mt-6">
-                    {isMobile && <PublicQueueCard theme="glass" />}
-                </div>
+            {/* Mobile Queue Card - Moved outside of sticky header to prevent menu overlap */}
+            <div className="md:hidden px-4 mt-4 mb-2 z-10">
+                <PublicQueueCard theme="light" />
             </div>
 
 
@@ -593,21 +593,23 @@ export default function PublicCalendarPage() {
             </div>
 
             {/* DESKTOP LIST VIEW */}
-            {viewMode === 'month' ? (
-                <MonthlyBookingList
-                    events={events}
-                    currentMonthStart={currentMonthStart}
-                    currentMonthEnd={currentMonthEnd}
-                    currentViewTitle={currentViewTitle}
-                    onItemClick={openDetail}
-                />
-            ) : (
-                <DailyBookingList
-                    events={events}
-                    selectedDate={selectedDate}
-                    onItemClick={openDetail}
-                />
-            )}
+            {
+                viewMode === 'month' ? (
+                    <MonthlyBookingList
+                        events={events}
+                        currentMonthStart={currentMonthStart}
+                        currentMonthEnd={currentMonthEnd}
+                        currentViewTitle={currentViewTitle}
+                        onItemClick={openDetail}
+                    />
+                ) : (
+                    <DailyBookingList
+                        events={events}
+                        selectedDate={selectedDate}
+                        onItemClick={openDetail}
+                    />
+                )
+            }
 
             {/* AGENDA LIST SECTION (MOBILE ONLY) */}
             <div className={`flex-1 bg-gray-50/50 min-h-[300px] md:hidden ${isMobile ? 'block' : 'hidden'}`}>
@@ -711,6 +713,6 @@ export default function PublicCalendarPage() {
                 open={reportModalOpen}
                 onClose={() => setReportModalOpen(false)}
             />
-        </div>
+        </div >
     );
 }

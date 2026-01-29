@@ -154,9 +154,11 @@ export async function POST(req: Request) {
           .eq("id", bookingId);
 
         // ส่ง Flex ตอบกลับคนขับ (อยู่ใน array)
+        /* ❌ DISABLED: User requested to stop sending 'Job Accepted' notification
         await sendLinePush(userId, [
           flexDriverAcceptSuccess(bookingId),
         ]);
+        */
 
         return NextResponse.json({ ok: true });
       }

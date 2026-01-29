@@ -46,13 +46,13 @@ export async function POST(req: Request) {
 
     // 4) ส่ง LINE แจ้งเตือนว่าเสร็จงานแล้ว
     if (driverLineId) {
-      console.log("📨 Sending JOB COMPLETED to:", driverLineId);
-
+      console.log("📨 [NOTIFY] Job completed for:", driverLineId);
+      /* ❌ DISABLED: User requested to stop sending 'Job Completed' notification
       await sendLinePush(driverLineId, [
         flexJobCompleted(booking)
       ]);
-
-      console.log("⚠️ No driver LINE ID found.");
+      */
+      console.log("ℹ️ [NOTIFY] Skipping Job Completed notification (Disabled)");
     }
 
     return NextResponse.json({

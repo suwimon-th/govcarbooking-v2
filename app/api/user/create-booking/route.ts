@@ -209,15 +209,16 @@ export async function POST(req: Request) {
     }
 
     // ✅ Calculate is_ot automatically
-    // Logic: Weekend (Sat/Sun) OR Time < 08:30 OR Time >= 16:30
-    const dObj = new Date(date);
-    const day = dObj.getDay(); // 0-6
+    // Logic: Weekend (Sat/Sun) OR Time < 08:00 OR Time >= 16:00
+    // Use Asia/Bangkok for weekend check to avoid server TZ issues
+    const bangkokDate = new Date(new Date(date).toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
+    const day = bangkokDate.getDay(); // 0-6
     const [sh, sm] = start_time.split(":").map(Number);
 
     // Weekend check
     const isWeekend = day === 0 || day === 6;
 
-    // Time check
+    // Time check (08:00 - 16:00)
     const timeVal = sh * 60 + sm;
     const startWork = 8 * 60; // 08:00
     const endWork = 16 * 60;  // 16:00
@@ -307,21 +308,14 @@ export async function POST(req: Request) {
       })());
     }
 
-    // ✅ 2) ส่ง LINE หาแอดมิน (ถ้ามี ADMIN_LINE_USER_ID)
-    // ✅ 2) ส่ง Email หาแอดมิน (แทน LINE OA ที่เต็ม / Notify ที่ปิดตัว)
-    // Check for Skip Condition: Advance + OT + Driver Selected
-
-    // Note: isOT and isAdvance were already calculated above at lines 170-182
-    // const isAdvance = date > today; (Already verified logic, using date comparison string vs string might be loose but date=YYYY-MM-DD vs today=YYYY-MM-DD works for equality, for > it works too)
-
-    const isAdvance = date > today;
-    // isOT is already calculated at line 182
-
-    const hasDriver = !!driver_id;
-    const shouldSkipAdmin = isAdvance && isOT && hasDriver;
+    // ✅ 2) ส่ง Email หาแอดมิน 
+    // Simplified Logic: If driver is already selected (e.g. for OT or manual assign), skip admin email.
+    // This allows Advance + Normal (no driver) to trigger email, 
+    // and OT (driver required in frontend) to skip email since driver is notified via LINE.
+    const shouldSkipAdmin = !!driver_id;
 
     if (shouldSkipAdmin) {
-      console.log("🚫 [NOTIFY] Skipping Admin Email (Reason: Advance + OT + Driver Selected)");
+      console.log("🚫 [NOTIFY] Skipping Admin Email (Reason: Driver already assigned)");
     } else {
       notifications.push((async () => {
         try {

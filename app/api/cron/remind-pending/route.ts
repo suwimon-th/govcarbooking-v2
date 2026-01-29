@@ -59,16 +59,22 @@ export async function GET() {
         });
 
         // 3) ส่ง LINE แจ้งเตือนทีละคน
+        // ❌ DISABLED: User requested to stop sending 'Pending Item' reminders
+        /*
         const notifications = Object.values(driverJobs).map(async (group) => {
             const flexMessage = flexReminderPendingJob(group.bookings);
             return sendLinePush(group.line_user_id, [flexMessage]);
         });
 
         await Promise.allSettled(notifications);
+        */
+
+        console.log("ℹ️ [CRON] Reminder notifications are currently DISABLED by user request.");
 
         return NextResponse.json({
             success: true,
-            driversNotified: Object.keys(driverJobs).length,
+            message: "Cron executed but notifications are DISABLED.",
+            driversFound: Object.keys(driverJobs).length,
             totalPendingJobs: pendingBookings.length,
         });
 

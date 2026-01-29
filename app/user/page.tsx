@@ -284,7 +284,10 @@ export default function UserPage() {
             {/* Mobile: Blue App-like Header */}
             <div className="md:hidden bg-[#1E40AF] text-white pt-10 pb-4 px-4 shadow sticky top-0 z-30 rounded-b-3xl">
                 <div className="flex items-center justify-between w-full">
-                    <h1 className="text-lg font-bold tracking-wide">ปฏิทินการใช้รถ</h1>
+                    <h1 className="text-lg font-bold tracking-wide flex items-center gap-2">
+                        <CalendarIcon className="w-5 h-5 opacity-80" />
+                        ปฏิทินการใช้รถ
+                    </h1>
                     <div className="flex gap-4 text-sm font-medium opacity-90 items-center">
                         <button onClick={() => {
                             const d = new Date();
@@ -295,13 +298,69 @@ export default function UserPage() {
                         }}>
                             วันนี้
                         </button>
+
+                        {/* Mobile Help Button */}
+                        <div className="relative" ref={isMobile ? helpMenuRef : null}>
+                            <button onClick={() => setHelpMenuOpen(!helpMenuOpen)} className="opacity-90 hover:opacity-100">
+                                <HelpCircle className="w-5 h-5" />
+                            </button>
+
+                            {/* Mobile Dropdown */}
+                            {helpMenuOpen && (
+                                <div className="absolute right-0 top-8 w-56 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-50 text-gray-800 animate-in fade-in zoom-in-95 duration-200">
+                                    <button
+                                        onClick={() => {
+                                            setHelpMenuOpen(false);
+                                            setFuelModalOpen(true);
+                                        }}
+                                        className="flex items-center gap-3 w-full px-4 py-3 hover:bg-rose-50 rounded-lg transition-colors text-left group"
+                                    >
+                                        <div className="bg-rose-100 text-rose-600 p-2 rounded-lg">
+                                            <Fuel className="w-4 h-4" />
+                                        </div>
+                                        <span className="text-sm font-bold">เบิกน้ำมัน</span>
+                                    </button>
+
+                                    <button
+                                        onClick={() => {
+                                            setHelpMenuOpen(false);
+                                            setReportModalOpen(true);
+                                        }}
+                                        className="flex items-center gap-3 w-full px-4 py-3 hover:bg-amber-50 rounded-lg transition-colors text-left group"
+                                    >
+                                        <div className="bg-amber-100 text-amber-600 p-2 rounded-lg">
+                                            <AlertTriangle className="w-4 h-4" />
+                                        </div>
+                                        <span className="text-sm font-bold">แจ้งปัญหา</span>
+                                    </button>
+
+                                    <a
+                                        href="https://line.me/R/ti/p/@420uicrg"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-3 w-full px-4 py-3 hover:bg-green-50 rounded-lg transition-colors text-left group"
+                                        onClick={() => setHelpMenuOpen(false)}
+                                    >
+                                        <div className="bg-green-100 text-green-600 p-2 rounded-lg">
+                                            <MessageCircle className="w-4 h-4" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-bold">ติดต่อเรา</span>
+                                            <span className="text-[10px] text-gray-500">Line: @420uicrg</span>
+                                        </div>
+                                    </a>
+                                </div>
+                            )}
+                        </div>
+
                         <Link href="/user/request"><Plus className="w-6 h-6" /></Link>
                     </div>
                 </div>
-                {/* Glass Queue Card inside Header */}
-                <div className="mt-6">
-                    {isMobile && <PublicQueueCard theme="glass" />}
-                </div>
+            </div>
+
+            {/* Mobile Queue Card - Moved outside of sticky header to prevent menu overlap */}
+            <div className="md:hidden px-4 mt-4 mb-2 z-10">
+                <PublicQueueCard theme="light" />
             </div>
 
 
