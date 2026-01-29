@@ -316,13 +316,10 @@ function AdminRequestsContent() {
             >
               <option value="ทั้งหมด">สถานะ: ทั้งหมด</option>
               <option value="REQUESTED">รออนุมัติ</option>
-              <option value="APPROVED">อนุมัติแล้ว</option>
               <option value="ASSIGNED">มอบหมายแล้ว</option>
               <option value="ACCEPTED">รับงานแล้ว</option>
-              <option value="IN_PROGRESS">กำลังเดินทาง</option>
               <option value="COMPLETED">เสร็จสิ้น</option>
               <option value="CANCELLED">ยกเลิก</option>
-              <option value="REJECTED">ปฏิเสธ</option>
             </select>
             <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
