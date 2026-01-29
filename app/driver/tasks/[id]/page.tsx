@@ -57,8 +57,14 @@ export default function DriverTaskPage() {
                 setError(json.error);
             } else {
                 setBooking(json.booking);
-                // Pre-fill mileage if exists
-                if (json.booking.start_mileage) setStartMileage(String(json.booking.start_mileage));
+                // Pre-fill mileage
+                if (json.booking.start_mileage) {
+                    setStartMileage(String(json.booking.start_mileage));
+                } else if (json.last_mileage) {
+                    // ✅ Auto-fill from last trip if not set
+                    setStartMileage(String(json.last_mileage));
+                }
+
                 if (json.booking.end_mileage) setEndMileage(String(json.booking.end_mileage));
             }
         } catch (err) {
