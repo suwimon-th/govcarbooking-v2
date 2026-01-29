@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseClient";
 import { sendLinePush, flexAssignDriver } from "@/lib/line";
+import { sendAdminEmail, generateDriverAssignmentEmailHtml } from "@/lib/email";
 
 function nowThai(): string {
   const now = new Date();
@@ -85,10 +86,34 @@ export async function POST(req: Request) {
       driver
     );
 
-    await sendLinePush(driver.line_user_id!, [messages]);
+    // ✅ Parallel Notifications (LINE + Email)
+    const notifyPromises = [];
 
-    // ✅ Update Notification Status
-    await supabase.from("bookings").update({ is_line_notified: true }).eq("id", bookingId);
+    // LINE
+    if (driver.line_user_id) {
+      notifyPromises.push(sendLinePush(driver.line_user_id, [messages]).then(() => {
+        console.log("✅ [AUTO] LINE sent");
+        return supabase.from("bookings").update({ is_line_notified: true }).eq("id", bookingId);
+      }).catch(err => console.error("❌ [AUTO] LINE Error:", err)));
+    }
+
+    // Email (Admin)
+    notifyPromises.push((async () => {
+      try {
+        const taskLink = `${process.env.PUBLIC_DOMAIN || 'https://govcarbooking-v2.vercel.app'}/driver/tasks/${bookingId}?driver_id=${driver.id}`;
+        const subject = `👨‍✈️ มอบหมายคนขับ (Auto): ${booking.request_code} (${driver.full_name})`;
+        // Note: generateDriverAssignmentEmailHtml expects full booking object. 
+        // We loaded 'booking' at line 31.
+        const html = generateDriverAssignmentEmailHtml(booking, driver, taskLink);
+        await sendAdminEmail(subject, html);
+        console.log("✅ [AUTO] Email sent");
+      } catch (err) {
+        console.error("❌ [AUTO] Email Error:", err);
+        // We don't throw here to avoid failing the whole request, as auto-assign is background
+      }
+    })());
+
+    await Promise.allSettled(notifyPromises);
 
     return NextResponse.json({
       success: true,
