@@ -20,6 +20,11 @@ type Booking = {
     end_mileage: number | null;
     vehicle_id: string;
     drivers?: { full_name: string };
+    vehicles?: {
+        plate_number: string;
+        brand: string;
+        model: string;
+    };
 };
 
 export default function DriverTaskPage() {
@@ -238,6 +243,23 @@ export default function DriverTaskPage() {
                         </div>
 
                         <div className="space-y-3 pt-2">
+
+                            {/* Vehicle Info (New) */}
+                            {booking.vehicles && (
+                                <div className="flex items-start gap-3 bg-blue-50 p-3 rounded-xl border border-blue-100">
+                                    <Car className="w-5 h-5 text-blue-600 mt-0.5" />
+                                    <div>
+                                        <p className="text-xs text-blue-500 font-bold uppercase">ยานพาหนะ</p>
+                                        <p className="text-lg font-black text-slate-800 tracking-tight">
+                                            {booking.vehicles.plate_number}
+                                        </p>
+                                        <p className="text-xs text-slate-500">
+                                            {booking.vehicles.brand} {booking.vehicles.model}
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="flex items-start gap-3">
                                 <User className="w-4 h-4 text-gray-400 mt-0.5" />
                                 <div>
