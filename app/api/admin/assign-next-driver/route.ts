@@ -142,5 +142,10 @@ export async function POST(req: Request) {
         { status: 500 }
       );
     }
+  } catch (err) {
+    return NextResponse.json(
+      { error: "เกิดข้อผิดพลาดในระบบ", detail: `${err}` },
+      { status: 500 }
+    );
   }
 }
