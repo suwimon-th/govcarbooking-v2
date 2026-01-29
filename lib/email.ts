@@ -167,3 +167,35 @@ export function generateIssueEmailHtml(reporterName: string, plateNumber: string
   `;
   return wrapLayout("⚠️ แจ้งปัญหาการใช้รถ", "#D97706", content); // Amber Theme
 }
+
+export function generateDriverAssignmentEmailHtml(booking: any, driver: any, taskLink: string) {
+  const content = `
+    <div style="margin-bottom: 20px; text-align: center;">
+      <p style="font-size: 16px; margin: 0;">มีการมอบหมายงานให้คนขับรถเรียบร้อยแล้ว</p>
+      <p style="font-size: 14px; color: #6b7280; margin-top: 4px;">กรุณาส่งลิงก์รับงานด้านล่างนี้ให้คนขับเพื่อดำเนินการต่อ</p>
+    </div>
+
+    <div style="background-color: #f0f9ff; border-radius: 8px; padding: 16px; border: 1px solid #bae6fd;">
+      <div class="info-row" style="border-color: #bae6fd;">
+        <span class="info-label">พนักงานขับรถ</span>
+        <span class="info-value" style="color: #0369a1;">${driver.full_name || driver.name}</span>
+      </div>
+      <div class="info-row" style="border-color: #bae6fd;">
+        <span class="info-label">รหัสใบจอง</span>
+        <span class="info-value">${booking.request_code}</span>
+      </div>
+      <div class="info-row" style="border: none;">
+        <span class="info-label">ลิงก์สำหรับคนขับ</span>
+        <span class="info-value" style="word-break: break-all; color: #2563eb; font-size: 12px; display: block; margin-top: 4px;">
+          <a href="${taskLink}">${taskLink}</a>
+        </span>
+      </div>
+    </div>
+
+    <div style="margin-top: 24px; padding: 12px; background-color: #fffbeb; border-radius: 8px; border: 1px solid #fef3c7; font-size: 13px; color: #92400e;">
+      <strong>⚠️ คำแนะนำสำหรับแอดมิน:</strong><br>
+      เนื่องจากคนขับอาจไม่ได้รับแจ้งเตือนทาง LINE รบกวนแอดมินคัดลอกลิงก์สีฟ้าด้านบน ส่งให้คนขับผ่านช่องทางอื่น เพื่อให้คนขับสามารถกดรับงานและบันทึกเลขไมล์ได้ครับ
+    </div>
+  `;
+  return wrapLayout("👨‍✈️ ข้อมูลการมอบหมายงาน", "#0284c7", content); // Sky Blue Theme
+}

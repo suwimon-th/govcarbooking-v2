@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseClient";
 import { sendLinePush, flexAssignDriver } from "@/lib/line";
-import { sendAdminEmail, generateBookingEmailHtml } from "@/lib/email";
+import {
+  sendAdminEmail,
+  generateBookingEmailHtml,
+  generateDriverAssignmentEmailHtml,
+} from "@/lib/email";
 
 /* ---------------------------
    helper: เติมวินาทีให้เวลา
@@ -308,28 +312,38 @@ export async function POST(req: Request) {
       })());
     }
 
-    // ✅ 2) ส่ง Email หาแอดมิน 
-    // Simplified Logic: If driver is already selected (e.g. for OT or manual assign), skip admin email.
-    // This allows Advance + Normal (no driver) to trigger email, 
-    // and OT (driver required in frontend) to skip email since driver is notified via LINE.
-    const shouldSkipAdmin = !!driver_id;
+    // ✅ 2) ส่ง Email หาแอดมิน
+    // Logic: 
+    // - If NO driver: Send "New Booking" email so admin knows to assign someone.
+    // - If YES driver (e.g. OT): Send "Assignment" email with the Driver's link so admin can copy it.
+    notifications.push((async () => {
+      try {
+        console.log(`📧 [EMAIL] Sending to Admin...`);
 
-    if (shouldSkipAdmin) {
-      console.log("🚫 [NOTIFY] Skipping Admin Email (Reason: Driver already assigned)");
-    } else {
-      notifications.push((async () => {
-        try {
-          console.log(`📧 [EMAIL] Sending to Admin...`);
-
+        if (!driver_id) {
+          // NO DRIVER -> Normal notification
           const subject = `🔔 มีการจองรถใหม่: ${data.request_code}`;
-          // Removed nextDriverName argument
           const html = generateBookingEmailHtml(data, date, start_time);
           await sendAdminEmail(subject, html);
-        } catch (err) {
-          console.error("❌ [EMAIL] Admin error:", err);
+        } else {
+          // YES DRIVER -> Send link to admin so they can forward it
+          const { data: driverObj } = await supabase
+            .from("drivers")
+            .select("full_name")
+            .eq("id", driver_id)
+            .single();
+
+          if (driverObj) {
+            const subject = `👨‍✈️ มอบหมายคนขับ: ${data.request_code} (${driverObj.full_name})`;
+            const taskLink = `${process.env.PUBLIC_DOMAIN || 'https://govcarbooking-v2.vercel.app'}/driver/tasks/${data.id}?driver_id=${driver_id}`;
+            const html = generateDriverAssignmentEmailHtml(data, driverObj, taskLink);
+            await sendAdminEmail(subject, html);
+          }
         }
-      })());
-    }
+      } catch (err) {
+        console.error("❌ [EMAIL] Admin error:", err);
+      }
+    })());
 
     // Wait for all notifications to complete (but don't fail the whole request if they fail)
     if (notifications.length > 0) {

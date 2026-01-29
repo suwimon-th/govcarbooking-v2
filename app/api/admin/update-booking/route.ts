@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseClient";
 import { sendLinePush, flexAssignDriver } from "@/lib/line";
+import { sendAdminEmail, generateDriverAssignmentEmailHtml } from "@/lib/email";
 
 export async function POST(req: Request) {
     try {
@@ -103,6 +104,17 @@ export async function POST(req: Request) {
                 // Send Push
                 await sendLinePush(bookingFull.driver.line_user_id, [msg]);
                 console.log("✅ Sent LINE to driver:", driverObj.full_name);
+
+                // ✅ 3.3) Send Email to Admin (Fallback for LINE errors)
+                try {
+                    console.log(`📧 [EMAIL] Sending assignment fallback to Admin...`);
+                    const subject = `👨‍✈️ มอบหมายคนขับ: ${bookingFull.request_code} (${driverObj.full_name})`;
+                    const taskLink = `${process.env.PUBLIC_DOMAIN || 'https://govcarbooking-v2.vercel.app'}/driver/tasks/${id}?driver_id=${driverObj.id}`;
+                    const html = generateDriverAssignmentEmailHtml(bookingFull, driverObj, taskLink);
+                    await sendAdminEmail(subject, html);
+                } catch (err) {
+                    console.error("❌ [EMAIL] Admin fallback error:", err);
+                }
 
                 // ✅ Update Notification Status
                 await supabase.from("bookings").update({ is_line_notified: true }).eq("id", id);
