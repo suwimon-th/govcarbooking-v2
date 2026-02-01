@@ -87,38 +87,40 @@ function wrapLayout(title: string, color: string, content: string) {
 
 export function generateBookingEmailHtml(booking: any, date: string, time: string) {
   const content = `
-    <div style="margin-bottom: 20px; text-align: center;">
-      <p style="font-size: 16px; margin: 0;">มีการบันทึกคำขอใช้รถใหม่เข้ามาในระบบ</p>
-    </div>
-    
-    <div style="background-color: #f8fafc; border-radius: 8px; padding: 16px;">
-      <div class="info-row">
-        <span class="info-label">รหัสใบจอง</span>
-        <span class="info-value" style="color: #2563eb;">${booking.request_code}</span>
+    <div style="background-color: #ffffff; border-radius: 12px; padding: 24px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+      <!-- Header -->
+      <div style="text-align: center; margin-bottom: 24px; border-bottom: 2px solid #f1f5f9; padding-bottom: 16px;">
+        <h2 style="margin: 0; color: #1e40af; font-size: 20px;">🔔 คำขอใช้รถใหม่</h2>
+        <p style="margin: 4px 0 0; color: #64748b; font-size: 14px;">รหัส: <span style="color: #2563eb; font-weight: bold;">${booking.request_code}</span></p>
       </div>
-      <div class="info-row">
-        <span class="info-label">วันที่ใช้รถ</span>
-        <span class="info-value">${date} เวลา ${time}</span>
-      </div>
-      <div class="info-row">
-        <span class="info-label">ผู้จอง</span>
-        <span class="info-value">${booking.requester_name}</span>
-      </div>
-      <div class="info-row">
-        <span class="info-label">สถานที่ไป</span>
-        <span class="info-value">${booking.destination}</span>
-      </div>
-      <div class="info-row" style="border-bottom: none;">
-        <span class="info-label">วัตถุประสงค์</span>
-        <span class="info-value">${booking.purpose}</span>
-      </div>
-    </div>
 
-    <a href="${BASE_URL}/admin/requests?id=${booking.id}&status=REQUESTED" class="btn">
-       📍 กดเพื่อตรวจสอบและมอบหมายคนขับ
-    </a>
+      <!-- Info Grid -->
+      <div style="background-color: #f8fafc; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+        <div class="info-row" style="border-color: #e2e8f0;">
+          <span class="info-label" style="font-weight: normal; color: #64748b;">📅 วันที่ใช้รถ</span>
+          <span class="info-value" style="color: #0f172a;">${date} เวลา ${time}</span>
+        </div>
+        <div class="info-row" style="border-color: #e2e8f0;">
+          <span class="info-label" style="font-weight: normal; color: #64748b;">👤 ผู้จอง</span>
+          <span class="info-value" style="color: #0f172a;">${booking.requester_name}</span>
+        </div>
+        <div class="info-row" style="border-color: #e2e8f0;">
+          <span class="info-label" style="font-weight: normal; color: #64748b;">📍 สถานที่ไป</span>
+          <span class="info-value" style="color: #0f172a;">${booking.destination}</span>
+        </div>
+        <div class="info-row" style="border: none;">
+          <span class="info-label" style="font-weight: normal; color: #64748b;">📝 วัตถุประสงค์</span>
+          <span class="info-value" style="color: #0f172a;">${booking.purpose}</span>
+        </div>
+      </div>
+
+      <!-- Button -->
+      <a href="${BASE_URL}/admin/requests?id=${booking.id}&status=REQUESTED" style="display: block; width: 100%; text-align: center; background-color: #2563eb; color: #ffffff; padding: 14px 0; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);">
+         👉 ตรวจสอบและมอบหมาย
+      </a>
+    </div>
   `;
-  return wrapLayout("🔔 คำขอใช้รถใหม่", "#2563EB", content); // Blue Theme
+  return wrapLayout("🔔 คำขอใช้รถใหม่", "#1e40af", content); // Blue-800 Theme
 }
 
 export function generateFuelEmailHtml(driverName: string, plateNumber: string) {
@@ -173,51 +175,110 @@ export function generateIssueEmailHtml(reporterName: string, plateNumber: string
   return wrapLayout("⚠️ แจ้งปัญหาการใช้รถ", "#D97706", content); // Amber Theme
 }
 
-export function generateDriverAssignmentEmailHtml(booking: any, driver: any, taskLink: string) {
+// Helper to format Thai Date (Simple version for Email)
+function formatThaiDate(dateStr: string) {
+  if (!dateStr) return "-";
+  const date = new Date(dateStr);
+  const d = date.getDate();
+  const m = date.getMonth();
+  const y = date.getFullYear();
+  const months = [
+    "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
+    "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."
+  ];
+  return `${d} ${months[m]} ${y + 543}`;
+}
+
+function formatTime(timeStr: string) {
+  if (!timeStr) return "";
+  return timeStr.slice(0, 5) + " น.";
+}
+
+export function generateDriverAssignmentEmailHtml(booking: any, driver: any, taskLink: string, vehicle?: any) {
+  // Parsing Date/Time
+  const datePart = booking.start_at ? booking.start_at.slice(0, 10) : "";
+  const timePart = booking.start_at ? booking.start_at.slice(11, 16) : "";
+
+  const thaiDate = formatThaiDate(datePart);
+  const timeDisplay = formatTime(timePart);
+
   const content = `
-    <div style="margin-bottom: 20px; text-align: center;">
-      <p style="font-size: 16px; margin: 0;">มีการมอบหมายงานให้คนขับรถเรียบร้อยแล้ว</p>
-      <p style="font-size: 14px; color: #6b7280; margin-top: 4px;">กรุณาส่งลิงก์รับงานด้านล่างนี้ให้คนขับเพื่อดำเนินการต่อ</p>
-    </div>
+    <div style="background-color: #ffffff; border-radius: 12px; padding: 24px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+      <!-- Main Info Header -->
+      <div style="text-align: center; margin-bottom: 24px; border-bottom: 2px solid #f1f5f9; padding-bottom: 16px;">
+        <h2 style="margin: 0; color: #0f172a; font-size: 20px;">ใบมอบหมายงาน</h2>
+        <p style="margin: 4px 0 0; color: #64748b; font-size: 14px;">รหัส: <span style="color: #0284c7; font-weight: bold;">${booking.request_code}</span></p>
+      </div>
 
-    <div style="background-color: #f0f9ff; border-radius: 8px; padding: 20px; border: 1px solid #bae6fd;">
       <!-- Driver Info -->
-      <div class="info-row" style="border-color: #bae6fd;">
-        <span class="info-label">พนักงานขับรถ</span>
-        <span class="info-value" style="color: #0369a1; font-size: 16px;">${driver.full_name || driver.name}</span>
-      </div>
-      <div class="info-row" style="border-color: #bae6fd;">
-        <span class="info-label">รหัสใบจอง</span>
-        <span class="info-value" style="font-size: 16px;">${booking.request_code}</span>
-      </div>
-
-      <!-- Main Action Button -->
-      <div style="text-align: center; margin: 24px 0;">
-        <a href="${taskLink}" style="background-color: #0284c7; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold; display: inline-block;">
-          เปิดลิงก์งาน (คลิก)
-        </a>
-      </div>
-
-      <!-- Quick Copy Section -->
-      <div style="margin-top: 24px; background-color: #ffffff; border: 2px dashed #cbd5e1; border-radius: 8px; padding: 16px;">
-        <p style="margin: 0 0 8px 0; font-size: 12px; color: #64748b; font-weight: bold; text-transform: uppercase;">
-          ✂️ สำหรับ Copy ส่งให้คนขับ (LINE/Chat)
-        </p>
-        <div style="font-family: monospace; font-size: 14px; color: #334155; line-height: 1.6; background: #f8fafc; padding: 12px; border-radius: 4px;">
-          🚗 <strong>มีงานใหม่!</strong><br>
-          คุณ: ${driver.full_name || driver.name}<br>
-          งาน: ${booking.request_code}<br>
-          <br>
-          👇 กดรับงานที่นี่:<br>
-          <a href="${taskLink}" style="color: #0284c7; word-break: break-all;">${taskLink}</a>
+      <div style="display: flex; align-items: center; margin-bottom: 20px;">
+        <div style="width: 40px; height: 40px; background-color: #e0f2fe; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 12px; color: #0284c7; font-size: 20px;">
+          👮‍♂️
+        </div>
+        <div>
+          <p style="margin: 0; font-size: 12px; color: #64748b;">พนักงานขับรถ</p>
+          <p style="margin: 0; font-size: 16px; font-weight: bold; color: #334155;">${driver.full_name || driver.name}</p>
         </div>
       </div>
-    </div>
 
-    <div style="margin-top: 24px; padding: 12px; background-color: #fffbeb; border-radius: 8px; border: 1px solid #fef3c7; font-size: 13px; color: #92400e;">
-      <strong>⚠️ คำแนะนำ:</strong><br>
-      แอดมินสามารถคัดลอกข้อความในกล่องเส้นประด้านบน ส่งให้คนขับทาง LINE หรือแชทส่วนตัวได้ทันทีครับ
+      <!-- Info Grid -->
+      <div style="background-color: #f8fafc; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+         <div class="info-row" style="border-color: #e2e8f0;">
+          <span class="info-label" style="font-weight: normal; color: #64748b;">🚙 รถที่ใช้</span>
+          <span class="info-value" style="color: #0f172a;">${vehicle?.plate_number || "-"}</span>
+        </div>
+        <div class="info-row" style="border-color: #e2e8f0;">
+          <span class="info-label" style="font-weight: normal; color: #64748b;">📅 วันที่</span>
+          <span class="info-value" style="color: #0f172a;">${thaiDate}</span>
+        </div>
+        <div class="info-row" style="border-color: #e2e8f0;">
+          <span class="info-label" style="font-weight: normal; color: #64748b;">⏰ เวลา</span>
+          <span class="info-value" style="color: #0f172a;">${timeDisplay}</span>
+        </div>
+        <div class="info-row" style="border-color: #e2e8f0;">
+          <span class="info-label" style="font-weight: normal; color: #64748b;">👤 ผู้ขอ</span>
+          <span class="info-value" style="color: #0f172a;">${booking.requester_name || "-"}</span>
+        </div>
+        <div class="info-row" style="border-color: #e2e8f0;">
+          <span class="info-label" style="font-weight: normal; color: #64748b;">📍 สถานที่</span>
+          <span class="info-value" style="color: #0f172a;">${booking.destination || "-"}</span>
+        </div>
+         <div class="info-row" style="border: none;">
+          <span class="info-label" style="font-weight: normal; color: #64748b;">📝 วัตถุประสงค์</span>
+          <span class="info-value" style="color: #0f172a;">${booking.purpose || "-"}</span>
+        </div>
+      </div>
+
+      <!-- Link Button -->
+      <a href="${taskLink}" style="display: block; width: 100%; text-align: center; background-color: #0284c7; color: #ffffff; padding: 14px 0; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; box-shadow: 0 4px 6px rgba(2, 132, 199, 0.2);">
+        👉 เปิดลิงก์งาน
+      </a>
+
+      <!-- Quick Copy Section (Chat Style) -->
+      <div style="margin-top: 32px; padding-top: 24px; border-top: 2px dashed #cbd5e1;">
+        <p style="margin: 0 0 12px 0; font-size: 13px; color: #64748b; font-weight: 600; text-align: center;">
+          ✂️ สำหรับ Copy ส่ง LINE
+        </p>
+        
+        <div style="background-color: #f1f5f9; padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0; position: relative;">
+          <!-- "Copy" Badge -->
+          <div style="position: absolute; top: -10px; right: 10px; background: #64748b; color: white; font-size: 10px; padding: 2px 8px; border-radius: 10px;">TEXT</div>
+          
+          <pre style="margin: 0; font-family: 'Sarabun', sans-serif; font-size: 14px; color: #334155; line-height: 1.6; white-space: pre-wrap;">🚗 <strong>มีงานใหม่!</strong>
+คุณ: ${driver.full_name || driver.name}
+งาน: ${booking.request_code}
+ผู้ขอ: ${booking.requester_name || "-"}
+รถ: ${vehicle?.plate_number || "-"}
+วันที่: ${thaiDate} เวลา ${timeDisplay}
+ไป: ${booking.destination || "-"}
+
+👇 กดรับงานที่นี่:
+${taskLink}</pre>
+        </div>
+        <p style="margin: 8px 0 0; text-align: center; font-size: 12px; color: #94a3b8;">(กดเลือกข้อความทั้งหมดแล้ว Copy ได้เลย)</p>
+      </div>
+
     </div>
   `;
-  return wrapLayout("👨‍✈️ ข้อมูลการมอบหมายงาน", "#0284c7", content); // Sky Blue Theme
+  return wrapLayout("👨‍✈️ มอบหมายงานใหม่", "#0ea5e9", content); // Sky-500 Theme
 }

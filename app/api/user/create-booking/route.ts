@@ -340,9 +340,16 @@ export async function POST(req: Request) {
             .single();
 
           if (driverObj) {
+            // ✅ Fetch Vehicle for Email
+            const { data: vehObj } = await supabase
+              .from("vehicles")
+              .select("plate_number")
+              .eq("id", vehicle_id)
+              .single();
+
             const subject = `👨‍✈️ มอบหมายคนขับ: ${data.request_code} (${driverObj.full_name})`;
             const taskLink = `${process.env.PUBLIC_DOMAIN || 'https://govcarbooking-v2.vercel.app'}/driver/tasks/${data.id}?driver_id=${driver_id}`;
-            const html = generateDriverAssignmentEmailHtml(data, driverObj, taskLink);
+            const html = generateDriverAssignmentEmailHtml(data, driverObj, taskLink, vehObj);
             await sendAdminEmail(subject, html);
           }
         }

@@ -119,7 +119,7 @@ export async function POST(req: Request) {
         const subject = `👨‍✈️ มอบหมายคนขับ (Auto): ${booking.request_code} (${driver.full_name})`;
         // Note: generateDriverAssignmentEmailHtml expects full booking object. 
         // We loaded 'booking' at line 31.
-        const html = generateDriverAssignmentEmailHtml(booking, driver, taskLink);
+        const html = generateDriverAssignmentEmailHtml(booking, driver, taskLink, vehicle);
         await sendAdminEmail(subject, html);
         console.log("✅ [AUTO] Email sent");
       } catch (err) {
