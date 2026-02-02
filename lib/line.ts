@@ -169,7 +169,7 @@ export function flexDriverAcceptSuccess(bookingId: string) {
 // ======================================================
 // FLEX: แจ้งงานใหม่ให้คนขับ (✅ เวลาไม่เพี้ยน)
 // ======================================================
-export function flexAssignDriver(booking: any, vehicle: any, driver: any) {
+export function flexAssignDriver(booking: any, vehicle: any, driver: any, customTitle?: string) {
   const { date, time } = parseThaiDateTime(booking.start_at);
   const thaiDate = formatThaiDate(date);
 
@@ -185,6 +185,7 @@ export function flexAssignDriver(booking: any, vehicle: any, driver: any) {
 
   let altText = isFuture ? "🗓️ งานจองล่วงหน้า" : "🚘 งานใหม่สำหรับคุณ";
   if (offHours) altText = "มีงานนอกเวลาราชการ";
+  if (customTitle) altText = customTitle; // Priority
 
   return {
     type: "flex",
@@ -197,11 +198,11 @@ export function flexAssignDriver(booking: any, vehicle: any, driver: any) {
         type: "box",
         layout: "vertical",
         paddingAll: "20px",
-        backgroundColor: offHours ? "#F59E0B" : (isFuture ? "#6366F1" : "#2563EB"),
+        backgroundColor: customTitle ? "#7E22CE" : (offHours ? "#F59E0B" : (isFuture ? "#6366F1" : "#2563EB")), // Purple for Retroactive (if customTitle provided)
         contents: [
           {
             type: "text",
-            text: offHours ? "OT งานนอกเวลาราชการ" : (isFuture ? "🗓️ งานจองล่วงหน้า" : "🚘 งานใหม่เข้ามา"),
+            text: customTitle || (offHours ? "OT งานนอกเวลาราชการ" : (isFuture ? "🗓️ งานจองล่วงหน้า" : "🚘 งานใหม่เข้ามา")),
             weight: "bold",
             size: "xl",
             color: "#FFFFFF",

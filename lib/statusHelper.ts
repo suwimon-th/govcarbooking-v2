@@ -8,6 +8,7 @@ export const bookingStatusMap: Record<string, { label: string; color: string }> 
     COMPLETED: { label: "จบภารกิจเรียบร้อย", color: "bg-emerald-50 text-emerald-700 border-emerald-200" },
     CANCELLED: { label: "ยกเลิกการขอใช้รถ", color: "bg-gray-100 text-gray-500 border-gray-200" },
     REJECTED: { label: "ไม่อนุมัติ / ปฏิเสธ", color: "bg-rose-50 text-rose-700 border-rose-200" },
+    PENDING_RETRO: { label: "รออนุมัติ (ย้อนหลัง)", color: "bg-purple-50 text-purple-700 border-purple-200" },
 };
 
 export function getStatusLabel(status: string) {

@@ -75,7 +75,6 @@ export default function UserLayout({
               {[
                 { href: "/user", label: "ขอใช้รถ", icon: Car },
                 { href: "/user/my-requests", label: "ประวัติ", icon: FileText },
-                { href: "/manual", label: "คู่มือ", icon: BookOpen },
                 { href: "/user/change-password", label: "รหัสผ่าน", icon: Key },
               ].map((item) => (
                 <Link
@@ -134,7 +133,6 @@ export default function UserLayout({
           {[
             { href: "/user", label: "ขอใช้รถใหม่", icon: Car },
             { href: "/user/my-requests", label: "ประวัติการขอใช้รถ", icon: FileText },
-            { href: "/manual", label: "คู่มือการใช้งาน", icon: BookOpen },
             { href: "/user/change-password", label: "เปลี่ยนรหัสผ่าน", icon: Key },
           ].map((item) => (
             <Link

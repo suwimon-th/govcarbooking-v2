@@ -27,6 +27,9 @@ interface RequestFormProps {
   requesterName: string;
   departmentName: string;
   selectedDate: string; // YYYY-MM-DD
+  isRetroactive?: boolean;
+  canSelectRequester?: boolean;
+  onSuccess?: () => void;
 }
 
 interface Passenger {
@@ -49,6 +52,9 @@ export default function RequestForm({
   requesterName,
   departmentName,
   selectedDate,
+  isRetroactive = false,
+  canSelectRequester = false,
+  onSuccess,
 }: RequestFormProps) {
   const [date, setDate] = useState<string>(selectedDate || "");
   const [startTime, setStartTime] = useState<string>("");
@@ -56,6 +62,16 @@ export default function RequestForm({
   const [vehicleId, setVehicleId] = useState<string>("");
   const [driverId, setDriverId] = useState<string>("");
   const [purpose, setPurpose] = useState<string>("");
+
+  // Requester State (Internal)
+  const [reqId, setReqId] = useState<string>(requesterId);
+  const [reqName, setReqName] = useState<string>(requesterName);
+
+  // 1. Sync props to state (Only if provided)
+  useEffect(() => {
+    if (requesterId) setReqId(requesterId);
+    if (requesterName) setReqName(requesterName);
+  }, [requesterId, requesterName]);
 
   // Passenger Logic
   const [passengerCount, setPassengerCount] = useState<string>(""); // Default empty
@@ -136,21 +152,40 @@ export default function RequestForm({
     setDate(selectedDate || "");
   }, [selectedDate]);
 
-  // Load Profile Position
+  // Intelligent User Data Loading
   useEffect(() => {
-    if (!requesterId) return;
-    const loadProfile = async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("position")
-        .eq("id", requesterId)
-        .single();
-      if (data?.position) {
-        setPosition(data.position);
+    const fetchUserData = async () => {
+      let activeId = reqId;
+
+      // 1. Auto-detect ID if missing (User Mode)
+      if (!activeId && !canSelectRequester) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          activeId = user.id;
+          setReqId(user.id);
+        }
+      }
+
+      // 2. Fetch Details if ID exists
+      if (activeId) {
+        // Fetch if name or position is missing
+        if (!reqName || !position) {
+          const { data } = await supabase
+            .from("profiles")
+            .select("full_name, position")
+            .eq("id", activeId)
+            .single();
+
+          if (data) {
+            if (!reqName && data.full_name) setReqName(data.full_name);
+            if (!position && data.position) setPosition(data.position);
+          }
+        }
       }
     };
-    loadProfile();
-  }, [requesterId]);
+
+    fetchUserData();
+  }, [reqId, reqName, position, canSelectRequester]);
 
   // โหลดรายการรถจาก Supabase
   useEffect(() => {
@@ -211,11 +246,29 @@ export default function RequestForm({
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setMessage("");
-    setSubmitState("idle");
+    setSubmitState("submitting");
 
-    if (!requesterId || !requesterName) {
+    // 1. Resolve Requester ID (Fallback if prop is empty)
+    let finalRequesterId = reqId;
+    let finalRequesterName = reqName;
+
+    if (!finalRequesterId) {
+      console.log("⚠️ Requester ID Missing, fetching from session...");
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        finalRequesterId = user.id;
+        // Try to find name if possible
+        if (!finalRequesterName) {
+          const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
+          if (profile) finalRequesterName = profile.full_name;
+        }
+      }
+    }
+
+    if (!finalRequesterId) {
+      console.error("❌ No user session found.");
+      setMessage("ไม่สามารถระบุตัวตนผู้ใช้ได้ กรุณาลองใหม่อีกครั้ง");
       setSubmitState("error");
-      setMessage("ไม่พบข้อมูลผู้ใช้ กรุณาเข้าสู่ระบบใหม่");
       return;
     }
 
@@ -231,10 +284,12 @@ export default function RequestForm({
     const selectedDateObj = new Date(date);
     selectedDateObj.setHours(0, 0, 0, 0);
 
-    if (selectedDateObj < today) {
-      setSubmitState("error");
-      setMessage("ไม่สามารถขอใช้รถย้อนหลังได้");
-      return;
+    if (!isRetroactive) {
+      if (selectedDateObj < today) {
+        setSubmitState("error");
+        setMessage("ไม่สามารถขอใช้รถย้อนหลังได้");
+        return;
+      }
     }
 
     if (isOffHours() && !driverId) {
@@ -247,9 +302,9 @@ export default function RequestForm({
       setSubmitState("submitting");
 
       const payload = {
-        requester_id: requesterId,
-        requester_name: requesterName,
-        department_id: 1,
+        requester_id: finalRequesterId,
+        requester_name: finalRequesterName || "ไม่ระบุชื่อ",
+        department_id: "cced3851-419b-449b-a37a-42cb2337a6b8", // Use UUID for safety
         vehicle_id: vehicleId,
         date,
         start_time: startTime,
@@ -260,6 +315,7 @@ export default function RequestForm({
         destination: destination,
         position: position,
         passengers: passengers,
+        is_retroactive: isRetroactive,
       };
 
       let res = await fetch("/api/user/create-booking", {
@@ -321,6 +377,11 @@ export default function RequestForm({
       setMessage("บันทึกคำขอใช้รถเรียบร้อยแล้ว");
       setCreatedBooking(json.booking);
 
+      if (onSuccess) {
+        onSuccess();
+        return; // Skip default success UI
+      }
+
       // รีเซ็ตฟิลด์บางส่วน
       setStartTime("");
       setEndTime("");
@@ -367,18 +428,26 @@ export default function RequestForm({
   const textInputClasses = "w-full !pl-16 pr-4 py-3 rounded-xl border border-gray-200 bg-gray-50/50 focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all placeholder:text-gray-400";
   const labelClasses = "block text-sm font-semibold text-gray-700 mb-2";
 
+  const containerClasses = isRetroactive
+    ? "p-2" // Minimal padding for modal
+    : "bg-white shadow-[0_8px_30px_rgb(0,0,0,0.08)] rounded-3xl p-6 md:p-10 max-w-2xl mx-auto border-t-4 border-blue-600 relative overflow-hidden";
+
   return (
-    <div className="bg-white shadow-[0_8px_30px_rgb(0,0,0,0.08)] rounded-3xl p-6 md:p-10 max-w-2xl mx-auto border-t-4 border-blue-600 relative overflow-hidden">
+    <div className={containerClasses}>
 
       {/* ... Header ... */}
-      <div className="absolute -top-20 -right-20 w-60 h-60 bg-blue-50 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
+      {!isRetroactive && (
+        <div className="absolute -top-20 -right-20 w-60 h-60 bg-blue-50 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
+      )}
 
       <div className="text-center mb-8 relative z-10">
-        <div className="inline-flex items-center justify-center p-3 bg-blue-50 rounded-2xl mb-4 text-blue-600">
-          <Car className="w-8 h-8" />
-        </div>
+        {!isRetroactive && (
+          <div className="inline-flex items-center justify-center p-3 bg-blue-50 rounded-2xl mb-4 text-blue-600">
+            <Car className="w-8 h-8" />
+          </div>
+        )}
         <h1 className="text-2xl md:text-3xl font-extrabold text-gray-800 tracking-tight">
-          แบบฟอร์มขอใช้รถราชการ
+          {isRetroactive ? "ขอใช้รถย้อนหลัง" : "แบบฟอร์มขอใช้รถราชการ"}
         </h1>
         <p className="text-gray-500 mt-2 text-sm md:text-base">
           ฝ่ายสิ่งแวดล้อมและสุขาภิบาล — สำนักงานเขตจอมทอง
@@ -425,7 +494,7 @@ export default function RequestForm({
                 {submitState === "success" ? "บันทึกข้อมูลสำเร็จ" : "แจ้งเตือน"}
               </h3>
 
-              <p className="text-gray-600 font-medium leading-relaxed mb-6">
+              <p className="text-gray-600 font-medium leading-relaxed mb-6 whitespace-pre-line">
                 {submitState === "success"
                   ? `รหัสคำขอ: ${createdBooking?.request_code}`
                   : message}
@@ -472,23 +541,58 @@ export default function RequestForm({
 
           <div className="grid md:grid-cols-2 gap-5">
             <div className="relative">
-              <label className={labelClasses}>ชื่อผู้ขอ</label>
+              <label htmlFor="requesterName" className={labelClasses}>ชื่อผู้ขอ</label>
               <div className="relative">
                 <User className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  value={requesterName}
-                  disabled
-                  className={`${textInputClasses} bg-gray-100 text-gray-500 cursor-not-allowed border-transparent`}
-                />
+                {canSelectRequester ? (
+                  <>
+                    <select
+                      id="requesterName"
+                      name="requesterName"
+                      value={reqId}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setReqId(val);
+                        const p = profiles.find((x) => x.id === val);
+                        if (p) {
+                          setReqName(p.full_name);
+                          if (p.position) setPosition(p.position);
+                        }
+                      }}
+                      className={`${textInputClasses} appearance-none`}
+                    >
+                      <option value="">-- เลือกผู้ขอ --</option>
+                      {profiles.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.full_name}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="absolute right-4 top-4 pointer-events-none">
+                      <ChevronRight className="w-4 h-4 text-gray-400 rotate-90" />
+                    </div>
+                  </>
+                ) : (
+                  <input
+                    id="requesterName"
+                    name="requesterName"
+                    type="text"
+                    value={reqName || ""}
+                    placeholder="กำลังโหลดข้อมูล..."
+                    disabled
+                    className={`${textInputClasses} bg-gray-100 text-gray-500 cursor-not-allowed border-transparent`}
+                  />
+                )}
               </div>
             </div>
 
             <div className="relative">
-              <label className={labelClasses}>ตำแหน่ง</label>
+              <label htmlFor="position" className={labelClasses}>ตำแหน่ง</label>
               <div className="relative">
                 <User className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
                 <input
+                  id="position"
+                  name="position"
                   type="text"
                   value={position}
                   onChange={(e) => setPosition(e.target.value)}
@@ -509,10 +613,12 @@ export default function RequestForm({
 
           <div className="grid md:grid-cols-2 gap-5">
             <div className="relative">
-              <label className={labelClasses}>วันที่</label>
+              <label htmlFor="date" className={labelClasses}>วันที่</label>
               <div className="relative">
                 <Calendar className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
                 <input
+                  id="date"
+                  name="date"
                   type="date"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
@@ -523,11 +629,13 @@ export default function RequestForm({
 
             {/* Start Time */}
             <div className="relative">
-              <label className={labelClasses}>เวลาเริ่ม</label>
+              <label htmlFor="startTime" className={labelClasses}>เวลาเริ่ม</label>
               <div className="relative">
                 <Clock className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400 z-10" />
                 <div className="pl-10">
                   <TimePicker24
+                    id="startTime"
+                    name="startTime"
                     value={startTime}
                     onChange={setStartTime}
                   />
@@ -538,11 +646,13 @@ export default function RequestForm({
 
           <div className="md:w-1/2 md:pr-2.5">
             <div className="relative">
-              <label className={labelClasses}>เวลาสิ้นสุด (ถ้ามี)</label>
+              <label htmlFor="endTime" className={labelClasses}>เวลาสิ้นสุด (ถ้ามี)</label>
               <div className="relative">
                 <Clock className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400 z-10" />
                 <div className="pl-10">
                   <TimePicker24
+                    id="endTime"
+                    name="endTime"
                     value={endTime}
                     onChange={setEndTime}
                   />
@@ -588,22 +698,29 @@ export default function RequestForm({
               </button>
             </div>
 
-            {/* OT Driver Selection */}
-            {isOffHours() && (
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 animate-in fade-in slide-in-from-top-2 shadow-sm">
+            {/* OT / Retroactive Driver Selection */}
+            {(isOffHours() || isRetroactive) && (
+              <div className={`${isRetroactive ? 'bg-purple-50 border-purple-200' : 'bg-amber-50 border-amber-200'} border rounded-xl p-5 animate-in fade-in slide-in-from-top-2 shadow-sm`}>
                 <div className="flex items-start gap-3 mb-3">
-                  <div className="bg-amber-100 p-1.5 rounded-lg text-amber-600">
-                    <AlertTriangle className="w-5 h-5" />
+                  <div className={`${isRetroactive ? 'bg-purple-100 text-purple-600' : 'bg-amber-100 text-amber-600'} p-1.5 rounded-lg`}>
+                    {isRetroactive ? <Clock className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
                   </div>
                   <div>
-                    <h4 className="font-bold text-amber-900 text-sm">นอกเวลาราชการ (OT)</h4>
-                    <p className="text-xs text-amber-700 mt-1">กรุณาระบุคนขับรถเพื่อแจ้งเตือนผ่าน LINE</p>
+                    <h4 className={`font-bold ${isRetroactive ? 'text-purple-900' : 'text-amber-900'} text-sm`}>
+                      {isRetroactive ? "ระบุคนขับรถ (ย้อนหลัง)" : "นอกเวลาราชการ (OT)"}
+                    </h4>
+                    <p className={`text-xs ${isRetroactive ? 'text-purple-700' : 'text-amber-700'} mt-1`}>
+                      {isRetroactive ? "กรุณาระบุคนขับที่ปฏิบัติงานจริง" : "กรุณาระบุคนขับรถเพื่อแจ้งเตือนผ่าน LINE"}
+                    </p>
                   </div>
                 </div>
 
                 <div className="relative">
                   <User className="absolute left-3.5 top-3.5 w-5 h-5 text-amber-500" />
                   <select
+                    id="driverId"
+                    name="driverId"
+                    aria-label="Select Driver"
                     value={driverId}
                     onChange={(e) => setDriverId(e.target.value)}
                     className={`${selectInputClasses} border-amber-300 focus:border-amber-500 focus:ring-amber-200 bg-white`}
@@ -627,10 +744,12 @@ export default function RequestForm({
           {/* Purpose & Destination */}
           <div className="grid md:grid-cols-2 gap-5">
             <div className="relative">
-              <label className={labelClasses}>สถานที่ไป (Destination)</label>
+              <label htmlFor="destination" className={labelClasses}>สถานที่ไป (Destination)</label>
               <div className="relative">
                 <MapPin className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
                 <input
+                  id="destination"
+                  name="destination"
                   type="text"
                   value={destination}
                   onChange={(e) => setDestination(e.target.value)}
@@ -640,10 +759,12 @@ export default function RequestForm({
               </div>
             </div>
             <div className="relative">
-              <label className={labelClasses}>จำนวนผู้โดยสาร (คน)</label>
+              <label htmlFor="passengerCount" className={labelClasses}>จำนวนผู้โดยสาร (คน)</label>
               <div className="relative">
                 <User className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
                 <input
+                  id="passengerCount"
+                  name="passengerCount"
                   type="number"
                   min="0"
                   value={passengerCount}
@@ -690,6 +811,7 @@ export default function RequestForm({
 
                     {p.type === 'external' && (
                       <input
+                        name={`passenger-name-${idx}`}
                         type="text"
                         placeholder="ชื่อ-นามสกุล"
                         value={p.name}
@@ -707,6 +829,7 @@ export default function RequestForm({
                   {/* Position */}
                   <div className="relative">
                     <input
+                      name={`passenger-position-${idx}`}
                       type="text"
                       placeholder="ตำแหน่ง"
                       value={p.position}
@@ -721,10 +844,12 @@ export default function RequestForm({
           )}
 
           <div className="relative">
-            <label className={labelClasses}>วัตถุประสงค์ (Purpose)</label>
+            <label htmlFor="purpose" className={labelClasses}>วัตถุประสงค์ (Purpose)</label>
             <div className="relative">
               <FileText className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
               <textarea
+                id="purpose"
+                name="purpose"
                 value={purpose}
                 onChange={(e) => setPurpose(e.target.value)}
                 rows={3}

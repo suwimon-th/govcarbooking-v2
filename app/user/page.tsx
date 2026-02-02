@@ -16,6 +16,7 @@ import { getStatusLabel, getStatusColor } from "@/lib/statusHelper";
 import { HelpCircle, Fuel, AlertTriangle, MessageCircle } from "lucide-react";
 import FuelRequestModal from "@/app/components/FuelRequestModal";
 import ReportIssueModal from "@/app/components/ReportIssueModal";
+
 import PublicQueueCard from "@/app/components/PublicQueueCard";
 import MonthlyBookingList from "@/app/components/MonthlyBookingList";
 import DailyBookingList from "@/app/components/DailyBookingList";
@@ -115,8 +116,61 @@ export default function UserPage() {
     // Help / Fuel / Report State
     const [fuelModalOpen, setFuelModalOpen] = useState(false);
     const [reportModalOpen, setReportModalOpen] = useState(false);
+
+    const [userProfile, setUserProfile] = useState<{ id: string, name: string } | null>(null);
+
     const [helpMenuOpen, setHelpMenuOpen] = useState(false);
     const helpMenuRef = useRef<HTMLDivElement>(null);
+
+    // Load User Profile for Retroactive Request (Optimized)
+    useEffect(() => {
+        const fetchUser = async () => {
+            try {
+                // 1. Try Cookies first (Fastest)
+                const getCookie = (name: string) => {
+                    try {
+                        const value = `; ${document.cookie}`;
+                        const parts = value.split(`; ${name}=`);
+                        if (parts.length === 2) return parts.pop()?.split(';').shift();
+                    } catch (e) { return null; }
+                };
+
+                const cookieId = getCookie("user_id");
+                const cookieName = getCookie("full_name");
+
+                if (cookieId) {
+                    const safeName = cookieName ? decodeURIComponent(cookieName).replace(/\+/g, ' ') : "";
+                    console.log("✅ User loaded from Cookie");
+                    setUserProfile({ id: cookieId, name: safeName });
+                    if (safeName) return; // If name is present, we are good
+                }
+
+                // 2. Fallback to Supabase Session (LocalStorage - Fast)
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session?.user) {
+                    console.log("✅ User loaded from Session");
+                    // If we already set from cookie but name was missing, update it
+                    const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', session.user.id).single();
+                    setUserProfile({
+                        id: session.user.id,
+                        name: profile?.full_name || session.user.email || ""
+                    });
+                    return;
+                }
+
+                // 3. Last Resort: Network Fetch (Slowest)
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    console.log("✅ User loaded from Network");
+                    const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
+                    setUserProfile({ id: user.id, name: profile?.full_name || "" });
+                }
+            } catch (error) {
+                console.error("❌ Error loading user:", error);
+            }
+        };
+        fetchUser();
+    }, []);
 
     // Close help menu when clicking outside
     useEffect(() => {
@@ -321,6 +375,8 @@ export default function UserPage() {
                                         <span className="text-sm font-bold">เบิกน้ำมัน</span>
                                     </button>
 
+
+
                                     <button
                                         onClick={() => {
                                             setHelpMenuOpen(false);
@@ -429,6 +485,8 @@ export default function UserPage() {
                                             <span className="text-[10px] text-gray-500">สำหรับพนักงานขับรถ</span>
                                         </div>
                                     </button>
+
+
 
                                     <button
                                         onClick={() => {
@@ -784,6 +842,8 @@ export default function UserPage() {
                 onClose={() => setModalOpen(false)}
                 detail={selected}
             />
+
+
         </div>
 
     );

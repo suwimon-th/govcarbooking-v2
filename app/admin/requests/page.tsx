@@ -18,10 +18,12 @@ import {
   Printer,
   FileDown,
   FileText as FileDoc,
-  MessageCircle, // Added
-  CheckCircle2   // Added
+  MessageCircle,
+  CheckCircle2,
+  Plus // Added
 } from "lucide-react";
 import { generateBookingDocument } from "@/lib/documentGenerator";
+import RetroactiveRequestModal from "@/app/components/RetroactiveRequestModal"; // Added
 
 /* ================= Interfaces ================= */
 
@@ -107,6 +109,22 @@ function AdminRequestsContent() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [nextDriver, setNextDriver] = useState<{ name: string, id: string } | null>(null);
   const [isDriverQueueModalOpen, setIsDriverQueueModalOpen] = useState(false);
+
+  // Create Modal State
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [adminProfile, setAdminProfile] = useState<{ id: string; name: string } | null>(null);
+
+  // Fetch Admin Profile
+  useEffect(() => {
+    const fetchAdmin = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
+        setAdminProfile({ id: user.id, name: profile?.full_name || "Admin" });
+      }
+    };
+    fetchAdmin();
+  }, []);
 
   // Filter Logic
   const filteredRows = rows.filter((r) => {
@@ -316,6 +334,7 @@ function AdminRequestsContent() {
             >
               <option value="ทั้งหมด">สถานะ: ทั้งหมด</option>
               <option value="REQUESTED">รออนุมัติ</option>
+              <option value="PENDING_RETRO">รออนุมัติ (ย้อนหลัง)</option>
               <option value="ASSIGNED">มอบหมายแล้ว</option>
               <option value="ACCEPTED">รับงานแล้ว</option>
               <option value="COMPLETED">เสร็จสิ้น</option>
@@ -325,6 +344,14 @@ function AdminRequestsContent() {
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
             </div>
           </div>
+
+          <button
+            onClick={() => setCreateModalOpen(true)}
+            className="flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-xl hover:bg-blue-700 transition-colors shadow-sm font-bold text-sm min-w-[140px]"
+          >
+            <Plus className="w-5 h-5" />
+            สร้างคำขอ
+          </button>
         </div>
       </div>
 
@@ -721,6 +748,18 @@ function AdminRequestsContent() {
           }}
         />
       )}
+
+      {/* Admin Create / Retroactive Modal */}
+      <RetroactiveRequestModal
+        open={createModalOpen}
+        onClose={() => {
+          setCreateModalOpen(false);
+          loadData(); // Reload table after creation
+        }}
+        requesterId={adminProfile?.id || ""}
+        requesterName={adminProfile?.name || ""}
+        canSelectRequester={true} // Allow Admin to select requester
+      />
     </div>
   );
 }

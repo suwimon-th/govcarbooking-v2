@@ -7,9 +7,11 @@ interface TimePicker24Props {
     className?: string; // To match existing styles
     placeholder?: string;
     disabled?: boolean;
+    name?: string; // Added for accessibility
+    id?: string;   // Added
 }
 
-export default function TimePicker24({ value, onChange, className, disabled }: TimePicker24Props) {
+export default function TimePicker24({ value, onChange, className, disabled, name, id }: TimePicker24Props) {
     // Parse current value
     const [hour, minute] = useMemo(() => {
         if (!value) return ["", ""];
@@ -42,10 +44,12 @@ export default function TimePicker24({ value, onChange, className, disabled }: T
     };
 
     return (
-        <div className={`flex items-center gap-2 ${className} !p-0 !border-none !bg-transparent`}>
+        <div id={id} className={`flex items-center gap-2 ${className} !p-0 !border-none !bg-transparent`}>
             {/* Hour Select */}
             <div className="relative flex-1">
                 <select
+                    name={name ? `${name}_hour` : undefined}
+                    aria-label="Hour"
                     value={hour}
                     onChange={(e) => handleHourChange(e.target.value)}
                     disabled={disabled}
@@ -66,6 +70,8 @@ export default function TimePicker24({ value, onChange, className, disabled }: T
             {/* Minute Select */}
             <div className="relative flex-1">
                 <select
+                    name={name ? `${name}_minute` : undefined}
+                    aria-label="Minute"
                     value={minute}
                     onChange={(e) => handleMinuteChange(e.target.value)}
                     disabled={disabled}

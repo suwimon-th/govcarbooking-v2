@@ -52,10 +52,19 @@ function formatTime(dateStr: string) {
 export default function MonthlyBookingList({ events, currentMonthStart, currentMonthEnd, currentViewTitle, onItemClick }: Props) {
 
     // Filter events for current view
-    // Filter events for current view
     // Note: events are already filtered by date range from the API (loadBookings)
-    // We just sort them here validation.
-    const filtered = [...events].sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+    // We just sort them here.
+    const filtered = [...events]
+        .filter(evt => {
+            if (!currentMonthStart || !currentMonthEnd) return true;
+            // Convert to comparable values
+            const evtTime = new Date(evt.start).getTime();
+            const startTime = currentMonthStart.getTime();
+            const endTime = currentMonthEnd.getTime();
+            // Strict range: [start, end)
+            return evtTime >= startTime && evtTime < endTime;
+        })
+        .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
 
     if (filtered.length === 0) {
         return (
@@ -165,9 +174,9 @@ export default function MonthlyBookingList({ events, currentMonthStart, currentM
                                             </div>
 
                                             {/* Status */}
-                                            <div className="w-28 flex-shrink-0 text-right">
+                                            <div className="w-40 flex-shrink-0 text-right">
                                                 <span className={`
-                                                    inline-flex items-center justify-center px-3 py-1.5 rounded-full text-[10px] font-bold border
+                                                    inline-flex items-center justify-center px-3 py-1.5 rounded-full text-[10px] font-bold border whitespace-nowrap
                                                     ${getStatusColor(evt.extendedProps?.status || 'REQUESTED')}
                                                 `}>
                                                     {statusLabel}

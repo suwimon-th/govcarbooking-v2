@@ -89,7 +89,8 @@ export async function POST(req: Request) {
       passenger_count = 1, // Default 1
       destination = "",
       position = "",
-      force_booking = false, // ✅ Param for confirmation
+      force_booking = false,
+      is_retroactive = false,
     } = body;
 
     if (
@@ -107,7 +108,47 @@ export async function POST(req: Request) {
       );
     }
 
-    // ... (Van logic skipped for brevity, keeping existing) ...
+    // ✅ RESTRICTION: Van (รถตู้) prohibited on 3rd Monday of the month
+    if (vehicle_id && date) {
+      const { data: veh } = await supabase
+        .from("vehicles")
+        .select("type, brand, model")
+        .eq("id", vehicle_id)
+        .single();
+
+      // Identify if it is a Van
+      // User uses "รถตู้" in type or perhaps "Van" in brand/model
+      const isVan =
+        veh?.type?.includes("ตู้") ||
+        veh?.type?.toLowerCase().includes("van") ||
+        veh?.brand?.toLowerCase().includes("van") ||
+        veh?.model?.toLowerCase().includes("van");
+
+      if (isVan) {
+        // Calculate Calendar Week
+        // Logic: Calculate which "Calendar Row" this date falls into.
+        // Week 1 is the row containing the 1st of the month.
+        const bookingDate = new Date(date); // YYYY-MM-DD
+        const dayOfWeek = bookingDate.getDay(); // 0=Sun, 1=Mon, ...
+
+        // Check if Monday (1)
+        if (dayOfWeek === 1) {
+          const firstDayOfMonth = new Date(bookingDate.getFullYear(), bookingDate.getMonth(), 1);
+          const offset = firstDayOfMonth.getDay(); // 0=Sun..6=Sat
+
+          // Formula: Math.ceil( (DayOfMonth + Offset) / 7 )
+          const dayOfMonth = bookingDate.getDate(); // 1..31
+          const weekNumber = Math.ceil((dayOfMonth + offset) / 7);
+
+          if (weekNumber === 3) {
+            return NextResponse.json(
+              { error: "รถตู้ไม่สามารถจองได้\nในวันจันทร์สัปดาห์ที่ 3 ของเดือน\n(รถเวร)" },
+              { status: 400 }
+            );
+          }
+        }
+      }
+    }
 
     const start_at = `${date}T${padTime(start_time)}`;
 
@@ -234,6 +275,12 @@ export async function POST(req: Request) {
        ❌ ไม่ส่ง created_at / assigned_at
        ✅ ให้ DB ใส่ now() เอง
     ---------------------------- */
+    // Determine Status
+    let initialStatus = driver_id ? "ASSIGNED" : "REQUESTED";
+    if (is_retroactive) {
+      initialStatus = "PENDING_RETRO";
+    }
+
     const { data, error } = await supabase
       .from("bookings")
       .insert([
@@ -246,7 +293,7 @@ export async function POST(req: Request) {
           end_at: dbEndAt, // ✅ Use NULL if not specified (display purpose)
           purpose,
           request_code,
-          status: driver_id ? "ASSIGNED" : "REQUESTED",
+          status: initialStatus,
           driver_id: driver_id || null,
           assigned_at: driver_id ? new Date().toISOString() : null,
           passenger_count,
@@ -271,6 +318,7 @@ export async function POST(req: Request) {
        Auto-assign คนขับ (ถ้ามี)
        เงื่อนไข: เฉพาะการขอใช้รถ "วันนี้" เท่านั้น
        (ขอใช้รถล่วงหน้า -> รอ Admin กด assign เอง)
+       Skip if Retroactive
     ---------------------------- */
     const DOMAIN = process.env.PUBLIC_DOMAIN;
 
@@ -279,7 +327,7 @@ export async function POST(req: Request) {
       timeZone: "Asia/Bangkok",
     }); // returns YYYY-MM-DD in safe format
 
-    if (DOMAIN && date === today && !driver_id) {
+    if (!is_retroactive && DOMAIN && date === today && !driver_id) {
       fetch(`${DOMAIN}/api/auto-assign`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -293,13 +341,17 @@ export async function POST(req: Request) {
     const notifications = [];
 
     // ✅ 1) ส่ง LINE หาคนขับ (ถ้ามี driver_id)
+    // Allow retroactive to send notification too (User Request)
     if (driver_id) {
       notifications.push((async () => {
         try {
           const { data: driver } = await supabase.from("drivers").select("*").eq("id", driver_id).single();
           const { data: vehicle } = await supabase.from("vehicles").select("*").eq("id", vehicle_id).single();
+
           if (driver?.line_user_id) {
-            const flex = flexAssignDriver(data, vehicle, driver);
+            const customTitle = is_retroactive ? "ขอใช้รถย้อนหลัง" : undefined;
+            const flex = flexAssignDriver(data, vehicle, driver, customTitle);
+
             console.log("📤 [NOTIFY] Sending to Driver:", driver.line_user_id);
             await sendLinePush(driver.line_user_id, [flex]);
 
@@ -320,7 +372,14 @@ export async function POST(req: Request) {
       try {
         console.log(`📧 [EMAIL] Sending to Admin...`);
 
-        if (!driver_id) {
+        if (is_retroactive) {
+          // Case: Retroactive Request
+          const subject = `⏳ ตรวจสอบการจองย้อนหลัง: ${data.request_code}`;
+          // Admin needs to "Approve" (Change status from PENDING_RETRO -> ASSIGNED/COMPLETED).
+          // In Admin Dashboard, seeing it is enough.
+          const html = generateBookingEmailHtml(data, date, start_time);
+          await sendAdminEmail(subject, html);
+        } else if (!driver_id) {
           // NO DRIVER -> Normal notification (New Booking)
           // CASE 3 Fix: If this is "Today", suppress this email because `auto-assign` will handle it.
           // (Either sending "Assigned" on success, or "New Booking" on failure)
