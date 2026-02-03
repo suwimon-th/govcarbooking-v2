@@ -205,9 +205,10 @@ export default function PublicCalendarPage() {
 
 
 
-    /* View Mode Change: Switch FullCalendar View */
-    // User requested "Like before", so we keep Month View always, and show ALL events.
-    // The filtering happens only in the LIST below (DailyBookingList).
+    /* Filter Events for Display on Calendar Grid (Desktop Daily Mode) */
+    const displayedEvents = (!isMobile && viewMode === 'day')
+        ? events.filter(e => normalizeDate(e.start) === selectedDate)
+        : events;
 
     const dailyEvents = events.filter(evt => {
         const evtDate = normalizeDate(evt.start);
@@ -479,8 +480,8 @@ export default function PublicCalendarPage() {
                 </div>
             </div>
 
-            {/* CALENDAR SECTION */}
-            <div className="bg-white shadow-sm md:shadow-none border-b md:border-none z-20 pb-2 md:pb-0 flex-1">
+            {/* CALENDAR SECTION (Validation: Hide on Desktop if viewMode === 'day') */}
+            <div className={`bg-white shadow-sm md:shadow-none border-b md:border-none z-20 pb-2 md:pb-0 flex-1 ${(!isMobile && viewMode === 'day') ? 'hidden' : 'block'}`}>
                 <div className="max-w-md md:max-w-[1200px] mx-auto md:px-8">
                     <style jsx global>{`
                 /* General Reset */
@@ -534,7 +535,7 @@ export default function PublicCalendarPage() {
                         }}
                         // nextDayThreshold removed to default to 00:00:00
 
-                        events={events}
+                        events={displayedEvents}
                         eventDisplay="block"
                         dayMaxEvents={isMobile ? false : 3}
 
@@ -572,7 +573,7 @@ export default function PublicCalendarPage() {
             </div>
 
             {/* TOGGLE SWITCH (Desktop) */}
-            <div className="hidden md:flex justify-center mt-8 mb-4">
+            <div className="hidden md:flex justify-center mt-8 mb-4 items-center gap-4">
                 <div className="bg-gray-100 p-1 rounded-xl inline-flex items-center shadow-inner">
                     <button
                         onClick={() => setViewMode('month')}
@@ -597,28 +598,48 @@ export default function PublicCalendarPage() {
                         ดูรายวัน
                     </button>
                 </div>
+
+                <button
+                    onClick={() => {
+                        const now = new Date();
+                        const y = now.getFullYear();
+                        const m = String(now.getMonth() + 1).padStart(2, '0');
+                        const d = String(now.getDate()).padStart(2, '0');
+                        const todayStr = `${y}-${m}-${d}`;
+
+                        setSelectedDate(todayStr);
+                        if (calendarRef.current) {
+                            calendarRef.current.getApi().today();
+                        }
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold transition-all text-sm border border-blue-200 shadow-sm"
+                >
+                    <CalendarCheck className="w-4 h-4" />
+                    ดูวันปัจจุบัน
+                </button>
             </div>
+        </div>
 
-            {/* DESKTOP LIST VIEW */}
-            {
-                viewMode === 'month' ? (
-                    <MonthlyBookingList
-                        events={events}
-                        currentMonthStart={currentMonthStart}
-                        currentMonthEnd={currentMonthEnd}
-                        currentViewTitle={currentViewTitle}
-                        onItemClick={openDetail}
-                    />
-                ) : (
-                    <DailyBookingList
-                        events={events}
-                        selectedDate={selectedDate}
-                        onItemClick={openDetail}
-                    />
-                )
-            }
+            {/* DESKTOP LIST VIEW */ }
+    {
+        viewMode === 'month' ? (
+            <MonthlyBookingList
+                events={events}
+                currentMonthStart={currentMonthStart}
+                currentMonthEnd={currentMonthEnd}
+                currentViewTitle={currentViewTitle}
+                onItemClick={openDetail}
+            />
+        ) : (
+            <DailyBookingList
+                events={events}
+                selectedDate={selectedDate}
+                onItemClick={openDetail}
+            />
+        )
+    }
 
-            {/* AGENDA LIST SECTION (MOBILE ONLY) */}
+    {/* AGENDA LIST SECTION (MOBILE ONLY) */ }
             <div className={`flex-1 bg-gray-50/50 min-h-[300px] md:hidden ${isMobile ? 'block' : 'hidden'}`}>
                 <div className="max-w-md mx-auto p-4">
 
