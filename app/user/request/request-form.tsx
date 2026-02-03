@@ -224,7 +224,15 @@ export default function RequestForm({
         .select("id, full_name")
         .eq("active", true)
         .order("full_name");
-      setDrivers(data || []);
+      if (data) {
+        const validDrivers = data.filter(d =>
+          !d.full_name.toLowerCase().includes("test") &&
+          !d.full_name.includes("ทดสอบ")
+        );
+        setDrivers(validDrivers);
+      } else {
+        setDrivers([]);
+      }
     };
     loadDrivers();
   }, []);

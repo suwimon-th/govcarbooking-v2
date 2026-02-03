@@ -54,7 +54,13 @@ export async function POST(req: Request) {
       .eq("status", "AVAILABLE")
       .order("queue_order", { ascending: true });
 
-    const driver = drivers?.[0];
+    // Filter out TEST drivers (Should be manual only)
+    const validDrivers = (drivers || []).filter(d => {
+      const lower = d.full_name.toLowerCase();
+      return !lower.includes("test") && !lower.includes("ทดสอบ");
+    });
+
+    const driver = validDrivers?.[0];
 
     if (!driver) {
       // ⚠️ If no driver available, manual assignment is required.

@@ -44,7 +44,10 @@ export default function DriverQueueModal({ bookingIds, onClose, onSuccess }: Pro
             .order("queue_order", { ascending: true });
 
         if (error) console.error(error);
-        else setDrivers(data || []);
+        else {
+            const filtered = (data || []).filter((d: Driver) => d.queue_order < 900);
+            setDrivers(filtered);
+        }
         setLoading(false);
     };
 
