@@ -205,7 +205,12 @@ export default function RequestForm({
       } catch (err) {
         console.error(err);
         setSubmitState("error");
-        setMessage("ไม่สามารถโหลดข้อมูลรถราชการได้");
+        Swal.fire({
+          icon: 'error',
+          title: 'โหลดข้อมูลไม่สำเร็จ',
+          text: 'ไม่สามารถโหลดข้อมูลรถราชการได้',
+          confirmButtonText: 'ลองใหม่'
+        });
       } finally {
         setLoadingVehicles(false);
       }
@@ -856,7 +861,7 @@ export default function RequestForm({
         <div className="pt-4 border-t border-gray-100">
           <button
             type="submit"
-            disabled={isSubmitting || !requesterId}
+            disabled={isSubmitting}
             className="w-full relative group overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white font-bold py-4 shadow-lg shadow-blue-200 transition-all hover:shadow-blue-300 hover:scale-[1.01] active:scale-[0.98] disabled:opacity-70 disabled:pointer-events-none"
           >
             <div className="relative z-10 flex items-center justify-center gap-2">
