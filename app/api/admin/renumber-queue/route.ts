@@ -3,11 +3,10 @@ import { supabase } from "@/lib/supabaseClient";
 
 export async function POST() {
     try {
-        // 1. Fetch all drivers sorted by current queue_order
+        // 1. Fetch all drivers
         const { data: drivers, error: fetchErr } = await supabase
             .from("drivers")
-            .select("id, full_name, queue_order")
-            .order("queue_order", { ascending: true });
+            .select("id, full_name, queue_order");
 
         if (fetchErr) {
             return NextResponse.json({ error: fetchErr.message }, { status: 500 });
@@ -17,19 +16,42 @@ export async function POST() {
             return NextResponse.json({ message: "No drivers to renumber" });
         }
 
-        // 2. Prepare updates (1, 2, 3...)
-        // We'll update them one by one or in a batch if Supabase supports upsert efficiently with different values.
-        // For simplicity/safety with small count, loop update is okay, or constructing a case statement.
-        // Supabase JS doesn't support bulk update with different values easily in one query without RPC.
-        // Let's use a loop for now (assuming < 50 drivers).
+        // 2. Define the Fixed Order Rule
+        const targetOrder = [
+            "สุรพล",    // 1
+            "ธีระสิทธิ์", // 2
+            "ธีรวัฒน์",  // 3
+            "ประพณ"     // 4
+        ];
 
+        // 3. Sort logic
+        drivers.sort((a, b) => {
+            // Find index in target list (partial match validation)
+            const indexA = targetOrder.findIndex(keyword => a.full_name.includes(keyword));
+            const indexB = targetOrder.findIndex(keyword => b.full_name.includes(keyword));
+
+            // Logic:
+            // - If both are in the list, sort by list index
+            // - If one is in list, it comes first
+            // - If neither, sort alphabetically or keep at bottom
+
+            if (indexA !== -1 && indexB !== -1) {
+                return indexA - indexB;
+            }
+            if (indexA !== -1) return -1; // A is in list, B is not -> A comes first
+            if (indexB !== -1) return 1;  // B is in list, A is not -> B comes first
+
+            // Fallback for others (Unknown drivers)
+            return a.full_name.localeCompare(b.full_name);
+        });
+
+        // 4. Update Database
         const updates = drivers.map((d, index) => ({
             id: d.id,
             full_name: d.full_name,
-            queue_order: index + 1 // 1-based index
+            queue_order: index + 1
         }));
 
-        // Perform updates
         for (const d of updates) {
             await supabase
                 .from("drivers")
@@ -39,7 +61,7 @@ export async function POST() {
 
         return NextResponse.json({
             success: true,
-            message: `Renumbered ${drivers.length} drivers`,
+            message: `Renumbered ${drivers.length} drivers based on fixed rules`,
             drivers: updates
         });
 
