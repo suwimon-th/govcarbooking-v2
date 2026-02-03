@@ -63,9 +63,7 @@ export async function GET(req: Request) {
           full_name,
           phone
         )
-      `)
-      .neq("status", "CANCELLED")
-      .neq("status", "REJECTED");
+      `);
 
     // ✅ Optimization: Filter by date range if provided
     /* 
