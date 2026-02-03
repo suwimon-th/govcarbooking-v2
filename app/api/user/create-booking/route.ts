@@ -150,6 +150,12 @@ export async function POST(req: Request) {
       }
     }
 
+    // ✅ Sanitize department_id (Prevent 22P02 Error if frontend sends UUID)
+    let safeDeptId = parseInt(String(department_id));
+    if (isNaN(safeDeptId)) {
+      safeDeptId = 1;
+    }
+
     const start_at = `${date}T${padTime(start_time)}`;
 
     let dbEndAt = null;
@@ -287,7 +293,7 @@ export async function POST(req: Request) {
         {
           requester_id,
           requester_name,
-          department_id,
+          department_id: safeDeptId,
           vehicle_id,
           start_at,
           end_at: dbEndAt, // ✅ Use NULL if not specified (display purpose)
