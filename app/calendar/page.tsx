@@ -196,6 +196,12 @@ export default function PublicCalendarPage() {
         setEvents(formatted);
     }, []);
 
+    /* Initial Load */
+    useEffect(() => {
+        loadVehicles();
+        loadBookings();
+    }, [loadBookings, loadVehicles]);
+
     /* View Mode Change: Switch FullCalendar View */
     useEffect(() => {
         if (calendarRef.current) {
