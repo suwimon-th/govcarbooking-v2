@@ -480,8 +480,8 @@ export default function PublicCalendarPage() {
                 </div>
             </div>
 
-            {/* CALENDAR SECTION (Validation: Hide on Desktop if viewMode === 'day') */}
-            <div className={`bg-white shadow-sm md:shadow-none border-b md:border-none z-20 pb-2 md:pb-0 flex-1 ${(!isMobile && viewMode === 'day') ? 'hidden' : 'block'}`}>
+            {/* CALENDAR SECTION */}
+            <div className="bg-white shadow-sm md:shadow-none border-b md:border-none z-20 pb-2 md:pb-0 flex-1">
                 <div className="max-w-md md:max-w-[1200px] mx-auto md:px-8">
                     <style jsx global>{`
                 /* General Reset */
