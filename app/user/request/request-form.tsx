@@ -251,6 +251,7 @@ export default function RequestForm({
     // 1. Resolve Requester ID (Fallback if prop is empty)
     let finalRequesterId = reqId;
     let finalRequesterName = reqName;
+    let finalRequesterDeptId: number | null = null;
 
     if (!finalRequesterId) {
       console.log("⚠️ Requester ID Missing, fetching from session...");
@@ -259,8 +260,11 @@ export default function RequestForm({
         finalRequesterId = user.id;
         // Try to find name if possible
         if (!finalRequesterName) {
-          const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
-          if (profile) finalRequesterName = profile.full_name;
+          const { data: profile } = await supabase.from('profiles').select('full_name, department_id').eq('id', user.id).single();
+          if (profile) {
+            finalRequesterName = profile.full_name;
+            finalRequesterDeptId = profile.department_id;
+          }
         }
       }
     }
@@ -304,7 +308,7 @@ export default function RequestForm({
       const payload = {
         requester_id: finalRequesterId,
         requester_name: finalRequesterName || "ไม่ระบุชื่อ",
-        department_id: "cced3851-419b-449b-a37a-42cb2337a6b8", // Use UUID for safety
+        department_id: finalRequesterDeptId || 1, // Fix: Use Integer ID (Default 1 for Env & Sanitation)
         vehicle_id: vehicleId,
         date,
         start_time: startTime,
