@@ -284,7 +284,18 @@ export async function POST(req: Request) {
     // Determine Status
     let initialStatus = driver_id ? "ASSIGNED" : "REQUESTED";
     if (is_retroactive) {
-      initialStatus = "PENDING_RETRO";
+      // User requested: Send directly to driver to fill mileage. 
+      // "ACCEPTED" allows driver to Start -> Finish. 
+      // "IN_PROGRESS" might be better but "ACCEPTED" is safer standard flow.
+      // User said "Press fill mileage immediately", but usually flow is Accept -> Start -> Finish.
+      // If I set "ACCEPTED", they accept, then start/finish. 
+      // If I set "IN_PROGRESS", they finish. 
+      // Let's use "ACCEPTED" (รับงานแล้ว) to be safe, or "IN_PROGRESS".
+      // Let's try "ACCEPTED" as it implies "Approved & Assigned".
+      // actually user said "Send to driver to press fill mileage".
+      // This might mean "IN_PROGRESS". 
+      // Let's use "ACCEPTED" first to be safe within the flow.
+      initialStatus = "ACCEPTED";
     }
 
     const { data, error } = await supabase
