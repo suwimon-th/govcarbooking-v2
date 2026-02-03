@@ -205,10 +205,9 @@ export default function PublicCalendarPage() {
 
 
 
-    /* Filter Events for Display on Calendar Grid (Desktop Daily Mode) */
-    const displayedEvents = (!isMobile && viewMode === 'day')
-        ? events.filter(e => normalizeDate(e.start) === selectedDate)
-        : events;
+    /* View Mode Change: Switch FullCalendar View */
+    // User requested "Like before", so we keep Month View always, and show ALL events.
+    // The filtering happens only in the LIST below (DailyBookingList).
 
     const dailyEvents = events.filter(evt => {
         const evtDate = normalizeDate(evt.start);
@@ -535,7 +534,7 @@ export default function PublicCalendarPage() {
                         }}
                         // nextDayThreshold removed to default to 00:00:00
 
-                        events={displayedEvents}
+                        events={events}
                         eventDisplay="block"
                         dayMaxEvents={isMobile ? false : 3}
 
