@@ -257,6 +257,18 @@ export default function RequestForm({
     let finalRequesterName = reqName;
     let finalRequesterDeptId: number | null = null;
 
+    // Fix: If Admin Mode (canSelectRequester) and no ID selected, FORCE ERROR
+    if (canSelectRequester && !reqId) {
+      setSubmitState("error");
+      Swal.fire({
+        icon: 'warning',
+        title: 'กรุณาเลือกชื่อผู้ขอ',
+        text: 'กรุณาเลือกรายชื่อผู้ขอใช้รถจากในช่อง "ชื่อผู้ขอ"',
+        confirmButtonText: 'ตกลง'
+      });
+      return;
+    }
+
     if (!finalRequesterId) {
       console.log("⚠️ Requester ID Missing, fetching from session...");
       const { data: { user } } = await supabase.auth.getUser();
