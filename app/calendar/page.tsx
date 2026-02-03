@@ -202,19 +202,13 @@ export default function PublicCalendarPage() {
         loadBookings();
     }, [loadBookings, loadVehicles]);
 
-    /* View Mode Change: Switch FullCalendar View */
-    useEffect(() => {
-        if (calendarRef.current) {
-            const calendarApi = calendarRef.current.getApi();
-            if (viewMode === 'day') {
-                calendarApi.changeView('dayGridDay'); // Show Single Day
-                calendarApi.gotoDate(selectedDate);   // Ensure we jump to selected date
-            } else {
-                calendarApi.changeView('dayGridMonth');
-            }
-        }
-    }, [viewMode, selectedDate]);
 
+
+
+    /* Filter Events for Display on Calendar Grid (Desktop Daily Mode) */
+    const displayedEvents = (!isMobile && viewMode === 'day')
+        ? events.filter(e => normalizeDate(e.start) === selectedDate)
+        : events;
 
     const dailyEvents = events.filter(evt => {
         const evtDate = normalizeDate(evt.start);
@@ -541,7 +535,7 @@ export default function PublicCalendarPage() {
                         }}
                         // nextDayThreshold removed to default to 00:00:00
 
-                        events={events}
+                        events={displayedEvents}
                         eventDisplay="block"
                         dayMaxEvents={isMobile ? false : 3}
 
