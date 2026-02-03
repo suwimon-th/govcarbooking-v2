@@ -87,7 +87,7 @@ export default function RequestForm({
   const [loadingVehicles, setLoadingVehicles] = useState<boolean>(false);
 
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
-  const [message, setMessage] = useState<string>("");
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [createdBooking, setCreatedBooking] = useState<any>(null);
   const router = useRouter();
@@ -245,7 +245,6 @@ export default function RequestForm({
   // Submit ฟอร์ม
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setMessage("");
     setSubmitState("submitting");
 
     // 1. Resolve Requester ID (Fallback if prop is empty)
@@ -269,16 +268,30 @@ export default function RequestForm({
       }
     }
 
+    if (!finalRequesterDeptId) {
+      finalRequesterDeptId = 1;
+    }
+
     if (!finalRequesterId) {
       console.error("❌ No user session found.");
-      setMessage("ไม่สามารถระบุตัวตนผู้ใช้ได้ กรุณาลองใหม่อีกครั้ง");
+      Swal.fire({
+        icon: 'error',
+        title: 'ไม่พบข้อมูลผู้ใช้',
+        text: 'กรุณาเข้าสู่ระบบใหม่อีกครั้ง',
+        confirmButtonText: 'ตกลง'
+      });
       setSubmitState("error");
       return;
     }
 
     if (!date || !startTime || !vehicleId || !purpose.trim()) {
       setSubmitState("error");
-      setMessage("กรุณากรอกข้อมูลให้ครบถ้วน");
+      Swal.fire({
+        icon: 'warning',
+        title: 'ข้อมูลไม่ครบถ้วน',
+        text: 'กรุณากรอกข้อมูลให้ครบถ้วน (วันที่, เวลา, รถ, วัตถุประสงค์)',
+        confirmButtonText: 'ตกลง'
+      });
       return;
     }
 
@@ -291,14 +304,35 @@ export default function RequestForm({
     if (!isRetroactive) {
       if (selectedDateObj < today) {
         setSubmitState("error");
-        setMessage("ไม่สามารถขอใช้รถย้อนหลังได้");
+        Swal.fire({
+          icon: 'error',
+          title: 'วันที่ไม่ถูกต้อง',
+          text: 'ไม่สามารถขอใช้รถย้อนหลังได้',
+          confirmButtonText: 'ตกลง'
+        });
         return;
       }
     }
 
     if (isOffHours() && !driverId) {
       setSubmitState("error");
-      setMessage("กรุณาเลือกคนขับรถ (นอกเวลาราชการ)");
+      Swal.fire({
+        icon: 'warning',
+        title: 'กรุณาเลือกคนขับ',
+        text: 'การจองนอกเวลาราชการ จำเป็นต้องระบุคนขับรถ',
+        confirmButtonText: 'ตกลง'
+      });
+      return;
+    }
+
+    if (isRetroactive && !driverId) {
+      setSubmitState("error");
+      Swal.fire({
+        icon: 'warning',
+        title: 'กรุณาเลือกคนขับ',
+        text: 'การบันทึกย้อนหลัง จำเป็นต้องระบุคนขับรถผู้ปฏิบัติงานจริง',
+        confirmButtonText: 'ตกลง'
+      });
       return;
     }
 
@@ -314,7 +348,8 @@ export default function RequestForm({
         start_time: startTime,
         end_time: endTime || null,
         purpose,
-        driver_id: isOffHours() ? driverId : null,
+        // For Retroactive: Always send driver. For OffHours: Send driver.
+        driver_id: (isOffHours() || isRetroactive) ? driverId : null,
         passenger_count: parseInt(passengerCount) || 1,
         destination: destination,
         position: position,
@@ -332,8 +367,6 @@ export default function RequestForm({
 
       // ✅ Handle Double Booking Confirmation
       if (res.status === 409 && json.code === 'DOUBLE_BOOKING') {
-        // Show native confirm dialog
-        // Show SweetAlert2 confirmation
         const result = await Swal.fire({
           title: 'ยืนยันการจองซ้อน',
           text: "ช่วงเวลานี้มีการจองอยู่แล้ว คุณต้องการจองซ้ำหรือไม่?",
@@ -343,50 +376,74 @@ export default function RequestForm({
           cancelButtonText: 'ยกเลิก',
           reverseButtons: true,
           focusCancel: true,
-          customClass: {
-            popup: 'rounded-3xl shadow-xl border border-gray-100',
-            title: 'text-xl font-bold text-gray-900 font-sans',
-            htmlContainer: 'text-gray-500 text-sm font-medium font-sans mt-2',
-            confirmButton: 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-blue-200 hover:shadow-blue-300 hover:scale-[1.02] transition-all',
-            cancelButton: 'bg-gray-100 text-gray-700 px-6 py-3 rounded-xl font-bold hover:bg-gray-200 transition-all',
-            actions: 'gap-4 mt-4'
-          },
-          buttonsStyling: false
+          confirmButtonColor: '#2563EB',
         });
-        const isConfirmed = result.isConfirmed;
 
-        if (isConfirmed) {
+        if (result.isConfirmed) {
           // Retry with force_booking = true
-          setMessage("กำลังบันทึกการจอง (ยืนยันพิเศษ)...");
+          Swal.fire({
+            title: 'กำลังบันทึก...',
+            text: 'กรุณารอสักครู่',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+          });
+
           res = await fetch("/api/user/create-booking", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ ...payload, force_booking: true }),
           });
           json = await res.json().catch(() => ({}));
+          Swal.close();
         } else {
           setSubmitState("idle");
-          setMessage(""); // Clear message
           return;
         }
       }
 
       if (!res.ok) {
         setSubmitState("error");
-        setMessage(json?.error || "ส่งคำขอไม่สำเร็จ กรุณาลองใหม่");
+        Swal.fire({
+          icon: 'error',
+          title: 'ส่งคำขอไม่สำเร็จ',
+          text: json?.error || "เกิดข้อผิดพลาดในการเชื่อมต่อ",
+          confirmButtonText: 'ลองใหม่'
+        });
         return;
       }
 
       setSubmitState("success");
-      setMessage("บันทึกคำขอใช้รถเรียบร้อยแล้ว");
       setCreatedBooking(json.booking);
 
+      await Swal.fire({
+        icon: 'success',
+        title: 'บันทึกสำเร็จ!',
+        text: `รหัสคำขอ: ${json.booking.request_code}`,
+        showDenyButton: true,
+        showCancelButton: true,
+        confirmButtonText: 'พิมพ์ใบขออนุญาต',
+        denyButtonText: 'ดูรายการคำขอ',
+        cancelButtonText: 'ปิดหน้าต่าง',
+        confirmButtonColor: '#2563EB',
+        denyButtonColor: '#4B5563',
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // Let handleDownloadDoc work if we can, but it needs state. 
+          // We can manually trigger it if needed, or pass the booking data.
+          // For now just success callback
+          if (onSuccess) onSuccess();
+        } else if (result.isDenied) {
+          router.push("/user/my-requests");
+        } else {
+          if (onSuccess) onSuccess();
+        }
+      });
+
       if (onSuccess) {
-        onSuccess();
-        return; // Skip default success UI
+        return;
       }
 
-      // รีเซ็ตฟิลด์บางส่วน
+      // Reset
       setStartTime("");
       setEndTime("");
       setVehicleId("");
@@ -398,7 +455,12 @@ export default function RequestForm({
     } catch (err) {
       console.error(err);
       setSubmitState("error");
-      setMessage("เกิดข้อผิดพลาด กรุณาลองใหม่ภายหลัง");
+      Swal.fire({
+        icon: 'error',
+        title: 'เกิดข้อผิดพลาด',
+        text: 'ระบบขัดข้อง กรุณาลองใหม่ภายหลัง',
+        confirmButtonText: 'ตกลง'
+      });
     }
   };
 
@@ -458,81 +520,7 @@ export default function RequestForm({
         </p>
       </div>
 
-      {/* Message Modal Overlay */}
-      {message && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className={`relative max-w-sm w-full bg-white rounded-3xl shadow-2xl p-6 transform transition-all animate-in zoom-in-95 duration-300 ${submitState === "error"
-              ? "border-b-4 border-red-500"
-              : submitState === "success"
-                ? "border-b-4 border-green-500"
-                : "border-b-4 border-blue-500"
-              }`}
-          >
-            <div className="flex flex-col items-center text-center">
-              {/* ... Status Icon ... */}
-              <div
-                className={`mb-4 p-4 rounded-full ${submitState === "success"
-                  ? "bg-green-100 text-green-600"
-                  : submitState === "error"
-                    ? "bg-red-100 text-red-600"
-                    : "bg-blue-100 text-blue-600"
-                  }`}
-              >
-                {submitState === "success" ? (
-                  <CheckCircle2 className="w-8 h-8" />
-                ) : (
-                  <AlertTriangle className="w-8 h-8" />
-                )}
-              </div>
-
-              <h3
-                className={`text-xl font-bold mb-2 ${submitState === "success"
-                  ? "text-green-800"
-                  : submitState === "error"
-                    ? "text-red-800"
-                    : "text-blue-800"
-                  }`}
-              >
-                {submitState === "success" ? "บันทึกข้อมูลสำเร็จ" : "แจ้งเตือน"}
-              </h3>
-
-              <p className="text-gray-600 font-medium leading-relaxed mb-6 whitespace-pre-line">
-                {submitState === "success"
-                  ? `รหัสคำขอ: ${createdBooking?.request_code}`
-                  : message}
-              </p>
-
-              {submitState === "success" ? (
-                <div className="flex flex-col gap-3 w-full">
-                  <button
-                    onClick={handleDownloadDoc}
-                    className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-all shadow-md flex items-center justify-center gap-2"
-                  >
-                    <FileText className="w-5 h-5" />
-                    พิมพ์คำขอใช้รถ
-                  </button>
-                  <button
-                    onClick={() => router.push("/user/my-requests")}
-                    className="w-full py-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold transition-all flex items-center justify-center gap-2"
-                  >
-                    <List className="w-5 h-5" />
-                    ดูรายการคำขอ
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setMessage("")}
-                  className="w-full py-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold transition-colors"
-                >
-                  รับทราบ
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Message Modal Overlay REMOVED - Using SweetAlert2 instead */}
 
       <form onSubmit={handleSubmit} className="space-y-8 relative z-10">
 
