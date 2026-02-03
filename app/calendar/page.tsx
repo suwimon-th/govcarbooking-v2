@@ -618,28 +618,28 @@ export default function PublicCalendarPage() {
                     ดูวันปัจจุบัน
                 </button>
             </div>
-        </div>
 
-            {/* DESKTOP LIST VIEW */ }
-    {
-        viewMode === 'month' ? (
-            <MonthlyBookingList
-                events={events}
-                currentMonthStart={currentMonthStart}
-                currentMonthEnd={currentMonthEnd}
-                currentViewTitle={currentViewTitle}
-                onItemClick={openDetail}
-            />
-        ) : (
-            <DailyBookingList
-                events={events}
-                selectedDate={selectedDate}
-                onItemClick={openDetail}
-            />
-        )
-    }
 
-    {/* AGENDA LIST SECTION (MOBILE ONLY) */ }
+            {/* DESKTOP LIST VIEW */}
+            {
+                viewMode === 'month' ? (
+                    <MonthlyBookingList
+                        events={events}
+                        currentMonthStart={currentMonthStart}
+                        currentMonthEnd={currentMonthEnd}
+                        currentViewTitle={currentViewTitle}
+                        onItemClick={openDetail}
+                    />
+                ) : (
+                    <DailyBookingList
+                        events={events}
+                        selectedDate={selectedDate}
+                        onItemClick={openDetail}
+                    />
+                )
+            }
+
+            {/* AGENDA LIST SECTION (MOBILE ONLY) */}
             <div className={`flex-1 bg-gray-50/50 min-h-[300px] md:hidden ${isMobile ? 'block' : 'hidden'}`}>
                 <div className="max-w-md mx-auto p-4">
 
