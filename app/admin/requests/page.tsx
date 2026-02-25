@@ -108,6 +108,10 @@ function AdminRequestsContent() {
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
   const [filterDriver, setFilterDriver] = useState("");
+  const [filterRequester, setFilterRequester] = useState("");
+  const [filterOpen, setFilterOpen] = useState(false);
+
+  const activeFilterCount = [filterDateFrom, filterDateTo, filterDriver, filterRequester].filter(Boolean).length;
 
   // Quick date preset helper
   const applyDatePreset = (preset: 'today' | 'week' | 'month' | 'clear') => {
@@ -173,6 +177,9 @@ function AdminRequestsContent() {
     // Driver filter
     const matchDriver = filterDriver === "" ? true : driverName.includes(filterDriver.toLowerCase());
 
+    // Requester filter
+    const matchRequester = filterRequester === "" ? true : requesterName.includes(filterRequester.toLowerCase());
+
     // Date filter — compare against start_at
     let matchDate = true;
     if ((filterDateFrom || filterDateTo) && r.start_at) {
@@ -181,7 +188,7 @@ function AdminRequestsContent() {
       if (filterDateTo && d > filterDateTo) matchDate = false;
     }
 
-    return matchSearch && matchStatus && matchDriver && matchDate;
+    return matchSearch && matchStatus && matchDriver && matchRequester && matchDate;
   });
 
   const loadData = async () => {
@@ -399,7 +406,71 @@ function AdminRequestsContent() {
       </div>
 
       {/* ===== FILTER ROW ===== */}
-      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-4 mb-6 flex flex-wrap gap-3 items-center">
+
+      {/* Mobile: Toggle Button */}
+      <div className="md:hidden mb-3">
+        <button
+          onClick={() => setFilterOpen(p => !p)}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all w-full justify-between
+            ${filterOpen || activeFilterCount > 0
+              ? 'bg-blue-50 border-blue-200 text-blue-700'
+              : 'bg-white border-gray-200 text-gray-600'}`}
+        >
+          <span className="flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" /></svg>
+            ตัวกรอง
+            {activeFilterCount > 0 && (
+              <span className="bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{activeFilterCount}</span>
+            )}
+          </span>
+          <span className="text-xs text-gray-400">แสดง {filteredRows.length}/{rows.length}</span>
+        </button>
+
+        {/* Mobile expanded panel */}
+        {filterOpen && (
+          <div className="mt-2 bg-white border border-gray-100 rounded-2xl shadow-sm p-4 flex flex-col gap-3">
+            {/* Quick Presets */}
+            <div>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">ช่วงวันที่</p>
+              <div className="flex gap-2">
+                {(['today', 'week', 'month'] as const).map((p) => (
+                  <button key={p} onClick={() => applyDatePreset(p)}
+                    className="flex-1 py-2 text-xs font-semibold rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 text-gray-600 transition-all">
+                    {p === 'today' ? 'วันนี้' : p === 'week' ? 'สัปดาห์นี้' : 'เดือนนี้'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] text-gray-400">ตั้งแต่</label>
+                <input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)}
+                  className="border border-gray-200 rounded-lg px-2 py-2 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white w-full" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] text-gray-400">ถึง</label>
+                <input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)}
+                  className="border border-gray-200 rounded-lg px-2 py-2 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white w-full" />
+              </div>
+            </div>
+            <input type="text" placeholder="กรองชื่อผู้ขอ..."
+              value={filterRequester} onChange={(e) => setFilterRequester(e.target.value)}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white w-full" />
+            <input type="text" placeholder="กรองชื่อคนขับ..."
+              value={filterDriver} onChange={(e) => setFilterDriver(e.target.value)}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white w-full" />
+            {activeFilterCount > 0 && (
+              <button onClick={() => { applyDatePreset('clear'); setFilterDriver(''); setFilterRequester(''); }}
+                className="flex items-center justify-center gap-1 py-2 text-xs font-semibold rounded-lg bg-red-50 text-red-500 border border-red-100">
+                <X className="w-3.5 h-3.5" /> ล้างตัวกรอง
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Desktop: Full inline filter bar */}
+      <div className="hidden md:flex bg-white border border-gray-100 rounded-2xl shadow-sm p-4 mb-6 flex-wrap gap-3 items-center">
         {/* Quick Presets */}
         <span className="text-xs font-bold text-gray-400 uppercase tracking-wider mr-1">ช่วงวันที่:</span>
         {(['today', 'week', 'month'] as const).map((p) => (
@@ -411,52 +482,36 @@ function AdminRequestsContent() {
             {p === 'today' ? 'วันนี้' : p === 'week' ? 'สัปดาห์นี้' : 'เดือนนี้'}
           </button>
         ))}
-
-        {/* Date From */}
         <div className="flex items-center gap-1.5">
           <span className="text-xs text-gray-400">ตั้งแต่</span>
-          <input
-            type="date"
-            value={filterDateFrom}
-            onChange={(e) => setFilterDateFrom(e.target.value)}
-            className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white cursor-pointer"
-          />
+          <input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)}
+            className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white cursor-pointer" />
         </div>
-
-        {/* Date To */}
         <div className="flex items-center gap-1.5">
           <span className="text-xs text-gray-400">ถึง</span>
-          <input
-            type="date"
-            value={filterDateTo}
-            onChange={(e) => setFilterDateTo(e.target.value)}
-            className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white cursor-pointer"
-          />
+          <input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)}
+            className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white cursor-pointer" />
         </div>
-
-        {/* Driver Filter */}
+        <div className="flex items-center gap-1.5">
+          <User className="w-3.5 h-3.5 text-gray-400" />
+          <input type="text" placeholder="กรองชื่อผู้ขอ..."
+            value={filterRequester} onChange={(e) => setFilterRequester(e.target.value)}
+            className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white w-36" />
+        </div>
         <div className="flex items-center gap-1.5 ml-auto">
           <User className="w-3.5 h-3.5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="กรองชื่อคนขับ..."
-            value={filterDriver}
-            onChange={(e) => setFilterDriver(e.target.value)}
-            className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white w-36"
-          />
+          <input type="text" placeholder="กรองชื่อคนขับ..."
+            value={filterDriver} onChange={(e) => setFilterDriver(e.target.value)}
+            className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white w-36" />
         </div>
-
-        {/* Clear All */}
-        {(filterDateFrom || filterDateTo || filterDriver) && (
+        {activeFilterCount > 0 && (
           <button
-            onClick={() => { applyDatePreset('clear'); setFilterDriver(''); }}
+            onClick={() => { applyDatePreset('clear'); setFilterDriver(''); setFilterRequester(''); }}
             className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-50 text-red-500 border border-red-100 hover:bg-red-100 transition-colors"
           >
             <X className="w-3.5 h-3.5" /> ล้างตัวกรอง
           </button>
         )}
-
-        {/* Result Count */}
         <span className="text-xs text-gray-400 ml-auto">
           แสดง <span className="font-bold text-gray-700">{filteredRows.length}</span> / {rows.length} รายการ
         </span>
