@@ -71,9 +71,11 @@ export const generateBookingDocument = async (booking: BookingData) => {
 const generateFromCode = async (booking: BookingData) => {
     // Prepare Data
     const bookingDate = new Date(booking.start_at || booking.created_at || new Date());
-    const reqDate = toThaiNum(bookingDate.getDate());
-    const reqMonth = bookingDate.toLocaleDateString("th-TH", { month: "long" });
-    const reqYear = toThaiNum(bookingDate.getFullYear() + 543);
+    // วันที่บนสุดในเอกสาร = วันปัจจุบันที่พิมพ์
+    const printDate = new Date();
+    const reqDate = toThaiNum(printDate.getDate());
+    const reqMonth = printDate.toLocaleDateString("th-TH", { month: "long" });
+    const reqYear = toThaiNum(printDate.getFullYear() + 543);
 
     const plate = booking.plate_number ? `${booking.plate_number}` : "..............................";
     const plateThai = toThaiNum(plate);
