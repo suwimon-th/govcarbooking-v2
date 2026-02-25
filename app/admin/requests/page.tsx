@@ -20,7 +20,8 @@ import {
   FileText as FileDoc,
   MessageCircle,
   CheckCircle2,
-  Plus // Added
+  Plus,
+  X
 } from "lucide-react";
 import { generateBookingDocument } from "@/lib/documentGenerator";
 import RetroactiveRequestModal from "@/app/components/RetroactiveRequestModal"; // Added
@@ -104,6 +105,35 @@ function AdminRequestsContent() {
   // Filter State
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState(initialStatus);
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
+  const [filterDriver, setFilterDriver] = useState("");
+
+  // Quick date preset helper
+  const applyDatePreset = (preset: 'today' | 'week' | 'month' | 'clear') => {
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    if (preset === 'today') {
+      const t = fmt(now);
+      setFilterDateFrom(t);
+      setFilterDateTo(t);
+    } else if (preset === 'week') {
+      const mon = new Date(now);
+      mon.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+      const sun = new Date(mon);
+      sun.setDate(mon.getDate() + 6);
+      setFilterDateFrom(fmt(mon));
+      setFilterDateTo(fmt(sun));
+    } else if (preset === 'month') {
+      setFilterDateFrom(`${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`);
+      const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      setFilterDateTo(fmt(last));
+    } else {
+      setFilterDateFrom('');
+      setFilterDateTo('');
+    }
+  };
 
   // Bulk Select State
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -131,14 +161,27 @@ function AdminRequestsContent() {
     const s = search.toLowerCase();
     const requestCode = (r.request_code || "").toLowerCase();
     const requesterName = (r.requester?.full_name || "").toLowerCase();
+    const driverName = (r.driver?.full_name || "").toLowerCase();
+    const vehiclePlate = (r.vehicle?.plate_number || "").toLowerCase();
 
-    // Check Search
-    const matchSearch = requestCode.includes(s) || requesterName.includes(s);
+    // Search: รหัสงาน / ชื่อผู้ขอ / ทะเบียน
+    const matchSearch = requestCode.includes(s) || requesterName.includes(s) || vehiclePlate.includes(s);
 
-    // Check Status
+    // Status Filter
     const matchStatus = filterStatus === "ทั้งหมด" ? true : r.status === filterStatus;
 
-    return matchSearch && matchStatus;
+    // Driver filter
+    const matchDriver = filterDriver === "" ? true : driverName.includes(filterDriver.toLowerCase());
+
+    // Date filter — compare against start_at
+    let matchDate = true;
+    if ((filterDateFrom || filterDateTo) && r.start_at) {
+      const d = r.start_at.slice(0, 10); // YYYY-MM-DD
+      if (filterDateFrom && d < filterDateFrom) matchDate = false;
+      if (filterDateTo && d > filterDateTo) matchDate = false;
+    }
+
+    return matchSearch && matchStatus && matchDriver && matchDate;
   });
 
   const loadData = async () => {
@@ -318,7 +361,7 @@ function AdminRequestsContent() {
           <div className="relative grow">
             <input
               type="text"
-              placeholder="เลขที่งาน / ชื่อผู้ขอ..."
+              placeholder="เลขที่งาน / ชื่อผู้ขอ / ทะเบียนรถ..."
               className="pl-4 pr-4 py-2.5 border rounded-xl w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-sm"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -353,6 +396,70 @@ function AdminRequestsContent() {
             สร้างคำขอ
           </button>
         </div>
+      </div>
+
+      {/* ===== FILTER ROW ===== */}
+      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-4 mb-6 flex flex-wrap gap-3 items-center">
+        {/* Quick Presets */}
+        <span className="text-xs font-bold text-gray-400 uppercase tracking-wider mr-1">ช่วงวันที่:</span>
+        {(['today', 'week', 'month'] as const).map((p) => (
+          <button
+            key={p}
+            onClick={() => applyDatePreset(p)}
+            className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 text-gray-600 transition-all"
+          >
+            {p === 'today' ? 'วันนี้' : p === 'week' ? 'สัปดาห์นี้' : 'เดือนนี้'}
+          </button>
+        ))}
+
+        {/* Date From */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-gray-400">ตั้งแต่</span>
+          <input
+            type="date"
+            value={filterDateFrom}
+            onChange={(e) => setFilterDateFrom(e.target.value)}
+            className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white cursor-pointer"
+          />
+        </div>
+
+        {/* Date To */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs text-gray-400">ถึง</span>
+          <input
+            type="date"
+            value={filterDateTo}
+            onChange={(e) => setFilterDateTo(e.target.value)}
+            className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white cursor-pointer"
+          />
+        </div>
+
+        {/* Driver Filter */}
+        <div className="flex items-center gap-1.5 ml-auto">
+          <User className="w-3.5 h-3.5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="กรองชื่อคนขับ..."
+            value={filterDriver}
+            onChange={(e) => setFilterDriver(e.target.value)}
+            className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white w-36"
+          />
+        </div>
+
+        {/* Clear All */}
+        {(filterDateFrom || filterDateTo || filterDriver) && (
+          <button
+            onClick={() => { applyDatePreset('clear'); setFilterDriver(''); }}
+            className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-50 text-red-500 border border-red-100 hover:bg-red-100 transition-colors"
+          >
+            <X className="w-3.5 h-3.5" /> ล้างตัวกรอง
+          </button>
+        )}
+
+        {/* Result Count */}
+        <span className="text-xs text-gray-400 ml-auto">
+          แสดง <span className="font-bold text-gray-700">{filteredRows.length}</span> / {rows.length} รายการ
+        </span>
       </div>
 
       {/* ================= BULK DELETE ACTION BAR ================= */}
