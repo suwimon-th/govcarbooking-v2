@@ -453,9 +453,8 @@ export default function RequestForm({
         denyButtonColor: '#4B5563',
       }).then((result) => {
         if (result.isConfirmed) {
-          // Let handleDownloadDoc work if we can, but it needs state. 
-          // We can manually trigger it if needed, or pass the booking data.
-          // For now just success callback
+          // ✅ พิมพ์ใบอนุญาต
+          handleDownloadDoc();
           if (onSuccess) onSuccess();
         } else if (result.isDenied) {
           router.push("/user/my-requests");
