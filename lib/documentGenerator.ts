@@ -421,7 +421,7 @@ const generateFromCode = async (booking: BookingData) => {
                                             new Paragraph({
                                                 alignment: AlignmentType.CENTER,
                                                 children: [
-                                                    new TextRun({ text: `( ${booking.requester_name} )`, ...fontStyle }),
+                                                    new TextRun({ text: `( ${booking.requester_name?.trim() || "-"} )`, ...fontStyle }),
                                                 ],
                                                 // Adjust indenting to account for " ผู้ขออนุญาต" text offset so it centers under the dots
                                                 indent: { right: 800 },
