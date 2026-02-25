@@ -156,24 +156,23 @@ export async function POST(req: Request) {
       safeDeptId = 1;
     }
 
-    // แปลงเวลาจาก Bangkok (UTC+7) เป็น UTC สำหรับเก็บใน Supabase
-    const toUTC = (dateStr: string, timeStr: string) => {
-      const localMs = new Date(`${dateStr}T${padTime(timeStr)}`).getTime();
-      return new Date(localMs - 7 * 60 * 60 * 1000).toISOString();
-    };
-
-    const start_at = toUTC(date, start_time);
+    const start_at = `${date}T${padTime(start_time)}`;
 
     let dbEndAt: string | null = null;
     if (end_time) {
-      dbEndAt = toUTC(date, end_time);
+      dbEndAt = `${date}T${padTime(end_time)}`;
     }
 
     let checkEndAt = dbEndAt;
     if (!checkEndAt) {
       // ถ้าไม่มีเวลาสิ้นสุด ใช้ start + 60 นาที
-      const startMs = new Date(start_at).getTime();
-      checkEndAt = new Date(startMs + 60 * 60 * 1000).toISOString();
+      const [sh, sm] = start_time.split(":").map(Number);
+      const totalMins = sh * 60 + sm + 60;
+      const eh = Math.floor(totalMins / 60) % 24;
+      const em = totalMins % 60;
+      const ehs = String(eh).padStart(2, "0");
+      const ems = String(em).padStart(2, "0");
+      checkEndAt = `${date}T${ehs}:${ems}:00`;
     }
 
     // ✅ Update Profile Position if provided
@@ -186,11 +185,8 @@ export async function POST(req: Request) {
 
     // ✅ CHECK DOUBLE BOOKING (Overlap) — บล็อกเสมอ ไม่มี force_booking
     if (vehicle_id && start_at && checkEndAt) {
-      // ใช้ UTC range ของวันนั้น (Asia/Bangkok = UTC-7h)
-      const startOfDay = new Date(`${date}T00:00:00`).getTime() - 7 * 60 * 60 * 1000;
-      const endOfDay = new Date(`${date}T23:59:59`).getTime() - 7 * 60 * 60 * 1000;
-      const startOfDayISO = new Date(startOfDay).toISOString();
-      const endOfDayISO = new Date(endOfDay).toISOString();
+      const startOfDay = `${date}T00:00:00`;
+      const endOfDay = `${date}T23:59:59`;
 
       const { data: potentialOverlaps, error: fetchError } = await supabase
         .from("bookings")
@@ -198,8 +194,8 @@ export async function POST(req: Request) {
         .eq("vehicle_id", vehicle_id)
         .neq("status", "CANCELLED")
         .neq("status", "REJECTED")
-        .gte("start_at", startOfDayISO)
-        .lte("start_at", endOfDayISO);
+        .gte("start_at", startOfDay)
+        .lte("start_at", endOfDay);
 
       if (fetchError) {
         console.error("OVERLAP FETCH ERROR:", fetchError);
