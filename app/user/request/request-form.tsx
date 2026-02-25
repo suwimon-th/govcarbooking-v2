@@ -390,40 +390,17 @@ export default function RequestForm({
 
       let json = await res.json().catch(() => ({}));
 
-      // ✅ Handle Double Booking Confirmation
-      if (res.status === 409 && json.code === 'DOUBLE_BOOKING') {
-        const result = await Swal.fire({
-          title: 'ยืนยันการจองซ้อน',
-          text: "ช่วงเวลานี้มีการจองอยู่แล้ว คุณต้องการจองซ้ำหรือไม่?",
-          icon: 'question',
-          showCancelButton: true,
-          confirmButtonText: 'ยืนยันจองซ้ำ',
-          cancelButtonText: 'ยกเลิก',
-          reverseButtons: true,
-          focusCancel: true,
+      // ❌ รถถูกจองแล้ว — แสดง error ทันที ไม่ถามยืนยัน
+      if (res.status === 409) {
+        setSubmitState("error");
+        Swal.fire({
+          icon: 'error',
+          title: 'รถคันนี้มีการขอใช้แล้ว',
+          text: json?.error || 'กรุณาเลือกเวลาอื่น (ต้องห่างอย่างน้อย 1 ชั่วโมง)',
+          confirmButtonText: 'ตกลง',
           confirmButtonColor: '#2563EB',
         });
-
-        if (result.isConfirmed) {
-          // Retry with force_booking = true
-          Swal.fire({
-            title: 'กำลังบันทึก...',
-            text: 'กรุณารอสักครู่',
-            allowOutsideClick: false,
-            didOpen: () => Swal.showLoading()
-          });
-
-          res = await fetch("/api/user/create-booking", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ ...payload, force_booking: true }),
-          });
-          json = await res.json().catch(() => ({}));
-          Swal.close();
-        } else {
-          setSubmitState("idle");
-          return;
-        }
+        return;
       }
 
       if (!res.ok) {

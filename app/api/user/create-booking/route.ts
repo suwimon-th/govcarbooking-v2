@@ -165,8 +165,9 @@ export async function POST(req: Request) {
 
     let checkEndAt = dbEndAt;
     if (!checkEndAt) {
+      // ถ้าไม่มีเวลาสิ้นสุด ใช้ start + 60 นาที
       const [sh, sm] = start_time.split(":").map(Number);
-      const totalMins = sh * 60 + sm + 30;
+      const totalMins = sh * 60 + sm + 60;
       const eh = Math.floor(totalMins / 60) % 24;
       const em = totalMins % 60;
       const ehs = String(eh).padStart(2, "0");
@@ -182,19 +183,8 @@ export async function POST(req: Request) {
         .eq("id", requester_id);
     }
 
-    // ✅ CHECK DOUBLE BOOKING (Overlap)
-    // Skip check if force_booking is TRUE
-    // ✅ CHECK DOUBLE BOOKING (Overlap)
-    // Refined Logic: Fetch bookings for the day and check overlap in JS
-    // This allows us to treat "Existing NULL End" as "Start + 30 mins"
-    // ✅ CHECK DOUBLE BOOKING (Overlap)
-    // Refined Logic: Fetch bookings for the day and check overlap in JS
-    // This allows us to treat "Existing NULL End" as "Start + 30 mins"
-    if (!force_booking && vehicle_id && start_at && checkEndAt) {
-      // 1. Fetch bookings for this vehicle on the same day (or overlapping range)
-      //    We'll simply fetch bookings starting/ending around this date to be safe.
-      //    For simplicity, let's fetch Status != CANCELLED/REJECTED for this vehicle
-      //    where start_at is on the same day.
+    // ✅ CHECK DOUBLE BOOKING (Overlap) — บล็อกเสมอ ไม่มี force_booking
+    if (vehicle_id && start_at && checkEndAt) {
       const startOfDay = `${date}T00:00:00+07:00`;
       const endOfDay = `${date}T23:59:59+07:00`;
 
@@ -211,32 +201,26 @@ export async function POST(req: Request) {
         console.error("OVERLAP FETCH ERROR:", fetchError);
       }
 
-      // 2. Filter in JS
       const isOverlap = (potentialOverlaps || []).some((booking) => {
         const existStart = new Date(booking.start_at).getTime();
-
         let existEnd: number;
         if (booking.end_at) {
           existEnd = new Date(booking.end_at).getTime();
         } else {
-          // If existing booking has NO end time, treat as +30 mins
-          existEnd = existStart + 30 * 60 * 1000;
+          // ถ้าไม่มีเวลาสิ้นสุด ใช้ +60 นาที
+          existEnd = existStart + 60 * 60 * 1000;
         }
 
         const newStartMs = new Date(start_at).getTime();
-        const newEndMs = new Date(checkEndAt!).getTime(); // Use Calculated End Time for Check
+        const newEndMs = new Date(checkEndAt!).getTime();
 
-        // Overlap Condition: (StartA < EndB) && (EndA > StartB)
+        // Overlap: (StartA < EndB) && (EndA > StartB)
         return existStart < newEndMs && existEnd > newStartMs;
       });
 
       if (isOverlap) {
-        // ⚠️ Return 409 Conflict for Frontend to handle confirmation
         return NextResponse.json(
-          {
-            error: "รถคันนี้มีการจองในช่วงเวลาดังกล่าวแล้ว ยืนยันที่จะจองซ้ำหรือไม่?",
-            code: "DOUBLE_BOOKING"
-          },
+          { error: "รถคันนี้มีการขอใช้แล้วในช่วงเวลาดังกล่าว กรุณาเลือกเวลาอื่น" },
           { status: 409 }
         );
       }
