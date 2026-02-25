@@ -407,7 +407,6 @@ const generateFromCode = async (booking: BookingData) => {
                         children: [
                             new TextRun({ text: `( ${booking.requester_name} )`, ...fontStyle }),
                         ],
-                        indent: { right: 1440 }, // Align roughly with line above
                     }),
                     new Paragraph({
                         alignment: AlignmentType.RIGHT,
