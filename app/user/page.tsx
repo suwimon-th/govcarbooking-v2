@@ -722,6 +722,7 @@ export default function UserPage() {
                     events={filteredEvents}
                     selectedDate={selectedDate}
                     onItemClick={openDetail}
+                    onDateChange={setSelectedDate}
                 />
             )}
 
