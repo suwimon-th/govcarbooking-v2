@@ -394,33 +394,58 @@ const generateFromCode = async (booking: BookingData) => {
                         spacing: { after: 400 },
                     }),
 
-                    // 11. Requester Signature
-                    new Paragraph({
+                    // 11. Requester Signature (Table for centering)
+                    new Table({
                         alignment: AlignmentType.RIGHT,
-                        children: [
-                            new TextRun({ text: "....................................................... ผู้ขออนุญาต", ...fontStyle }),
+                        width: { size: 0, type: WidthType.AUTO },
+                        borders: {
+                            top: { style: BorderStyle.NONE },
+                            bottom: { style: BorderStyle.NONE },
+                            left: { style: BorderStyle.NONE },
+                            right: { style: BorderStyle.NONE },
+                            insideHorizontal: { style: BorderStyle.NONE },
+                            insideVertical: { style: BorderStyle.NONE },
+                        },
+                        rows: [
+                            new TableRow({
+                                children: [
+                                    new TableCell({
+                                        children: [
+                                            new Paragraph({
+                                                alignment: AlignmentType.CENTER,
+                                                children: [
+                                                    new TextRun({ text: "....................................................... ผู้ขออนุญาต", ...fontStyle }),
+                                                ],
+                                                spacing: { before: 50 },
+                                            }),
+                                            new Paragraph({
+                                                alignment: AlignmentType.CENTER,
+                                                children: [
+                                                    new TextRun({ text: `( ${booking.requester_name} )`, ...fontStyle }),
+                                                ],
+                                                // Adjust indenting to account for " ผู้ขออนุญาต" text offset so it centers under the dots
+                                                indent: { right: 800 },
+                                            }),
+                                            new Paragraph({
+                                                alignment: AlignmentType.CENTER,
+                                                children: [
+                                                    new TextRun({ text: booking.requester_position || ".......................................................", ...fontStyle }),
+                                                ],
+                                                indent: { right: 800 },
+                                            }),
+                                            new Paragraph({
+                                                alignment: AlignmentType.CENTER,
+                                                children: [
+                                                    new TextRun({ text: "ฝ่ายสิ่งแวดล้อมและสุขาภิบาล สำนักงานเขตจอมทอง", ...fontStyle }),
+                                                ],
+                                                spacing: { after: 300 },
+                                                indent: { right: 800 },
+                                            }),
+                                        ],
+                                    }),
+                                ],
+                            }),
                         ],
-                        spacing: { before: 50 }
-                    }),
-                    new Paragraph({
-                        alignment: AlignmentType.RIGHT,
-                        children: [
-                            new TextRun({ text: `( ${booking.requester_name} )`, ...fontStyle }),
-                        ],
-                    }),
-                    new Paragraph({
-                        alignment: AlignmentType.RIGHT,
-                        children: [
-                            new TextRun({ text: booking.requester_position || ".......................................................", ...fontStyle }),
-                        ],
-                        indent: { right: 1000 }
-                    }),
-                    new Paragraph({
-                        alignment: AlignmentType.RIGHT,
-                        children: [
-                            new TextRun({ text: "ฝ่ายสิ่งแวดล้อมและสุขาภิบาล สำนักงานเขตจอมทอง", ...fontStyle }),
-                        ],
-                        spacing: { after: 300 }
                     }),
 
                     // APPROVAL LOGIC : OT vs Standard
