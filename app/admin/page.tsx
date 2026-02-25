@@ -12,6 +12,7 @@ import {
   Clock,
   MapPin,
   ChevronRight,
+  ChevronLeft,
   Calendar,
   Fuel
 } from "lucide-react";
@@ -55,6 +56,20 @@ export default function AdminDashboardPage() {
   const [recentRequests, setRecentRequests] = useState<RecentBooking[]>([]);
   const [todayDistance, setTodayDistance] = useState<number>(0);
 
+  // Selected date for trip list (defaults to today)
+  const [selectedTripDate, setSelectedTripDate] = useState<string>(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  });
+
+  function shiftTripDate(days: number) {
+    setSelectedTripDate(prev => {
+      const d = new Date(prev);
+      d.setDate(d.getDate() + days);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    });
+  }
+
   // =======================
   // FETCH DASHBOARD DATA
   // =======================
@@ -92,8 +107,7 @@ export default function AdminDashboardPage() {
       .eq("status", "PENDING");
     setPendingFuelRequests(fuelCount ?? 0);
 
-    // Today Trips
-    const today = new Date().toISOString().split("T")[0];
+    // Today Trips (refetched per selectedTripDate)
     const { data: trips } = await supabase
       .from("bookings")
       .select(`
@@ -105,8 +119,8 @@ export default function AdminDashboardPage() {
         driver:driver_id(full_name),
         vehicle:vehicle_id(plate_number)
       `)
-      .gte("start_at", `${today}T00:00:00`)
-      .lte("start_at", `${today}T23:59:59`)
+      .gte("start_at", `${selectedTripDate}T00:00:00`)
+      .lte("start_at", `${selectedTripDate}T23:59:59`)
       .order("start_at", { ascending: true });
 
     setTodayTrips((trips ?? []) as unknown as TodayTrip[]);
@@ -133,7 +147,7 @@ export default function AdminDashboardPage() {
 
     const kmToday =
       (mileage || [])
-        .filter((m) => m.logged_at?.startsWith(today))
+        .filter((m) => m.logged_at?.startsWith(selectedTripDate))
         .reduce((sum, log) => sum + (log.distance ?? 0), 0);
 
     setTodayDistance(kmToday);
@@ -141,7 +155,20 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     loadDashboard();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTripDate]);
+
+  // Format selectedTripDate as Thai label
+  const tripDateLabel = (() => {
+    const d = new Date(selectedTripDate);
+    const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+    return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear() + 543}`;
+  })();
+
+  const todayStr = (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  })();
 
   return (
     <div className="px-4 md:px-8 py-6 max-w-[1400px] mx-auto min-h-screen bg-gray-50/50">
@@ -260,14 +287,45 @@ export default function AdminDashboardPage() {
 
           {/* Today Activity */}
           <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
               <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-blue-600" />
-                ภารกิจวันนี้
+                ภารกิจ
               </h2>
-              <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-                {new Date().toLocaleDateString('th-TH', { dateStyle: 'long' })}
-              </span>
+              <div className="flex items-center gap-2">
+                {/* Prev day */}
+                <button
+                  onClick={() => shiftTripDate(-1)}
+                  className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-100 text-gray-500 transition-colors"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                {/* Date input */}
+                <input
+                  type="date"
+                  value={selectedTripDate}
+                  onChange={(e) => { if (e.target.value) setSelectedTripDate(e.target.value); }}
+                  className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white cursor-pointer"
+                />
+                {/* Next day */}
+                <button
+                  onClick={() => shiftTripDate(1)}
+                  className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-100 text-gray-500 transition-colors"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+                {selectedTripDate !== todayStr && (
+                  <button
+                    onClick={() => setSelectedTripDate(todayStr)}
+                    className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-50 text-blue-700 border border-blue-100 hover:bg-blue-100 transition-colors"
+                  >
+                    วันนี้
+                  </button>
+                )}
+                <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full whitespace-nowrap">
+                  {tripDateLabel}
+                </span>
+              </div>
             </div>
 
             {todayTrips.length === 0 ? (

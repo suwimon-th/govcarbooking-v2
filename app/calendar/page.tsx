@@ -10,13 +10,13 @@ import type { EventClickArg } from "@fullcalendar/core";
 import EventDetailModal from "@/app/components/EventDetailModal";
 import FuelRequestModal from "@/app/components/FuelRequestModal";
 import ReportIssueModal from "@/app/components/ReportIssueModal";
+import DailyBookingList from "@/app/components/DailyBookingList";
 import { Calendar as CalendarIcon, Clock, ChevronRight, LogIn, HelpCircle, Fuel, AlertTriangle, MessageCircle, BookOpen, Phone, CalendarCheck } from "lucide-react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import { getStatusLabel, getStatusColor } from "@/lib/statusHelper";
 import PublicQueueCard from "@/app/components/PublicQueueCard";
 import MonthlyBookingList from "@/app/components/MonthlyBookingList";
-import DailyBookingList from "@/app/components/DailyBookingList";
 
 /* ----------------------------------------------------
    TYPES
@@ -130,7 +130,6 @@ export default function PublicCalendarPage() {
         };
     }, []);
 
-    // Table View State
     const [currentMonthStart, setCurrentMonthStart] = useState<Date | null>(null);
     const [currentMonthEnd, setCurrentMonthEnd] = useState<Date | null>(null);
     const [currentViewTitle, setCurrentViewTitle] = useState("");
@@ -573,7 +572,7 @@ export default function PublicCalendarPage() {
             </div>
 
             {/* TOGGLE SWITCH (Desktop) */}
-            <div className="hidden md:flex justify-center mt-8 mb-4 items-center gap-4">
+            <div className="hidden md:flex justify-center mt-4 mb-4">
                 <div className="bg-gray-100 p-1 rounded-xl inline-flex items-center shadow-inner">
                     <button
                         onClick={() => setViewMode('month')}
@@ -598,6 +597,142 @@ export default function PublicCalendarPage() {
                         ดูรายวัน
                     </button>
                 </div>
+            </div>
+
+            {/* MONTHLY TABLE (Desktop Only) */}
+            <div className={`${viewMode === 'month' ? 'md:block' : 'hidden'} max-w-[1200px] mx-auto px-8 mt-10 mb-20`}>
+                <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                    <Clock className="w-6 h-6 text-blue-600" />
+                    รายการขอใช้รถเดือน {currentViewTitle}
+                </h3>
+
+                <div className="bg-white border rounded-xl shadow-sm overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left">
+                            <thead className="bg-gray-50 text-gray-600 uppercase text-xs tracking-wider border-b">
+                                <tr>
+                                    <th className="px-6 py-4 font-semibold">วันที่</th>
+                                    <th className="px-6 py-4 font-semibold">เวลา</th>
+                                    <th className="px-6 py-4 font-semibold">ผู้ขอ / จุดหมาย</th>
+                                    <th className="px-6 py-4 font-semibold">รถปฏิบัติงาน</th>
+                                    <th className="px-6 py-4 font-semibold text-center">สถานะ</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50">
+                                {(() => {
+                                    const filtered = events.filter(e => currentMonthStart && currentMonthEnd && new Date(e.start) >= currentMonthStart && new Date(e.start) < currentMonthEnd)
+                                        .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+
+                                    if (filtered.length === 0) {
+                                        return (
+                                            <tr>
+                                                <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                                                    ไม่มีรายการขอใช้รถในเดือนนี้
+                                                </td>
+                                            </tr>
+                                        );
+                                    }
+
+                                    return filtered.map((evt, index) => {
+                                        const prevEvt = filtered[index - 1];
+                                        const isNewDay = index === 0 || normalizeDate(evt.start) !== normalizeDate(prevEvt.start);
+                                        const isOff = evt.extendedProps?.isOffHours;
+
+                                        return (
+                                            <tr
+                                                key={evt.id}
+                                                onClick={() => openDetail(evt.id)}
+                                                className={`hover:bg-blue-50/50 transition-colors cursor-pointer ${isNewDay ? 'border-t border-gray-200' : ''}`}
+                                            >
+                                                {/* DATE */}
+                                                <td className={`px-4 py-4 whitespace-nowrap align-top ${isNewDay ? 'bg-gray-50/30' : ''}`}>
+                                                    {isNewDay && (
+                                                        <div className="flex flex-col items-center">
+                                                            <span className="font-extrabold text-[#1E3A8A] text-xl leading-none">
+                                                                {new Date(evt.start).getDate()}
+                                                            </span>
+                                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter mt-1">
+                                                                {new Date(evt.start).toLocaleDateString('th-TH', { month: 'short' })}
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                </td>
+
+                                                {/* TIME */}
+                                                <td className="px-6 py-4 whitespace-nowrap align-top">
+                                                    <div className="flex flex-col text-gray-600">
+                                                        <span className="font-medium text-gray-900 border-l-2 border-blue-200 pl-2 flex items-center gap-1">
+                                                            {isOff && <span className="text-amber-600 font-bold text-xs" title="นอกเวลาราชการ">OT</span>}
+                                                            {formatTime(evt.start)}
+                                                        </span>
+                                                        {evt.end && <span className="text-xs text-gray-400 pl-2.5">ถึง {formatTime(evt.end)}</span>}
+                                                        {isOff && (
+                                                            <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded mt-1 w-fit">
+                                                                นอกเวลา
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </td>
+
+                                                {/* DETAILS */}
+                                                <td className="px-6 py-4 align-top max-w-[300px]">
+                                                    <div className="flex flex-col gap-2.5">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-0.5">ผู้ขอ (Requester)</span>
+                                                            <span className="font-extrabold text-gray-900 text-lg leading-none">
+                                                                {evt.extendedProps?.requester || "ไม่ระบุชื่อ"}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex flex-col">
+                                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">วัตถุประสงค์ / สถานที่</span>
+                                                            <span className="text-xs text-gray-600 leading-relaxed line-clamp-2" title={evt.extendedProps?.location}>
+                                                                {evt.extendedProps?.location || "ไม่ระบุรายละเอียด"}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+
+                                                {/* VEHICLE */}
+                                                <td className="px-6 py-4 align-top">
+                                                    <span
+                                                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-white shadow-sm whitespace-nowrap"
+                                                        style={{
+                                                            borderColor: evt.color || '#E5E7EB',
+                                                            color: evt.color || '#374151'
+                                                        }}
+                                                    >
+                                                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: evt.color || '#9CA3AF' }}></span>
+                                                        {evt.extendedProps?.vehicle}
+                                                    </span>
+                                                    {evt.extendedProps?.driver_name && (
+                                                        <div className="mt-2 flex flex-col gap-0.5">
+                                                            <div className="text-[11px] font-bold text-gray-700 flex items-center gap-1">
+                                                                {evt.extendedProps.driver_name}
+                                                            </div>
+                                                            {evt.extendedProps?.driver_phone && (
+                                                                <div className="text-[10px] text-gray-500 flex items-center gap-1">
+                                                                    <Phone className="w-3 h-3" />
+                                                                    {evt.extendedProps.driver_phone}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </td>
+
+                                                {/* STATUS */}
+                                                <td className="px-6 py-4 align-top text-center w-[120px]">
+                                                    <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-bold border ${getStatusColor(evt.extendedProps?.status || 'REQUESTED')}`}>
+                                                        {getStatusLabel(evt.extendedProps?.status || 'REQUESTED')}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        );
+                                    });
+                                })()}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
 
                 <button
                     onClick={() => {
@@ -620,24 +755,15 @@ export default function PublicCalendarPage() {
             </div>
 
 
-            {/* DESKTOP LIST VIEW */}
-            {
-                viewMode === 'month' ? (
-                    <MonthlyBookingList
-                        events={events}
-                        currentMonthStart={currentMonthStart}
-                        currentMonthEnd={currentMonthEnd}
-                        currentViewTitle={currentViewTitle}
-                        onItemClick={openDetail}
-                    />
-                ) : (
-                    <DailyBookingList
-                        events={events}
-                        selectedDate={selectedDate}
-                        onItemClick={openDetail}
-                    />
-                )
-            }
+            {/* DAILY VIEW (Desktop Only) */}
+            {viewMode === 'day' && (
+                <DailyBookingList
+                    events={events}
+                    selectedDate={selectedDate}
+                    onItemClick={openDetail}
+                    onDateChange={setSelectedDate}
+                />
+            )}
 
             {/* AGENDA LIST SECTION (MOBILE ONLY) */}
             <div className={`flex-1 bg-gray-50/50 min-h-[300px] md:hidden ${isMobile ? 'block' : 'hidden'}`}>
