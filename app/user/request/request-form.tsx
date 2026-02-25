@@ -453,8 +453,8 @@ export default function RequestForm({
         denyButtonColor: '#4B5563',
       }).then((result) => {
         if (result.isConfirmed) {
-          // ✅ พิมพ์ใบอนุญาต
-          handleDownloadDoc();
+          // ✅ พิมพ์ใบอนุญาต — ส่ง booking โดยตรงเพื่อไม่ต้องรอ state flush
+          handleDownloadDoc(json.booking);
           if (onSuccess) onSuccess();
         } else if (result.isDenied) {
           router.push("/user/my-requests");
@@ -488,26 +488,28 @@ export default function RequestForm({
     }
   };
 
-  const handleDownloadDoc = async () => {
-    if (!createdBooking) return;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleDownloadDoc = async (bookingOverride?: any) => {
+    const booking = bookingOverride ?? createdBooking;
+    if (!booking) return;
 
     await generateBookingDocument({
-      request_code: createdBooking.request_code,
-      created_at: createdBooking.created_at,
+      request_code: booking.request_code,
+      created_at: booking.created_at,
       requester_name: requesterName,
-      purpose: createdBooking.purpose,
-      start_at: createdBooking.start_at,
-      end_at: createdBooking.end_at,
-      driver_name: createdBooking.driver_id
-        ? drivers.find(d => d.id === createdBooking.driver_id)?.full_name || null
+      purpose: booking.purpose,
+      start_at: booking.start_at,
+      end_at: booking.end_at,
+      driver_name: booking.driver_id
+        ? drivers.find(d => d.id === booking.driver_id)?.full_name || null
         : null,
-      plate_number: vehicles.find((v) => v.id === createdBooking.vehicle_id)?.plate_number || null,
-      brand: vehicles.find((v) => v.id === createdBooking.vehicle_id)?.brand || null,
-      passenger_count: createdBooking.passenger_count || 1,
-      destination: createdBooking.destination || "",
-      requester_position: createdBooking.requester_position || position || "",
-      passengers: createdBooking.passengers || [],
-      is_ot: createdBooking.is_ot,
+      plate_number: vehicles.find((v) => v.id === booking.vehicle_id)?.plate_number || null,
+      brand: vehicles.find((v) => v.id === booking.vehicle_id)?.brand || null,
+      passenger_count: booking.passenger_count || 1,
+      destination: booking.destination || "",
+      requester_position: booking.requester_position || position || "",
+      passengers: booking.passengers || [],
+      is_ot: booking.is_ot,
     });
   };
 
@@ -903,12 +905,12 @@ export default function RequestForm({
 
         {/* Vehicle Selector Modal */}
         {showVehicleSelector && (
-          <div className="fixed inset-0 z-[60] flex items-end md:items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="fixed inset-0 z-[60] flex items-center justify-center px-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
             {/* Dismiss overlay */}
             <div className="absolute inset-0" onClick={() => setShowVehicleSelector(false)} />
 
-            <div className="relative w-full md:max-w-lg bg-white md:rounded-3xl rounded-t-3xl shadow-2xl flex flex-col animate-in slide-in-from-bottom-6 md:zoom-in-95 duration-300"
-              style={{ maxHeight: '80dvh' }}>
+            <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl flex flex-col animate-in zoom-in-95 duration-300"
+              style={{ maxHeight: '85dvh' }}>
 
               {/* Drag handle (mobile only) */}
               <div className="flex justify-center pt-3 pb-1 md:hidden">
@@ -928,28 +930,8 @@ export default function RequestForm({
                 </button>
               </div>
 
-              {/* Search */}
-              <div className="px-4 pt-3 pb-2">
-                <div className="relative">
-                  <svg className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
-                  <input
-                    type="text"
-                    placeholder="ค้นหาทะเบียน / รุ่น..."
-                    className="w-full pl-9 pr-4 py-2 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400"
-                    onChange={(e) => {
-                      const q = e.target.value.toLowerCase();
-                      const all = document.querySelectorAll('[data-vehicle-item]');
-                      all.forEach(el => {
-                        const text = el.getAttribute('data-vehicle-item') || '';
-                        (el as HTMLElement).style.display = text.includes(q) ? '' : 'none';
-                      });
-                    }}
-                  />
-                </div>
-              </div>
-
               {/* Vehicle List */}
-              <div className="overflow-y-auto px-4 pb-6 space-y-2 flex-1">
+              <div className="overflow-y-auto px-4 pb-6 space-y-2 flex-1 pt-3">
                 {loadingVehicles ? (
                   <div className="text-center py-10 text-gray-500">
                     <Loader2 className="w-7 h-7 animate-spin mx-auto mb-2 text-blue-500" />
