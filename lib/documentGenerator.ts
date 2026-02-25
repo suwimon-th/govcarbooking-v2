@@ -423,15 +423,12 @@ const generateFromCode = async (booking: BookingData) => {
                                                 children: [
                                                     new TextRun({ text: `( ${booking.requester_name?.trim() || "-"} )`, ...fontStyle }),
                                                 ],
-                                                // Adjust indenting to account for " ผู้ขออนุญาต" text offset so it centers under the dots
-                                                indent: { right: 800 },
                                             }),
                                             new Paragraph({
                                                 alignment: AlignmentType.CENTER,
                                                 children: [
                                                     new TextRun({ text: booking.requester_position || ".......................................................", ...fontStyle }),
                                                 ],
-                                                indent: { right: 800 },
                                             }),
                                             new Paragraph({
                                                 alignment: AlignmentType.CENTER,
@@ -439,9 +436,9 @@ const generateFromCode = async (booking: BookingData) => {
                                                     new TextRun({ text: "ฝ่ายสิ่งแวดล้อมและสุขาภิบาล สำนักงานเขตจอมทอง", ...fontStyle }),
                                                 ],
                                                 spacing: { after: 300 },
-                                                indent: { right: 800 },
                                             }),
                                         ],
+                                        margins: { right: 400 }, // Align perfectly with Approver signature TableCell margins
                                     }),
                                 ],
                             }),
