@@ -4,6 +4,43 @@ import { supabase } from "@/lib/supabaseClient";
 import { sendLinePush, flexAssignDriver } from "@/lib/line";
 import { sendAdminEmail, generateDriverAssignmentEmailHtml } from "@/lib/email";
 
+/* ---------------------------
+   generate request code เหมือนใน create-booking
+   ENV-{plate2digits}/{seq3}
+---------------------------- */
+async function generateRequestCode(vehicleId: string): Promise<string> {
+    const { data: vehicle } = await supabase
+        .from("vehicles")
+        .select("plate_number")
+        .eq("id", vehicleId)
+        .single();
+
+    const plate = vehicle?.plate_number || "";
+    const digits = plate.replace(/\D/g, "");
+    const plateSuffix = digits.slice(-2) || "00";
+    const prefix = `ENV-${plateSuffix}/`;
+
+    const { data } = await supabase
+        .from("bookings")
+        .select("request_code")
+        .eq("vehicle_id", vehicleId)
+        .like("request_code", `${prefix}%`)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+    let running = 1;
+    if (data && data.length > 0) {
+        const last = data[0].request_code;
+        const parts = last.split("/");
+        if (parts.length === 2) {
+            const parsed = Number(parts[1]);
+            if (!isNaN(parsed)) running = parsed + 1;
+        }
+    }
+
+    return `${prefix}${String(running).padStart(3, "0")}`;
+}
+
 export async function POST(req: Request) {
     try {
         const body = await req.json();
@@ -34,10 +71,10 @@ export async function POST(req: Request) {
             if (d >= 0) distance = d;
         }
 
-        // 1) ดึงข้อมูลเดิมก่อน update (เพื่อเทียบว่า driver เปลี่ยนไหม)
+        // 1) ดึงข้อมูลเดิมก่อน update (เพื่อเทียบว่า driver / vehicle เปลี่ยนไหม)
         const { data: oldBooking } = await supabase
             .from("bookings")
-            .select("driver_id, status")
+            .select("driver_id, status, vehicle_id, request_code")
             .eq("id", id)
             .single();
 
@@ -67,6 +104,21 @@ export async function POST(req: Request) {
         if (error) {
             console.error("UPDATE ERROR:", error);
             return NextResponse.json({ error: error.message }, { status: 400 });
+        }
+
+        // ✅ เมื่อ vehicle_id เปลี่ยน ให้ generate request_code ใหม่
+        // (ยกเว้น TESTER role ที่เริ่มด้วย TEST-)
+        if (
+            vehicle_id &&
+            vehicle_id !== oldBooking?.vehicle_id &&
+            !oldBooking?.request_code?.startsWith("TEST-")
+        ) {
+            const newCode = await generateRequestCode(vehicle_id);
+            await supabase
+                .from("bookings")
+                .update({ request_code: newCode })
+                .eq("id", id);
+            console.log(`✅ [UPDATE] request_code updated to ${newCode}`);
         }
 
         // 3) เงื่อนไขการส่งแจ้งเตือน
