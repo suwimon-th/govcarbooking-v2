@@ -106,19 +106,37 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: error.message }, { status: 400 });
         }
 
-        // ✅ เมื่อ vehicle_id เปลี่ยน ให้ generate request_code ใหม่
-        // (ยกเว้น TESTER role ที่เริ่มด้วย TEST-)
-        if (
-            vehicle_id &&
-            vehicle_id !== oldBooking?.vehicle_id &&
-            !oldBooking?.request_code?.startsWith("TEST-")
-        ) {
-            const newCode = await generateRequestCode(vehicle_id);
-            await supabase
-                .from("bookings")
-                .update({ request_code: newCode })
-                .eq("id", id);
-            console.log(`✅ [UPDATE] request_code updated to ${newCode}`);
+        // ✅ generate request_code ใหม่เมื่อ:
+        // 1) vehicle_id เปลี่ยน หรือ
+        // 2) prefix ของ request_code ไม่ตรงกับรถที่ใช้อยู่ (กรณีเปลี่ยนรถไปก่อน deploy fix)
+        const effectiveVehicleId = vehicle_id || oldBooking?.vehicle_id;
+        const currentCode = oldBooking?.request_code || "";
+        const isTester = currentCode.startsWith("TEST-");
+
+        if (effectiveVehicleId && !isTester) {
+            // ดึง plate number ของรถปัจจุบัน
+            const { data: veh } = await supabase
+                .from("vehicles")
+                .select("plate_number")
+                .eq("id", effectiveVehicleId)
+                .single();
+
+            if (veh?.plate_number) {
+                const digits = veh.plate_number.replace(/\D/g, "");
+                const plateSuffix = digits.slice(-2) || "00";
+                const expectedPrefix = `ENV-${plateSuffix}/`;
+                const codeMatchesVehicle = currentCode.startsWith(expectedPrefix);
+                const vehicleChanged = vehicle_id && vehicle_id !== oldBooking?.vehicle_id;
+
+                if (vehicleChanged || !codeMatchesVehicle) {
+                    const newCode = await generateRequestCode(effectiveVehicleId);
+                    await supabase
+                        .from("bookings")
+                        .update({ request_code: newCode })
+                        .eq("id", id);
+                    console.log(`✅ [UPDATE] request_code updated: ${currentCode} → ${newCode}`);
+                }
+            }
         }
 
         // 3) เงื่อนไขการส่งแจ้งเตือน
