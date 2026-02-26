@@ -22,11 +22,12 @@ async function generateRequestCode(vehicleId: string): Promise<string> {
 
     // ⚠️ Query ทุก booking ที่มี prefix นี้ (ไม่ว่าจะ vehicle_id ใด)
     // เพื่อป้องกัน duplicate key เมื่อรถเปลี่ยนมือ
+    // ใช้ ORDER BY request_code DESC (ไม่ใช่ created_at) เพื่อได้เลขสูงสุดจริงๆ
     const { data } = await supabase
         .from("bookings")
         .select("request_code")
         .like("request_code", `${prefix}%`)
-        .order("created_at", { ascending: false })
+        .order("request_code", { ascending: false })
         .limit(1);
 
     // ถ้ายังหาไม่เจอ ให้ลองเรียงตาม request_code เพื่อหาตัวสุดท้ายจริงๆ
