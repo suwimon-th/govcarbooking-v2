@@ -20,14 +20,16 @@ async function generateRequestCode(vehicleId: string): Promise<string> {
     const plateSuffix = digits.slice(-2) || "00";
     const prefix = `ENV-${plateSuffix}/`;
 
+    // ⚠️ Query ทุก booking ที่มี prefix นี้ (ไม่ว่าจะ vehicle_id ใด)
+    // เพื่อป้องกัน duplicate key เมื่อรถเปลี่ยนมือ
     const { data } = await supabase
         .from("bookings")
         .select("request_code")
-        .eq("vehicle_id", vehicleId)
         .like("request_code", `${prefix}%`)
         .order("created_at", { ascending: false })
         .limit(1);
 
+    // ถ้ายังหาไม่เจอ ให้ลองเรียงตาม request_code เพื่อหาตัวสุดท้ายจริงๆ
     let running = 1;
     if (data && data.length > 0) {
         const last = data[0].request_code;
