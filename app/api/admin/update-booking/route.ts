@@ -112,29 +112,43 @@ export async function POST(req: Request) {
         const effectiveVehicleId = vehicle_id || oldBooking?.vehicle_id;
         const currentCode = oldBooking?.request_code || "";
         const isTester = currentCode.startsWith("TEST-");
+        let newRequestCode: string | null = null;
+
+        console.log(`🔍 [CODE_CHECK] effectiveVehicleId=${effectiveVehicleId}, currentCode=${currentCode}, isTester=${isTester}`);
 
         if (effectiveVehicleId && !isTester) {
             // ดึง plate number ของรถปัจจุบัน
-            const { data: veh } = await supabase
+            const { data: veh, error: vehError } = await supabase
                 .from("vehicles")
                 .select("plate_number")
                 .eq("id", effectiveVehicleId)
                 .single();
 
+            console.log(`🔍 [CODE_CHECK] plate=${veh?.plate_number}, vehError=${vehError?.message}`);
+
             if (veh?.plate_number) {
-                const digits = veh.plate_number.replace(/\D/g, "");
+                const digits = veh.plate_number.replace(/[^0-9]/g, "");
                 const plateSuffix = digits.slice(-2) || "00";
                 const expectedPrefix = `ENV-${plateSuffix}/`;
                 const codeMatchesVehicle = currentCode.startsWith(expectedPrefix);
                 const vehicleChanged = vehicle_id && vehicle_id !== oldBooking?.vehicle_id;
 
+                console.log(`🔍 [CODE_CHECK] digits=${digits}, suffix=${plateSuffix}, expectedPrefix=${expectedPrefix}, codeMatchesVehicle=${codeMatchesVehicle}, vehicleChanged=${vehicleChanged}`);
+
                 if (vehicleChanged || !codeMatchesVehicle) {
-                    const newCode = await generateRequestCode(effectiveVehicleId);
-                    await supabase
+                    newRequestCode = await generateRequestCode(effectiveVehicleId);
+                    const { error: codeError } = await supabase
                         .from("bookings")
-                        .update({ request_code: newCode })
+                        .update({ request_code: newRequestCode })
                         .eq("id", id);
-                    console.log(`✅ [UPDATE] request_code updated: ${currentCode} → ${newCode}`);
+                    if (codeError) {
+                        console.error(`❌ [CODE_UPDATE] Failed to update request_code: ${codeError.message}`);
+                        newRequestCode = null;
+                    } else {
+                        console.log(`✅ [CODE_UPDATE] request_code updated: ${currentCode} → ${newRequestCode}`);
+                    }
+                } else {
+                    console.log(`ℹ️ [CODE_CHECK] Code already matches vehicle, no update needed.`);
                 }
             }
         }
@@ -213,16 +227,16 @@ export async function POST(req: Request) {
                         await Promise.allSettled(notifyPromises);
 
                         // Return success but with warnings if any
-                        return NextResponse.json({ success: true, warnings: errors.length > 0 ? errors : undefined });
+                        return NextResponse.json({ success: true, new_request_code: newRequestCode, warnings: errors.length > 0 ? errors : undefined });
                     }
                 }
             } catch (err) {
                 console.error("❌ [NOTIFY] Global notify error:", err);
-                return NextResponse.json({ success: true, warnings: ["Global Notify Error"] });
+                return NextResponse.json({ success: true, new_request_code: newRequestCode, warnings: ["Global Notify Error"] });
             }
         }
 
-        return NextResponse.json({ success: true });
+        return NextResponse.json({ success: true, new_request_code: newRequestCode });
     } catch (err) {
         console.error("SERVER ERROR:", err);
         return NextResponse.json({ error: "Server Error" }, { status: 500 });
