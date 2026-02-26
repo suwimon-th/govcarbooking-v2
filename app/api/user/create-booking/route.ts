@@ -156,11 +156,11 @@ export async function POST(req: Request) {
       safeDeptId = 1;
     }
 
-    const start_at = `${date}T${padTime(start_time)}`;
+    const start_at = `${date}T${padTime(start_time)}+07:00`;
 
     let dbEndAt: string | null = null;
     if (end_time) {
-      dbEndAt = `${date}T${padTime(end_time)}`;
+      dbEndAt = `${date}T${padTime(end_time)}+07:00`;
     }
 
     let checkEndAt = dbEndAt;
@@ -172,7 +172,7 @@ export async function POST(req: Request) {
       const em = totalMins % 60;
       const ehs = String(eh).padStart(2, "0");
       const ems = String(em).padStart(2, "0");
-      checkEndAt = `${date}T${ehs}:${ems}:00`;
+      checkEndAt = `${date}T${ehs}:${ems}:00+07:00`;
     }
 
     // ✅ Update Profile Position if provided
@@ -185,8 +185,8 @@ export async function POST(req: Request) {
 
     // ✅ CHECK DOUBLE BOOKING (Overlap) — บล็อกเสมอ ไม่มี force_booking
     if (vehicle_id && start_at && checkEndAt) {
-      const startOfDay = `${date}T00:00:00`;
-      const endOfDay = `${date}T23:59:59`;
+      const startOfDay = `${date}T00:00:00+07:00`;
+      const endOfDay = `${date}T23:59:59+07:00`;
 
       const { data: potentialOverlaps, error: fetchError } = await supabase
         .from("bookings")
