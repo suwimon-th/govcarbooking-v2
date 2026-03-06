@@ -123,7 +123,17 @@ export function generateBookingEmailHtml(booking: any, date: string, time: strin
   return wrapLayout("🔔 คำขอใช้รถใหม่", "#1e40af", content); // Blue-800 Theme
 }
 
-export function generateFuelEmailHtml(driverName: string, plateNumber: string) {
+export function generateFuelEmailHtml(data: {
+  driver_name: string;
+  plate_number: string;
+  request_date?: string;
+  system_quota?: string;
+  period?: string;
+}) {
+  const { driver_name, plate_number, request_date, system_quota, period } = data;
+
+  const thaiDate = request_date ? formatThaiDate(request_date) : "-";
+
   const content = `
     <div style="margin-bottom: 20px; text-align: center;">
       <p style="font-size: 16px; margin: 0;">พนักงานขับรถได้ทำการส่งคําขอเบิกน้ำมัน</p>
@@ -131,12 +141,20 @@ export function generateFuelEmailHtml(driverName: string, plateNumber: string) {
 
     <div style="background-color: #fff1f2; border-radius: 8px; padding: 16px;">
       <div class="info-row" style="border-color: #fecdd3;">
-        <span class="info-label">ทะเบียนรถ</span>
-        <span class="info-value" style="color: #e11d48;">${plateNumber}</span>
+        <span class="info-label">วันที่เบิก</span>
+        <span class="info-value">${thaiDate} ${period ? `(${period})` : ''}</span>
       </div>
-      <div class="info-row" style="border: none;">
+      <div class="info-row" style="border-color: #fecdd3;">
         <span class="info-label">ผู้เบิก</span>
-        <span class="info-value">${driverName}</span>
+        <span class="info-value">${driver_name}</span>
+      </div>
+      <div class="info-row" style="border-color: #fecdd3;">
+        <span class="info-label">ทะเบียนรถ</span>
+        <span class="info-value" style="color: #e11d48; font-weight: bold;">${plate_number}</span>
+      </div>
+      <div class="info-row" style="border-color: #fecdd3;">
+        <span class="info-label">โควตาที่ได้</span>
+        <span class="info-value">${system_quota || "-"}</span>
       </div>
     </div>
 

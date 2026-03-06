@@ -13,10 +13,26 @@ export default function FuelRequestModal({ open, onClose }: FuelRequestModalProp
     const [drivers, setDrivers] = useState<{ id: string; full_name: string }[]>([]);
     const [vehicles, setVehicles] = useState<{ id: string; plate_number: string }[]>([]);
     const [foggingList, setFoggingList] = useState<{ code: string }[]>([]); // Dynamic list
+
+    // Fixed Requester List
+    const FIXED_REQUESTERS = [
+        "นายประพณ โชติกะพุกกะณะ",
+        "สุรพล พุทโธ",
+        "นายจักรพล เกี้ยวกลาง",
+        "ธีรวัฒน์ พร้อมสุข",
+        "ธีระสิทธิ์ ใสสะอาด"
+    ];
+
     const [driverName, setDriverName] = useState("");
     const [plateNumber, setPlateNumber] = useState("");
     const [foggingNumbers, setFoggingNumbers] = useState<string[]>([]); // Array for multiple selection
     const [requesterName, setRequesterName] = useState(""); // New field for Fogging Machine requester
+
+    // New Fields
+    const [requestDate, setRequestDate] = useState(() => new Date().toISOString().split('T')[0]);
+    const [systemQuota, setSystemQuota] = useState("");
+    const [period, setPeriod] = useState("");
+
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState<"IDLE" | "SUCCESS" | "ERROR">("IDLE");
     const [errorMsg, setErrorMsg] = useState("");
@@ -62,23 +78,49 @@ export default function FuelRequestModal({ open, onClose }: FuelRequestModalProp
             setPlateNumber("");
             setFoggingNumbers([]);
             setRequesterName("");
+            setRequestDate(new Date().toISOString().split('T')[0]);
+            setSystemQuota("");
+            setPeriod("");
             setStatus("IDLE");
             setErrorMsg("");
         }
     }, [open]);
 
-    // Auto-handle Fogging Machine Logic
+    // Auto-handle Fogging Machine Logic & Quota
     useEffect(() => {
         if (plateNumber === "เครื่องพ่นหมอกควัน") {
             setDriverName("-");
+            setSystemQuota("เบนซิน 30 ลิตร, ดีเซล 100 ลิตร");
+        } else {
             setFoggingNumbers([]);
             setRequesterName("");
-        } else if (driverName === "-") {
-            setDriverName("");
-            setFoggingNumbers([]);
-            setRequesterName("");
+
+            // Checking specific car plates for 60 Liters quota
+            const sixtyLiterPlates = ["ฮษ 3605", "ฮย 7550", "7กน 4873", "7กน 4877"];
+            if (plateNumber && sixtyLiterPlates.includes(plateNumber.replace(/\s+/g, ' ').trim())) {
+                setSystemQuota("60 ลิตร");
+            } else if (plateNumber) {
+                setSystemQuota("ตามความเหมาะสม"); // Fallback for other cars if any
+            } else {
+                setSystemQuota("");
+            }
         }
     }, [plateNumber]);
+
+    // Format Period automatically based on Request Date
+    useEffect(() => {
+        if (!requestDate) {
+            setPeriod("");
+            return;
+        }
+        const dateObj = new Date(requestDate);
+        const day = dateObj.getDate();
+        if (day >= 1 && day <= 15) {
+            setPeriod("งวดแรก");
+        } else {
+            setPeriod("งวดหลัง");
+        }
+    }, [requestDate]);
 
     if (!open) return null;
 
@@ -120,6 +162,9 @@ export default function FuelRequestModal({ open, onClose }: FuelRequestModalProp
                 body: JSON.stringify({
                     driver_name: finalName,
                     plate_number: finalPlate,
+                    request_date: requestDate,
+                    system_quota: systemQuota,
+                    period: period
                 }),
             });
 
@@ -182,6 +227,29 @@ export default function FuelRequestModal({ open, onClose }: FuelRequestModalProp
                                 </div>
                             )}
 
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        วันที่เบิก <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        type="date"
+                                        required
+                                        value={requestDate}
+                                        onChange={(e) => setRequestDate(e.target.value)}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none transition-all appearance-none bg-white"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        งวดการเบิก
+                                    </label>
+                                    <div className="w-full h-[42px] px-4 flex items-center bg-gray-50 border border-gray-200 rounded-lg text-gray-600 font-medium">
+                                        {period || "-"}
+                                    </div>
+                                </div>
+                            </div>
+
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                     หมายเลขทะเบียนรถ <span className="text-red-500">*</span>
@@ -210,13 +278,19 @@ export default function FuelRequestModal({ open, onClose }: FuelRequestModalProp
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
                                             ชื่อผู้เบิก <span className="text-red-500">*</span>
                                         </label>
-                                        <input
-                                            type="text"
+                                        <select
+                                            required
                                             value={requesterName}
                                             onChange={(e) => setRequesterName(e.target.value)}
-                                            placeholder="ระบุชื่อผู้เบิก..."
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none transition-all"
-                                        />
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none transition-all appearance-none bg-white"
+                                        >
+                                            <option value="">-- เลือกผู้เบิก --</option>
+                                            {FIXED_REQUESTERS.map((name, idx) => (
+                                                <option key={idx} value={name}>
+                                                    {name}
+                                                </option>
+                                            ))}
+                                        </select>
                                     </div>
 
                                     {/* Multi-selection */}
@@ -267,23 +341,27 @@ export default function FuelRequestModal({ open, onClose }: FuelRequestModalProp
                                         onChange={(e) => setDriverName(e.target.value)}
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none transition-all appearance-none bg-white"
                                     >
-                                        <option value="">-- เลือกพนักงานขับรถ --</option>
-                                        {drivers.map((d) => (
-                                            <option key={d.id} value={d.full_name}>
-                                                {d.full_name}
+                                        <option value="">-- เลือกผู้เบิก --</option>
+                                        {FIXED_REQUESTERS.map((name, idx) => (
+                                            <option key={idx} value={name}>
+                                                {name}
                                             </option>
                                         ))}
                                     </select>
+                                </div>
+                            )}
 
-                                    {driverName === "อื่นๆ (ระบุเอง)" && (
-                                        <input
-                                            name="customDriver"
-                                            type="text"
-                                            required
-                                            placeholder="ระบุชื่อคนขับ..."
-                                            className="mt-2 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:border-rose-500 outline-none transition-all"
-                                        />
-                                    )}
+                            {/* Additional Information Inputs */}
+                            {plateNumber && (
+                                <div className="border-t border-gray-100 pt-4 mt-1 animate-in fade-in zoom-in-95 duration-200">
+                                    <div className="bg-rose-50 p-3 rounded-lg border border-rose-100">
+                                        <label className="block text-xs font-bold text-rose-800 mb-1">
+                                            โควตาการเบิกที่กำหนดไว้
+                                        </label>
+                                        <div className="text-rose-600 font-semibold">
+                                            {systemQuota || "-"}
+                                        </div>
+                                    </div>
                                 </div>
                             )}
 

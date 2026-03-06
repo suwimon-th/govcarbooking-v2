@@ -1,15 +1,19 @@
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 :root {
   --background: #f5f7fb;
   --foreground: #1a1a1a;
-  --primary: #0d47a1;       /* กรมท่า */
+  --primary: #0d47a1;
+  /* กรมท่า */
   --primary-light: #1565c0;
-  --secondary: #ffc107;     /* เหลืองราชการ */
+  --secondary: #ffc107;
+  /* เหลืองราชการ */
   --card-bg: #ffffff;
   --glass: rgba(255, 255, 255, 0.85);
   --shadow-premium: 0 10px 40px -10px rgba(13, 71, 161, 0.15), 0 4px 12px -2px rgba(13, 71, 161, 0.05);
-  --radius-xl: 1.5rem;      /* 24px */
+  --radius-xl: 1.5rem;
+  /* 24px */
 }
 
 body {
@@ -23,7 +27,7 @@ body {
   background: var(--card-bg);
   border-radius: 12px;
   padding: 24px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
 }
 
 /* ปุ่มหลัก */
@@ -35,12 +39,15 @@ body {
   border-radius: 8px;
   transition: 0.2s;
 }
+
 .btn-primary:hover {
   background: var(--primary-light);
 }
 
 /* Input แบบราชการ */
-input, select, textarea {
+input,
+select,
+textarea {
   background: #ffffff;
   border: 1px solid #d0d3da;
   padding: 8px 12px;
@@ -49,8 +56,17 @@ input, select, textarea {
   margin-top: 4px;
   margin-bottom: 14px;
 }
+
 label {
   font-weight: 600;
+}
+
+/* TH SarabunPSK — ตัวเลขไทย */
+.font-sarabun-thai {
+  font-family: 'Sarabun', 'TH SarabunPSK', sans-serif !important;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-feature-settings: "tnum";
+  font-feature-settings: "tnum";
 }
 
 /* Fix calendar icon */
@@ -59,6 +75,7 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   filter: invert(0);
   cursor: pointer;
 }
+
 /* FullCalendar modern UI */
 .fc .fc-toolbar-title {
   font-size: 1.4rem;
@@ -75,11 +92,13 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 .fc-day-today {
   background-color: #e9f2ff !important;
 }
+
 .table-text {
   white-space: normal;
   word-break: break-word;
   line-height: 1.4;
 }
+
 /* ================================
    FullCalendar: บังคับตัวหนังสือสีดำ
 ================================ */
@@ -105,6 +124,7 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 .fc .fc-event {
   color: #000 !important;
 }
+
 .fc-event-title,
 .fc-event-time {
   text-shadow: none;
@@ -169,13 +189,13 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 }
 
 /* Micro-animations for buttons */
-.swal2-confirm:hover, 
+.swal2-confirm:hover,
 .swal2-cancel:hover {
   transform: translateY(-2px);
   transition: all 0.2s ease;
 }
 
-.swal2-confirm:active, 
+.swal2-confirm:active,
 .swal2-cancel:active {
   transform: translateY(0);
 }

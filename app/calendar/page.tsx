@@ -8,10 +8,9 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import type { EventClickArg } from "@fullcalendar/core";
 import EventDetailModal from "@/app/components/EventDetailModal";
-import FuelRequestModal from "@/app/components/FuelRequestModal";
 import ReportIssueModal from "@/app/components/ReportIssueModal";
 import DailyBookingList from "@/app/components/DailyBookingList";
-import { Calendar as CalendarIcon, Clock, ChevronRight, LogIn, HelpCircle, Fuel, AlertTriangle, MessageCircle, BookOpen, Phone, CalendarCheck } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, ChevronRight, LogIn, HelpCircle, Fuel, AlertTriangle, MessageCircle, Phone, CalendarCheck } from "lucide-react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import { getStatusLabel, getStatusColor } from "@/lib/statusHelper";
@@ -112,7 +111,6 @@ export default function PublicCalendarPage() {
     const [viewMode, setViewMode] = useState<'month' | 'day'>('month');
 
     // Fuel Request State
-    const [fuelModalOpen, setFuelModalOpen] = useState(false);
     const [reportModalOpen, setReportModalOpen] = useState(false);
     const [helpMenuOpen, setHelpMenuOpen] = useState(false);
     const helpMenuRef = useRef<HTMLDivElement>(null);
@@ -188,6 +186,7 @@ export default function PublicCalendarPage() {
                     driver_name: item.driver_name,
                     driver_phone: item.driver_phone,
                     driver: item.driver_name,
+                    created_at: item.created_at,
                 }
             };
         });
@@ -276,18 +275,16 @@ export default function PublicCalendarPage() {
                             {/* Mobile Dropdown */}
                             {helpMenuOpen && (
                                 <div className="absolute right-0 top-8 w-56 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-50 text-gray-800 animate-in fade-in zoom-in-95 duration-200">
-                                    <button
-                                        onClick={() => {
-                                            setHelpMenuOpen(false);
-                                            setFuelModalOpen(true);
-                                        }}
+                                    <Link
+                                        href="/fuel"
+                                        onClick={() => setHelpMenuOpen(false)}
                                         className="flex items-center gap-3 w-full px-4 py-3 hover:bg-rose-50 rounded-lg transition-colors text-left group"
                                     >
                                         <div className="bg-rose-100 text-rose-600 p-2 rounded-lg">
                                             <Fuel className="w-4 h-4" />
                                         </div>
                                         <span className="text-sm font-bold">เบิกน้ำมัน</span>
-                                    </button>
+                                    </Link>
 
                                     <button
                                         onClick={() => {
@@ -387,11 +384,9 @@ export default function PublicCalendarPage() {
 
                             {helpMenuOpen && (
                                 <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-50 animate-in fade-in zoom-in-95 duration-200">
-                                    <button
-                                        onClick={() => {
-                                            setHelpMenuOpen(false);
-                                            setFuelModalOpen(true);
-                                        }}
+                                    <Link
+                                        href="/fuel"
+                                        onClick={() => setHelpMenuOpen(false)}
                                         className="flex items-center gap-3 w-full px-4 py-3 hover:bg-rose-50 rounded-lg transition-colors text-left group"
                                     >
                                         <div className="bg-rose-100 text-rose-600 p-2 rounded-lg group-hover:bg-white group-hover:shadow-sm transition-all">
@@ -401,22 +396,8 @@ export default function PublicCalendarPage() {
                                             <span className="text-sm font-bold text-gray-800">เบิกน้ำมันเชื้อเพลิง</span>
                                             <span className="text-[10px] text-gray-500">สำหรับพนักงานขับรถ</span>
                                         </div>
-                                    </button>
-
-                                    <Link
-                                        href="/manual"
-                                        target="_blank"
-                                        className="flex items-center gap-3 w-full px-4 py-3 hover:bg-indigo-50 rounded-lg transition-colors text-left group"
-                                        onClick={() => setHelpMenuOpen(false)}
-                                    >
-                                        <div className="bg-indigo-100 text-indigo-600 p-2 rounded-lg group-hover:bg-white group-hover:shadow-sm transition-all">
-                                            <BookOpen className="w-5 h-5" />
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <span className="text-sm font-bold text-gray-800">คู่มือการใช้งาน</span>
-                                            <span className="text-[10px] text-gray-500">สำหรับผู้ใช้งานใหม่</span>
-                                        </div>
                                     </Link>
+
 
                                     <button
                                         onClick={() => {
@@ -858,10 +839,7 @@ export default function PublicCalendarPage() {
                 detail={selected}
             />
 
-            <FuelRequestModal
-                open={fuelModalOpen}
-                onClose={() => setFuelModalOpen(false)}
-            />
+
 
             <ReportIssueModal
                 open={reportModalOpen}

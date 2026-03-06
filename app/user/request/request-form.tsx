@@ -748,7 +748,7 @@ export default function RequestForm({
                   type="text"
                   value={destination}
                   onChange={(e) => setDestination(e.target.value)}
-                  className={textInputClasses}
+                  className={`${textInputClasses} font-sarabun-thai`}
                   placeholder="ระบุสถานที่..."
                 />
               </div>
@@ -848,7 +848,7 @@ export default function RequestForm({
                 value={purpose}
                 onChange={(e) => setPurpose(e.target.value)}
                 rows={3}
-                className={`${textInputClasses} pt-3 h-auto resize-none`}
+                className={`${textInputClasses} pt-3 h-auto resize-none font-sarabun-thai`}
                 placeholder="เช่น ลงพื้นที่ตรวจสอบเรื่องร้องเรียน..."
               />
             </div>

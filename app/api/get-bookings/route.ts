@@ -24,6 +24,7 @@ interface BookingItem {
   purpose: string;
   start_at: string;
   end_at: string | null;
+  created_at: string;
   status: string;
   vehicle_id: string;
   requester_name: string;
@@ -50,6 +51,7 @@ export async function GET(req: Request) {
         purpose,
         start_at,
         end_at,
+        created_at,
         status,
         vehicle_id,
         requester_name,
@@ -75,7 +77,10 @@ export async function GET(req: Request) {
     }
     */
 
-    const { data, error } = await query.returns<BookingItem[]>();
+    const { data, error } = await query
+      .order("start_at", { ascending: true })
+      .order("created_at", { ascending: true })
+      .returns<BookingItem[]>();
 
     if (error) {
       console.error("GET_BOOKINGS_ERROR:", error);
@@ -98,7 +103,7 @@ export async function GET(req: Request) {
         start,
         end,
         status: item.status,
-        purpose: item.purpose, // ✅ ส่งกลับไปด้วยเพื่อแสดงในตาราง
+        purpose: item.purpose,
         vehicle_id: item.vehicle_id,
         vehicle_color: item.vehicles?.color ?? "#9CA3AF",
         vehicle_plate: item.vehicles?.plate_number ?? "-",
@@ -107,7 +112,8 @@ export async function GET(req: Request) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         driver_phone: (item.drivers as any)?.phone ?? null,
         requester_name: item.requester_name,
-        is_off_hours: item.is_ot, // ✅ Use explicit DB value
+        is_off_hours: item.is_ot,
+        created_at: item.created_at,
       };
     });
 

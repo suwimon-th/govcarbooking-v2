@@ -257,7 +257,7 @@ const generateFromCode = async (booking: BookingData) => {
                         ],
                         children: [
                             new TextRun({ text: "ขออนุญาตใช้รถ (ไปที่ไหน) ", ...fontStyle }),
-                            new TextRun({ text: `  ${booking.destination || "-"}  `, ...fontStyle, underline: { type: UnderlineType.DOTTED, color: "000000" } }),
+                            new TextRun({ text: `  ${toThaiNum(booking.destination || "-")}  `, ...fontStyle, underline: { type: UnderlineType.DOTTED, color: "000000" } }),
                             new TextRun({ children: ["\t"], ...fontStyle, underline: { type: UnderlineType.DOTTED, color: "000000" } }),
                         ],
                         spacing: { after: 100 },
@@ -272,7 +272,7 @@ const generateFromCode = async (booking: BookingData) => {
                         children: [
                             new TextRun({ text: "เพื่อ ", ...fontStyle }),
                             new TextRun({
-                                text: `  ${booking.purpose}  `,
+                                text: `  ${toThaiNum(booking.purpose)}  `,
                                 ...fontStyle,
                                 underline: { type: UnderlineType.DOTTED, color: "000000" }
                             }),

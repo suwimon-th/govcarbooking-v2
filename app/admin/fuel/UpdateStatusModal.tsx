@@ -1,55 +1,45 @@
 "use client";
 
-import { X, CheckCircle, XCircle, Clock, AlertCircle } from "lucide-react";
+import { X, Fuel } from "lucide-react";
 import { useState, useEffect } from "react";
 
 interface Props {
     isOpen: boolean;
     onClose: () => void;
     currentStatus: string;
-    onUpdate: (newStatus: string) => void;
+    onUpdate: (newStatus: string, requestNumber?: string) => void;
+    initialRequestNumber?: string | null;
 }
 
-export default function UpdateStatusModal({ isOpen, onClose, currentStatus, onUpdate }: Props) {
-    if (!isOpen) return null;
+export default function UpdateStatusModal({
+    isOpen,
+    onClose,
+    currentStatus,
+    onUpdate,
+    initialRequestNumber,
+}: Props) {
 
-    const [selected, setSelected] = useState<string>("");
+    const [requestNumber, setRequestNumber] = useState<string>("");
 
     useEffect(() => {
-        // Reset selection when opening
-        setSelected("");
-    }, [isOpen]);
+        if (isOpen) {
+            setRequestNumber(initialRequestNumber || "");
+        }
+    }, [isOpen, initialRequestNumber]);
 
     const handleSave = () => {
-        if (selected) {
-            onUpdate(selected);
-            onClose();
-        }
+        // Automatically set status to COMPLETED when admin saves
+        onUpdate("COMPLETED", requestNumber);
+        onClose();
     };
 
-    const statusOptions = [
-        {
-            id: "IN_PROGRESS",
-            label: "กำลังดำเนินการ",
-            icon: <Clock className="w-5 h-5 text-blue-600" />,
-            color: "bg-blue-50 border-blue-200 hover:bg-blue-100",
-            textColor: "text-blue-700"
-        },
-        {
-            id: "COMPLETED",
-            label: "สำเร็จ / อนุมัติ",
-            icon: <CheckCircle className="w-5 h-5 text-green-600" />,
-            color: "bg-green-50 border-green-200 hover:bg-green-100",
-            textColor: "text-green-700"
-        },
-        {
-            id: "REJECTED",
-            label: "ไม่อนุมัติ / ยกเลิก",
-            icon: <XCircle className="w-5 h-5 text-red-600" />,
-            color: "bg-red-50 border-red-200 hover:bg-red-100",
-            textColor: "text-red-700"
-        }
-    ];
+    const handleReject = () => {
+        if (!confirm("คุณต้องการยกเลิกคำขอนี้ใช่หรือไม่?")) return;
+        onUpdate("REJECTED");
+        onClose();
+    };
+
+    if (!isOpen) return null;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
@@ -58,8 +48,8 @@ export default function UpdateStatusModal({ isOpen, onClose, currentStatus, onUp
                 {/* Header */}
                 <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                     <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                        <AlertCircle className="w-5 h-5 text-blue-600" />
-                        อัพเดทสถานะ
+                        <Fuel className="w-5 h-5 text-rose-600" />
+                        ระบุเลขที่ใบเบิก
                     </h3>
                     <button
                         onClick={onClose}
@@ -71,34 +61,23 @@ export default function UpdateStatusModal({ isOpen, onClose, currentStatus, onUp
 
                 {/* Body */}
                 <div className="p-6">
-                    <p className="text-gray-500 text-sm mb-4">กรุณาเลือกสถานะที่ต้องการเปลี่ยน:</p>
-
-                    <div className="space-y-3">
-                        {statusOptions.map((option) => (
-                            <button
-                                key={option.id}
-                                onClick={() => setSelected(option.id)}
-                                className={`w-full flex items-center p-4 border rounded-xl transition-all duration-200 group ${selected === option.id
-                                        ? `ring-2 ring-blue-500 ring-offset-1 ${option.color}`
-                                        : "border-gray-200 hover:border-blue-300 hover:shadow-sm bg-white"
-                                    }`}
-                            >
-                                <div className={`p-2 rounded-full bg-white mr-4 shadow-sm ${selected === option.id ? "" : "group-hover:scale-110 transition-transform"}`}>
-                                    {option.icon}
-                                </div>
-                                <div className="text-left">
-                                    <span className={`block font-bold ${option.textColor}`}>
-                                        {option.label}
-                                    </span>
-                                </div>
-
-                                {selected === option.id && (
-                                    <div className="ml-auto">
-                                        <CheckCircle className="w-5 h-5 text-blue-600" />
-                                    </div>
-                                )}
-                            </button>
-                        ))}
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1.5">
+                                เลขที่ขอเบิก
+                            </label>
+                            <input
+                                type="text"
+                                value={requestNumber}
+                                onChange={(e) => setRequestNumber(e.target.value)}
+                                placeholder="ระบุเลขที่ขอเบิกลงสมุด..."
+                                className="w-full h-11 px-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm bg-white"
+                                autoFocus
+                            />
+                        </div>
+                        <p className="text-[11px] text-gray-400 font-medium">
+                            * เมื่อบันทึกแล้ว สถานะจะเปลี่ยนเป็น <span className="text-green-600 font-bold">สำเร็จ</span> โดยอัตโนมัติ
+                        </p>
                     </div>
                 </div>
 
@@ -111,11 +90,16 @@ export default function UpdateStatusModal({ isOpen, onClose, currentStatus, onUp
                         ยกเลิก
                     </button>
                     <button
-                        onClick={handleSave}
-                        disabled={!selected}
-                        className="px-6 py-2.5 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-all active:scale-95"
+                        onClick={handleReject}
+                        className="px-4 py-2.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-600 font-bold hover:bg-rose-100 transition-colors"
                     >
-                        บันทึก
+                        ยกเลิกรายการ
+                    </button>
+                    <button
+                        onClick={handleSave}
+                        className="px-6 py-2.5 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 shadow-sm transition-all active:scale-95"
+                    >
+                        บันทึก/อนุมัติ
                     </button>
                 </div>
             </div>

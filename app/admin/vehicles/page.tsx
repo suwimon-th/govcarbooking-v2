@@ -16,7 +16,12 @@ import {
   CheckCircle2,
   XCircle,
   Tag,
-  Filter
+  Filter,
+  Hash,
+  Cog,
+  Fuel,
+  Wind,
+  AlertTriangle
 } from "lucide-react";
 
 type VehicleStatus = "ACTIVE" | "INACTIVE" | "REPAIR" | null;
@@ -31,7 +36,16 @@ interface VehicleRow {
   remark: string | null;
   created_at: string | null;
   color: string | null;
-  last_request_code?: string; // Add this
+  asset_number?: string | null;
+  received_date?: string | null;
+  weight?: number | null;
+  tax_expire_date?: string | null;
+  photo_urls?: string[] | null;
+  fuel_type?: string | null;
+  engine_size?: string | null;
+  drive_type?: string | null;
+  emission_standard?: string | null;
+  last_request_code?: string;
 }
 
 type ToastType = "success" | "error" | "info";
@@ -62,7 +76,7 @@ export default function VehiclesPage() {
     const { data: vehicles, error } = await supabase
       .from("vehicles")
       .select(
-        "id, plate_number, brand, model, type, status, remark, created_at, color"
+        "id, plate_number, brand, model, type, status, remark, created_at, color, asset_number, received_date, weight, tax_expire_date, photo_urls, fuel_type, engine_size, drive_type, emission_standard"
       )
       .order("created_at", { ascending: false });
 
@@ -129,28 +143,54 @@ export default function VehiclesPage() {
   });
 
   const getStatusBadge = (status: VehicleStatus) => {
+    if (!status) return <span className="text-gray-400 text-xs">-</span>;
     switch (status) {
       case "ACTIVE":
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-700 border border-green-200 whitespace-nowrap">
+          <span className="flex items-center gap-1.5 bg-green-50 text-green-700 px-2.5 py-1 rounded-full text-xs font-semibold border border-green-200 shadow-sm">
             <CheckCircle2 className="w-3.5 h-3.5" /> พร้อมใช้งาน
           </span>
         );
       case "INACTIVE":
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-700 border border-gray-200 whitespace-nowrap">
+          <span className="flex items-center gap-1.5 bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full text-xs font-semibold border border-gray-300 shadow-sm">
             <XCircle className="w-3.5 h-3.5" /> งดใช้ชั่วคราว
           </span>
         );
       case "REPAIR":
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-700 border border-orange-200 whitespace-nowrap">
+          <span className="flex items-center gap-1.5 bg-orange-50 text-orange-700 px-2.5 py-1 rounded-full text-xs font-semibold border border-orange-200 shadow-sm">
             <Wrench className="w-3.5 h-3.5" /> ซ่อมบำรุง
           </span>
         );
       default:
-        return <span className="text-gray-400">-</span>;
+        return <span className="text-gray-500 text-xs">{status}</span>;
     }
+  };
+
+  // ---------- Tax Expiry Helper ----------
+  const getTaxWarning = (dateStr?: string | null) => {
+    if (!dateStr) return null;
+
+    const expireDate = new Date(dateStr);
+    const today = new Date();
+    const diffTime = expireDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) {
+      return (
+        <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 text-[10px] font-bold px-1.5 py-0.5 rounded border border-red-200">
+          <AlertTriangle className="w-3 h-3" /> ภาษีขาดแล้ว
+        </span>
+      );
+    } else if (diffDays <= 90) {
+      return (
+        <span className="inline-flex items-center gap-1 bg-yellow-100 text-yellow-700 text-[10px] font-bold px-1.5 py-0.5 rounded border border-yellow-200">
+          <AlertTriangle className="w-3 h-3" /> ต่อภาษี (เหลือ {diffDays} วัน)
+        </span>
+      );
+    }
+    return null;
   };
 
   return (
@@ -252,18 +292,44 @@ export default function VehiclesPage() {
             <div className="flex justify-between items-start">
               <div className="flex items-center gap-3">
                 <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 border bg-white"
+                  className="w-10 h-10 rounded-xl overflow-hidden shrink-0 border bg-white flex items-center justify-center"
                   style={{
                     borderColor: v.color || '#BFDBFE',
-                    color: v.color || '#2563EB'
                   }}
                 >
-                  <Car className="w-5 h-5" />
+                  {v.photo_urls && v.photo_urls.length > 0 ? (
+                    <img src={v.photo_urls[0]} alt={v.plate_number || ""} className="w-full h-full object-cover" />
+                  ) : (
+                    <Car className="w-5 h-5" style={{ color: v.color || '#2563EB' }} />
+                  )}
                 </div>
                 <div>
-                  <div className="font-bold text-gray-900 text-base">{v.plate_number || "-"}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-gray-900 text-base">{v.plate_number || "-"}</span>
+                    {getTaxWarning(v.tax_expire_date)}
+                  </div>
                   <div className="text-gray-500 text-xs">
                     {v.brand || v.model ? `${v.brand ?? ""} ${v.model ?? ""}`.trim() : "-"}
+                  </div>
+                  {/* Additional Info */}
+                  <div className="mt-2 text-[11px] text-gray-500 space-y-1 block md:hidden">
+                    {v.asset_number && (
+                      <div className="flex gap-1.5 items-center">
+                        <Hash className="w-3 h-3 text-slate-400" />
+                        <span>ครุภัณฑ์: <span className="text-slate-700 font-medium">{v.asset_number}</span></span>
+                      </div>
+                    )}
+                    {(v.engine_size || v.fuel_type || v.drive_type || v.emission_standard) && (
+                      <div className="flex gap-1.5 items-start">
+                        <Cog className="w-3 h-3 text-slate-400 mt-0.5 shrink-0" />
+                        <div className="flex flex-wrap gap-x-1.5 gap-y-1 leading-tight">
+                          {v.engine_size && <span className="bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded whitespace-nowrap">{v.engine_size}</span>}
+                          {v.fuel_type && <span className="bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded whitespace-nowrap">{v.fuel_type}</span>}
+                          {v.drive_type && <span className="bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded whitespace-nowrap">{v.drive_type}</span>}
+                          {v.emission_standard && <span className="bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded whitespace-nowrap">{v.emission_standard}</span>}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -332,19 +398,41 @@ export default function VehiclesPage() {
                 <tr key={v.id} className="hover:bg-blue-50/30 transition-colors">
                   <td className="px-6 py-4 align-top">
                     <div className="flex items-start gap-3">
-                      <div
-                        className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 border bg-white"
-                        style={{
-                          borderColor: v.color || '#BFDBFE',
-                          color: v.color || '#2563EB'
-                        }}
-                      >
-                        <Car className="w-5 h-5" />
+                      {/* Image/Icon */}
+                      <div className="w-10 h-10 shrink-0 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center border border-blue-100/50 shadow-sm mr-3 overflow-hidden">
+                        {v.photo_urls && v.photo_urls.length > 0 ? (
+                          <img src={v.photo_urls[0]} alt={v.plate_number || ""} className="w-full h-full object-cover" />
+                        ) : (
+                          <Car size={18} />
+                        )}
                       </div>
                       <div>
-                        <div className="font-bold text-gray-900 text-base">{v.plate_number || "-"}</div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-gray-900 text-base">{v.plate_number || "-"}</span>
+                          {getTaxWarning(v.tax_expire_date)}
+                        </div>
                         <div className="text-gray-500 text-xs">
                           {v.brand || v.model ? `${v.brand ?? ""} ${v.model ?? ""}`.trim() : "-"}
+                        </div>
+                        {/* Additional Info */}
+                        <div className="mt-2 text-[11px] text-gray-500 space-y-1 hidden md:block">
+                          {v.asset_number && (
+                            <div className="flex gap-1.5 items-center">
+                              <Hash className="w-3 h-3 text-slate-400" />
+                              <span>ครุภัณฑ์: <span className="text-slate-700 font-medium">{v.asset_number}</span></span>
+                            </div>
+                          )}
+                          {(v.engine_size || v.fuel_type || v.drive_type || v.emission_standard) && (
+                            <div className="flex gap-1.5 items-start">
+                              <Cog className="w-3 h-3 text-slate-400 mt-0.5 shrink-0" />
+                              <div className="flex flex-wrap gap-x-1.5 gap-y-1 leading-tight max-w-[200px]">
+                                {v.engine_size && <span className="bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded whitespace-nowrap">{v.engine_size}</span>}
+                                {v.fuel_type && <span className="bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded whitespace-nowrap">{v.fuel_type}</span>}
+                                {v.drive_type && <span className="bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded whitespace-nowrap">{v.drive_type}</span>}
+                                {v.emission_standard && <span className="bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded whitespace-nowrap">{v.emission_standard}</span>}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>

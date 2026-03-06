@@ -16,6 +16,7 @@ interface CalendarEvent {
         vehicle?: string;
         driver?: string;
         isOffHours?: boolean;
+        created_at?: string;
     };
 }
 
@@ -57,8 +58,31 @@ function shiftDate(dateStr: string, days: number): string {
 
 export default function DailyBookingList({ events, selectedDate, onItemClick, onDateChange }: Props) {
     // Filter events for specific date
+    // Sort by start time, then by created_at (who booked first)
     const dailyEvents = events.filter(e => normalizeDate(e.start) === selectedDate)
-        .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+        .sort((a, b) => {
+            const timeDiff = new Date(a.start).getTime() - new Date(b.start).getTime();
+            if (timeDiff !== 0) return timeDiff;
+            // Same start time → sort by created_at ascending (earlier = higher priority)
+            const ca = a.extendedProps?.created_at ? new Date(a.extendedProps.created_at).getTime() : 0;
+            const cb = b.extendedProps?.created_at ? new Date(b.extendedProps.created_at).getTime() : 0;
+            return ca - cb;
+        });
+
+    // Pre-compute queue order for same-start-time groups
+    const startTimeGroups: Record<string, number[]> = {};
+    dailyEvents.forEach((evt, idx) => {
+        const key = formatTime(evt.start);
+        if (!startTimeGroups[key]) startTimeGroups[key] = [];
+        startTimeGroups[key].push(idx);
+    });
+    // groupOrder[idx] = position within the same-start group (1-based), or 0 if alone
+    const groupOrder: Record<number, number> = {};
+    Object.values(startTimeGroups).forEach((indexes) => {
+        if (indexes.length > 1) {
+            indexes.forEach((idx, pos) => { groupOrder[idx] = pos + 1; });
+        }
+    });
 
     const goTodDay = () => {
         if (!onDateChange) return;
@@ -131,9 +155,10 @@ export default function DailyBookingList({ events, selectedDate, onItemClick, on
                 </div>
             ) : (
                 <div className="space-y-4">
-                    {dailyEvents.map((evt) => {
+                    {dailyEvents.map((evt, idx) => {
                         const isOff = evt.extendedProps?.isOffHours;
                         const statusLabel = getStatusLabel(evt.extendedProps?.status || 'REQUESTED');
+                        const order = groupOrder[idx]; // 1-based, only set when >1 in group
 
                         return (
                             <div
@@ -148,6 +173,11 @@ export default function DailyBookingList({ events, selectedDate, onItemClick, on
                                     </span>
                                     {evt.end && <span className="text-xs text-gray-400 mt-1">{formatTime(evt.end)}</span>}
                                     {isOff && <span className="mt-2 text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">OT</span>}
+                                    {order && (
+                                        <span className="mt-1 text-[10px] font-bold text-orange-700 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-full whitespace-nowrap">
+                                            ลำดับที่ {order}
+                                        </span>
+                                    )}
                                 </div>
 
                                 {/* Main Content */}

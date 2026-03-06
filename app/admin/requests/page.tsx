@@ -189,6 +189,17 @@ function AdminRequestsContent() {
     }
 
     return matchSearch && matchStatus && matchDriver && matchRequester && matchDate;
+  }).sort((a, b) => {
+    // Priority: REQUESTED / PENDING_RETRO ขึ้นก่อน, ที่เหลือตามหลัง
+    const priority = (status: string) =>
+      status === "REQUESTED" || status === "PENDING_RETRO" ? 0 : 1;
+    const pa = priority(a.status);
+    const pb = priority(b.status);
+    if (pa !== pb) return pa - pb;
+    // ถ้า priority เท่ากัน → เรียงตาม start_at ล่าสุดขึ้นก่อน
+    const sa = a.start_at ? new Date(a.start_at).getTime() : 0;
+    const sb = b.start_at ? new Date(b.start_at).getTime() : 0;
+    return sb - sa;
   });
 
   const loadData = async () => {

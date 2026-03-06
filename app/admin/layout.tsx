@@ -19,7 +19,6 @@ import {
   Fuel,
   AlertTriangle,
   MessageCircle,
-  BookOpen,
   ChevronDown,
   SprayCan
 } from "lucide-react";
@@ -215,9 +214,7 @@ export default function AdminLayout({
                 <div className="absolute top-full right-0 pt-2 w-56 hidden group-hover:block z-50">
                   <div className="bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                     <div className="p-1">
-                      <Link href="/manual" className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 rounded-lg text-gray-700" target="_blank">
-                        <BookOpen className="w-4 h-4 text-indigo-500" /> คู่มือการใช้งาน
-                      </Link>
+
                       <button
                         onClick={() => setReportModalOpen(true)}
                         className="w-full text-left flex items-center gap-2 px-4 py-2 hover:bg-gray-50 rounded-lg text-gray-700"
@@ -338,9 +335,7 @@ export default function AdminLayout({
               <div>
                 <p className="px-3 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">ช่วยเหลือ</p>
                 <div className="space-y-1">
-                  <Link href="/manual" onClick={() => setMobileMenuOpen(false)} target="_blank" className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 text-gray-600 rounded-lg">
-                    <BookOpen className="w-4 h-4" /> คู่มือการใช้งาน
-                  </Link>
+
                   <button
                     onClick={() => {
                       setMobileMenuOpen(false);

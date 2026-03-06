@@ -5,7 +5,13 @@ import { sendAdminEmail, generateFuelEmailHtml } from "@/lib/email";
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const { driver_name, plate_number } = body;
+        const {
+            driver_name,
+            plate_number,
+            request_date,
+            system_quota,
+            period
+        } = body;
 
         if (!driver_name || !plate_number) {
             return NextResponse.json(
@@ -20,6 +26,9 @@ export async function POST(req: Request) {
             .insert({
                 driver_name,
                 plate_number,
+                request_date,
+                system_quota,
+                period,
                 status: "PENDING"
             });
 
@@ -37,7 +46,13 @@ export async function POST(req: Request) {
         if (adminEmail) {
             console.log(`📧 [FUEL] Sending email from ${driver_name} to Admin`);
             const subject = `⛽️ มีการขอเบิกน้ำมัน: ${plate_number}`;
-            const html = generateFuelEmailHtml(driver_name, plate_number);
+            const html = generateFuelEmailHtml({
+                driver_name,
+                plate_number,
+                request_date,
+                system_quota,
+                period
+            });
             await sendAdminEmail(subject, html);
         } else {
             console.warn("⚠️ [FUEL] ADMIN_EMAIL not found. Notification skipped.");
@@ -54,5 +69,43 @@ export async function POST(req: Request) {
             { error: "เกิดข้อผิดพลาดภายในระบบ" },
             { status: 500 }
         );
+    }
+}
+
+export async function PATCH(req: Request) {
+    try {
+        const body = await req.json();
+        const { id, request_number, actual_amount, status } = body;
+
+        if (!id) {
+            return NextResponse.json({ error: "Missing ID" }, { status: 400 });
+        }
+
+        const updateData: any = {};
+        if (request_number !== undefined) updateData.request_number = request_number;
+        if (actual_amount !== undefined) {
+            updateData.actual_amount = actual_amount;
+            // Automatically set status to COMPLETED if actual amount is filled
+            if (actual_amount !== null) {
+                updateData.status = "COMPLETED";
+            }
+        }
+        if (status !== undefined) updateData.status = status;
+
+        const { data, error } = await supabase
+            .from("fuel_requests")
+            .update(updateData)
+            .eq("id", id)
+            .select();
+
+        if (error) {
+            console.error("❌ [FUEL] Patch Error:", error);
+            return NextResponse.json({ error: "Update failed" }, { status: 500 });
+        }
+
+        return NextResponse.json({ success: true, data });
+    } catch (err) {
+        console.error("FUEL_PATCH_ERROR:", err);
+        return NextResponse.json({ error: "Internal error" }, { status: 500 });
     }
 }

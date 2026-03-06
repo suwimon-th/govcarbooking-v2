@@ -14,7 +14,6 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { getStatusLabel, getStatusColor } from "@/lib/statusHelper";
 import { HelpCircle, Fuel, AlertTriangle, MessageCircle } from "lucide-react";
-import FuelRequestModal from "@/app/components/FuelRequestModal";
 import ReportIssueModal from "@/app/components/ReportIssueModal";
 
 import PublicQueueCard from "@/app/components/PublicQueueCard";
@@ -114,7 +113,6 @@ export default function UserPage() {
     const [vehicles, setVehicles] = useState<{ id: string, plate_number: string, color: string | null }[]>([]);
 
     // Help / Fuel / Report State
-    const [fuelModalOpen, setFuelModalOpen] = useState(false);
     const [reportModalOpen, setReportModalOpen] = useState(false);
 
     const [userProfile, setUserProfile] = useState<{ id: string, name: string } | null>(null);
@@ -362,18 +360,16 @@ export default function UserPage() {
                             {/* Mobile Dropdown */}
                             {helpMenuOpen && (
                                 <div className="absolute right-0 top-8 w-56 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-50 text-gray-800 animate-in fade-in zoom-in-95 duration-200">
-                                    <button
-                                        onClick={() => {
-                                            setHelpMenuOpen(false);
-                                            setFuelModalOpen(true);
-                                        }}
+                                    <Link
+                                        href="/fuel"
+                                        onClick={() => setHelpMenuOpen(false)}
                                         className="flex items-center gap-3 w-full px-4 py-3 hover:bg-rose-50 rounded-lg transition-colors text-left group"
                                     >
                                         <div className="bg-rose-100 text-rose-600 p-2 rounded-lg">
                                             <Fuel className="w-4 h-4" />
                                         </div>
                                         <span className="text-sm font-bold">เบิกน้ำมัน</span>
-                                    </button>
+                                    </Link>
 
 
 
@@ -470,11 +466,9 @@ export default function UserPage() {
 
                             {helpMenuOpen && (
                                 <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-50 animate-in fade-in zoom-in-95 duration-200">
-                                    <button
-                                        onClick={() => {
-                                            setHelpMenuOpen(false);
-                                            setFuelModalOpen(true);
-                                        }}
+                                    <Link
+                                        href="/fuel"
+                                        onClick={() => setHelpMenuOpen(false)}
                                         className="flex items-center gap-3 w-full px-4 py-3 hover:bg-rose-50 rounded-lg transition-colors text-left group"
                                     >
                                         <div className="bg-rose-100 text-rose-600 p-2 rounded-lg group-hover:bg-white group-hover:shadow-sm transition-all">
@@ -484,7 +478,7 @@ export default function UserPage() {
                                             <span className="text-sm font-bold text-gray-800">เบิกน้ำมันเชื้อเพลิง</span>
                                             <span className="text-[10px] text-gray-500">สำหรับพนักงานขับรถ</span>
                                         </div>
-                                    </button>
+                                    </Link>
 
 
 
@@ -828,10 +822,7 @@ export default function UserPage() {
                 </div>
             </div>
 
-            <FuelRequestModal
-                open={fuelModalOpen}
-                onClose={() => setFuelModalOpen(false)}
-            />
+
 
             <ReportIssueModal
                 open={reportModalOpen}

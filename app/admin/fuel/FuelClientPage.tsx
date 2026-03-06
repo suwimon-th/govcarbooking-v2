@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 import {
     Fuel,
     Car,
+    Trash2,
 } from "lucide-react";
 import UpdateStatusModal from "./UpdateStatusModal";
 
@@ -15,6 +16,11 @@ interface FuelRequest {
     plate_number: string;
     status: "PENDING" | "APPROVED" | "REJECTED" | "IN_PROGRESS" | "COMPLETED";
     remark: string | null;
+    request_date?: string | null;
+    request_number?: string | null;
+    system_quota?: string | null;
+    actual_amount?: number | null;
+    period?: string | null;
 }
 
 export default function FuelClientPage() {
@@ -26,6 +32,8 @@ export default function FuelClientPage() {
     // Modal State
     const [selectedRequest, setSelectedRequest] = useState<string | null>(null);
     const [currentStatus, setCurrentStatus] = useState<string>("");
+    const [initialReqNum, setInitialReqNum] = useState<string | null>(null);
+    const [initialActAmt, setInitialActAmt] = useState<number | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     const fetchRequests = async () => {
@@ -57,18 +65,22 @@ export default function FuelClientPage() {
         fetchRequests();
     }, [filter]);
 
-    const handleOpenModal = (id: string, status: string) => {
+    const handleOpenModal = (id: string, status: string, reqNum?: string | null) => {
         setSelectedRequest(id);
         setCurrentStatus(status);
+        setInitialReqNum(reqNum || null);
         setIsModalOpen(true);
     };
 
-    const handleUpdateStatus = async (newStatus: string) => {
+    const handleUpdateStatus = async (newStatus: string, requestNumber?: string) => {
         if (!selectedRequest) return;
+
+        const updateData: any = { status: newStatus };
+        if (requestNumber !== undefined) updateData.request_number = requestNumber;
 
         const { error } = await supabase
             .from("fuel_requests")
-            .update({ status: newStatus })
+            .update(updateData)
             .eq("id", selectedRequest);
 
         if (!error) {
@@ -77,14 +89,27 @@ export default function FuelClientPage() {
             alert("เกิดข้อผิดพลาด: " + error.message);
         }
     };
+    const handleDelete = async (id: string) => {
+        if (!confirm("คุณตรวจสอบดีแล้วใช่ไหมว่าต้องการลบรายการนี้?")) return;
 
+        const { error } = await supabase
+            .from("fuel_requests")
+            .delete()
+            .eq("id", id);
+
+        if (!error) {
+            fetchRequests();
+        } else {
+            alert("ลบไม่สำเร็จ: " + error.message);
+        }
+    };
     const getStatusBadge = (status: string) => {
         switch (status) {
             case "PENDING": return <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs">รออนุมัติ</span>;
             case "APPROVED": return <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">อนุมัติแล้ว</span>;
             case "IN_PROGRESS": return <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">กำลังดำเนินการ</span>;
             case "COMPLETED": return <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">สำเร็จ</span>;
-            case "REJECTED": return <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs">ไม่อนุมัติ</span>;
+            case "REJECTED": return <span className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs">ยกเลิก</span>;
             default: return <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">{status}</span>;
         }
     };
@@ -113,9 +138,8 @@ export default function FuelClientPage() {
                 {[
                     { key: "ALL", label: "ทั้งหมด" },
                     { key: "PENDING", label: "รออนุมัติ" },
-                    { key: "IN_PROGRESS", label: "กำลังดำเนินการ" },
                     { key: "COMPLETED", label: "สำเร็จ" },
-                    { key: "REJECTED", label: "ไม่อนุมัติ" }
+                    { key: "REJECTED", label: "ยกเลิก" }
                 ].map((f) => (
                     <button
                         key={f.key}
@@ -137,9 +161,11 @@ export default function FuelClientPage() {
                         <table className="w-full text-left border-collapse">
                             <thead className="bg-gray-50 border-b border-gray-200">
                                 <tr>
-                                    <th className="p-4 font-semibold text-gray-600 text-sm">วันที่แจ้ง</th>
-                                    <th className="p-4 font-semibold text-gray-600 text-sm">ผู้ขอเบิก</th>
-                                    <th className="p-4 font-semibold text-gray-600 text-sm">ทะเบียนรถ</th>
+                                    <th className="p-4 font-semibold text-gray-600 text-sm">ผู้ขอเบิก/ทะเบียนรถ</th>
+                                    <th className="p-4 font-semibold text-gray-600 text-sm">วันที่เบิก (งวด)</th>
+                                    <th className="p-4 font-semibold text-gray-600 text-sm">เลขขอเบิก</th>
+                                    <th className="p-4 font-semibold text-gray-600 text-sm text-center">โควตา</th>
+                                    <th className="p-4 font-semibold text-gray-600 text-sm text-center">เติมจริง</th>
                                     <th className="p-4 font-semibold text-gray-600 text-sm">สถานะ</th>
                                     <th className="p-4 font-semibold text-gray-600 text-sm text-right">จัดการ</th>
                                 </tr>
@@ -147,37 +173,69 @@ export default function FuelClientPage() {
                             <tbody className="divide-y divide-gray-100">
                                 {requests.length === 0 ? (
                                     <tr>
-                                        <td colSpan={5} className="p-8 text-center text-gray-400">
+                                        <td colSpan={7} className="p-8 text-center text-gray-400">
                                             ไม่พบข้อมูล
                                         </td>
                                     </tr>
                                 ) : (
                                     requests.map((req) => (
                                         <tr key={req.id} className="hover:bg-gray-50/50 transition-colors">
-                                            <td className="p-4 text-sm text-gray-600">
-                                                {new Date(req.created_at).toLocaleString("th-TH")}
-                                            </td>
-                                            <td className="p-4 text-sm font-medium text-gray-800">
-                                                {req.driver_name}
-                                            </td>
-                                            <td className="p-4 text-sm text-gray-600">
-                                                <div className="flex items-center gap-2">
-                                                    <Car className="w-4 h-4 text-gray-400" />
+                                            <td className="p-4 align-top">
+                                                <div className="font-bold text-gray-800 text-base mb-1">
+                                                    {req.driver_name}
+                                                </div>
+                                                <div className="flex items-center gap-1.5 text-xs text-rose-600 font-semibold bg-rose-50 px-2 py-0.5 rounded w-fit border border-rose-100">
+                                                    <Car className="w-3.5 h-3.5" />
                                                     {req.plate_number}
                                                 </div>
+                                                <div className="text-[10px] text-gray-400 mt-1">
+                                                    ส่งคำขอ: {new Date(req.created_at).toLocaleString("th-TH")}
+                                                </div>
                                             </td>
-                                            <td className="p-4 cursor-pointer" onClick={() => handleOpenModal(req.id, req.status)}>
+                                            <td className="p-4 align-top">
+                                                <div className="text-sm font-medium text-gray-800">
+                                                    {req.request_date ? new Date(req.request_date).toLocaleDateString("th-TH") : "-"}
+                                                </div>
+                                                {req.period && (
+                                                    <div className="text-xs text-blue-600 mt-0.5 font-semibold">
+                                                        ({req.period})
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td className="p-4 align-top text-sm text-gray-600">
+                                                {req.request_number || "-"}
+                                            </td>
+                                            <td className="p-4 align-top text-center text-sm">
+                                                {req.system_quota ? (
+                                                    <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-semibold">
+                                                        {req.system_quota}
+                                                    </span>
+                                                ) : "-"}
+                                            </td>
+                                            <td className="p-4 align-top text-center text-sm font-bold text-gray-800">
+                                                {req.actual_amount ? `${req.actual_amount} ลิตร` : "-"}
+                                            </td>
+                                            <td className="p-4 cursor-pointer align-top" onClick={() => handleOpenModal(req.id, req.status, req.request_number)}>
                                                 <div className="hover:scale-105 transition-transform inline-block" title="คลิกเพื่อเปลี่ยนสถานะ">
                                                     {getStatusBadge(req.status)}
                                                 </div>
                                             </td>
                                             <td className="p-4 text-right">
-                                                <button
-                                                    onClick={() => handleOpenModal(req.id, req.status)}
-                                                    className="px-3 py-1.5 bg-blue-50 text-blue-600 text-xs font-medium rounded-lg hover:bg-blue-100 transition-colors border border-blue-200"
-                                                >
-                                                    จัดการ
-                                                </button>
+                                                <div className="flex justify-end gap-2">
+                                                    <button
+                                                        onClick={() => handleOpenModal(req.id, req.status, req.request_number)}
+                                                        className="px-3 py-1.5 bg-blue-50 text-blue-600 text-xs font-bold rounded-lg hover:bg-blue-100 transition-colors border border-blue-200"
+                                                    >
+                                                        จัดการ
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(req.id)}
+                                                        className="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                                                        title="ลบรายการ"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))
@@ -197,25 +255,57 @@ export default function FuelClientPage() {
                                 <div key={req.id} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col gap-3">
                                     <div className="flex justify-between items-start">
                                         <div className="flex flex-col">
-                                            <span className="text-xs text-gray-500">{new Date(req.created_at).toLocaleString("th-TH")}</span>
-                                            <span className="font-bold text-gray-900 mt-1">{req.driver_name}</span>
+                                            <span className="font-bold text-gray-900 text-lg">{req.driver_name}</span>
+                                            <div className="flex items-center gap-1.5 text-xs text-rose-600 font-semibold bg-rose-50 px-2 py-0.5 rounded w-fit border border-rose-100 mt-1.5 mb-1">
+                                                <Car className="w-3.5 h-3.5" />
+                                                <span>{req.plate_number}</span>
+                                            </div>
                                         </div>
-                                        <div onClick={() => handleOpenModal(req.id, req.status)}>
+                                        <div onClick={() => handleOpenModal(req.id, req.status, req.request_number)}>
                                             {getStatusBadge(req.status)}
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 p-2 rounded-lg">
-                                        <Car className="w-4 h-4" />
-                                        <span className="font-medium">{req.plate_number}</span>
+                                    <div className="grid grid-cols-2 gap-2 mt-2 bg-gray-50/50 p-3 rounded-lg border border-gray-100 text-xs">
+                                        <div className="flex flex-col gap-1">
+                                            <span className="text-gray-500">วันที่ขอเบิก:</span>
+                                            <span className="font-semibold text-gray-800">
+                                                {req.request_date ? new Date(req.request_date).toLocaleDateString("th-TH") : "-"}
+                                                <span className="text-blue-600 ml-1">{req.period ? `(${req.period})` : ""}</span>
+                                            </span>
+                                        </div>
+                                        <div className="flex flex-col gap-1">
+                                            <span className="text-gray-500">เลขขอเบิก:</span>
+                                            <span className="font-semibold text-gray-800">{req.request_number || "-"}</span>
+                                        </div>
+                                        <div className="flex flex-col gap-1 mt-1 pt-2 border-t border-gray-100">
+                                            <span className="text-gray-500">โควตา:</span>
+                                            <span className="font-semibold text-gray-800">{req.system_quota || "-"}</span>
+                                        </div>
+                                        <div className="flex flex-col gap-1 mt-1 pt-2 border-t border-gray-100">
+                                            <span className="text-gray-500">เติมจริง:</span>
+                                            <span className="font-bold border-rose-600 text-rose-600">{req.actual_amount ? `${req.actual_amount} ลิตร` : "-"}</span>
+                                        </div>
                                     </div>
 
-                                    <button
-                                        onClick={() => handleOpenModal(req.id, req.status)}
-                                        className="w-full py-2 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 active:scale-95 transition-all shadow-sm"
-                                    >
-                                        จัดการสถานะ
-                                    </button>
+                                    <div className="text-[10px] text-gray-400 mt-1">
+                                        ส่งคำขอเข้าระบบเมื่อ: {new Date(req.created_at).toLocaleString("th-TH")}
+                                    </div>
+
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => handleOpenModal(req.id, req.status, req.request_number)}
+                                            className="flex-1 py-2 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 active:scale-95 transition-all shadow-sm"
+                                        >
+                                            จัดการสถานะ
+                                        </button>
+                                        <button
+                                            onClick={() => handleDelete(req.id)}
+                                            className="px-3 bg-rose-50 text-rose-600 rounded-lg border border-rose-100"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
                                 </div>
                             ))
                         )}
@@ -223,12 +313,15 @@ export default function FuelClientPage() {
                 </div>
             )}
 
-            <UpdateStatusModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                currentStatus={currentStatus}
-                onUpdate={handleUpdateStatus}
-            />
+            {isModalOpen && (
+                <UpdateStatusModal
+                    isOpen={isModalOpen}
+                    onClose={() => setIsModalOpen(false)}
+                    currentStatus={currentStatus}
+                    onUpdate={handleUpdateStatus}
+                    initialRequestNumber={initialReqNum}
+                />
+            )}
         </div>
     );
 }

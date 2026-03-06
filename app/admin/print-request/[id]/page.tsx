@@ -133,8 +133,6 @@ export default function PrintRequestPage() {
 
             {/* A4 Frame Styles */}
             <style jsx global>{`
-                @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
-                
                 @media print {
                     @page {
                         size: A4;
