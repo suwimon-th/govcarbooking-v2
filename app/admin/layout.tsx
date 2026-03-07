@@ -20,7 +20,8 @@ import {
   AlertTriangle,
   MessageCircle,
   ChevronDown,
-  SprayCan
+  SprayCan,
+  ClipboardCheck
 } from "lucide-react";
 import ReportIssueModal from "@/app/components/ReportIssueModal";
 
@@ -43,6 +44,7 @@ export default function AdminLayout({
     "/admin/drivers": "คนขับรถ",
     "/admin/users": "ผู้ใช้งาน",
     "/admin/reports": "รายงานสรุป",
+    "/admin/inspections": "แบบรายงานสภาพรถ",
   };
 
   const currentTitle = breadcrumbTitles[pathname] ?? "";
@@ -196,6 +198,9 @@ export default function AdminLayout({
                       <Link href="/admin/fuel" className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 rounded-lg text-gray-700">
                         <Fuel className="w-4 h-4 text-rose-500" /> เบิกน้ำมัน
                       </Link>
+                      <Link href="/admin/inspections" className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 rounded-lg text-gray-700">
+                        <ClipboardCheck className="w-4 h-4 text-blue-500" /> แบบรายงานสภาพรถ
+                      </Link>
                       <Link href="/admin/reports" className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 rounded-lg text-gray-700">
                         <FileText className="w-4 h-4 text-orange-500" /> รายงานสรุป
                       </Link>
@@ -322,6 +327,9 @@ export default function AdminLayout({
                   </Link>
                   <Link href="/admin/fuel" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 text-gray-600 rounded-lg">
                     <Fuel className="w-4 h-4" /> เบิกน้ำมัน
+                  </Link>
+                  <Link href="/admin/inspections" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 text-gray-600 rounded-lg">
+                    <ClipboardCheck className="w-4 h-4" /> แบบรายงานสภาพรถ
                   </Link>
                   <Link href="/admin/reports" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 text-gray-600 rounded-lg">
                     <FileText className="w-4 h-4" /> รายงานสรุป

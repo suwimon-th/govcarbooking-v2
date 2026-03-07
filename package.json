@@ -9,13 +9,14 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@fontsource/sarabun": "^5.2.8",
     "@fullcalendar/daygrid": "^6.1.19",
     "@fullcalendar/interaction": "^6.1.19",
     "@fullcalendar/list": "^6.1.20",
     "@fullcalendar/react": "^6.1.19",
     "@line/liff": "^2.27.3",
     "@supabase/supabase-js": "^2.84.0",
-    "docx": "^9.5.1",
+    "docx": "^9.6.0",
     "dotenv": "^17.2.3",
     "file-saver": "^2.0.5",
     "lucide-react": "^0.554.0",

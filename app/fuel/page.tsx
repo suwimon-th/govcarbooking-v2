@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { Loader2, CheckCircle2, AlertCircle, Fuel, ArrowLeft, Plus, History, Edit2, Check, X, Car, User, Calendar, ClipboardList, Droplets } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import Link from "next/link";
 
@@ -20,6 +21,23 @@ interface FuelRequest {
 
 export default function FuelPage() {
     const [viewMode, setViewMode] = useState<'LOGBOOK' | 'FORM'>('LOGBOOK');
+    const router = useRouter();
+
+    // -- Authentication Check --
+    useEffect(() => {
+        const getCookie = (name: string) => {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop()?.split(";").shift();
+            return null;
+        };
+        const userId = getCookie("user_id");
+        if (!userId) {
+            const currentPath = window.location.pathname + window.location.search;
+            router.push(`/login?redirect=${encodeURIComponent(currentPath)}`);
+        }
+    }, [router]);
+
     const [fuelRequests, setFuelRequests] = useState<FuelRequest[]>([]);
     const [loadingLogbook, setLoadingLogbook] = useState(true);
 

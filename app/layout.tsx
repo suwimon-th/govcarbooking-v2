@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import { Prompt } from "next/font/google";
+import { Geist, Geist_Mono, Prompt, Sarabun } from "next/font/google";
 import "./globals.css";
+import "@fontsource/sarabun"; // For print layout
 
 // ฟอนต์ Prompt (ราชการ)
 const prompt = Prompt({

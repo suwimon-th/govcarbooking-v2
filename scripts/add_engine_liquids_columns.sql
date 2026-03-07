@@ -1,0 +1,6 @@
+ALTER TABLE public.vehicle_inspections
+ADD COLUMN IF NOT EXISTS item_engine_oil BOOLEAN,
+ADD COLUMN IF NOT EXISTS item_brake_oil BOOLEAN,
+ADD COLUMN IF NOT EXISTS item_fuel BOOLEAN,
+ADD COLUMN IF NOT EXISTS item_battery_water BOOLEAN,
+ADD COLUMN IF NOT EXISTS item_radiator_water BOOLEAN;

@@ -10,7 +10,7 @@ import type { EventClickArg } from "@fullcalendar/core";
 import EventDetailModal from "@/app/components/EventDetailModal";
 import ReportIssueModal from "@/app/components/ReportIssueModal";
 import DailyBookingList from "@/app/components/DailyBookingList";
-import { Calendar as CalendarIcon, Clock, ChevronRight, LogIn, HelpCircle, Fuel, AlertTriangle, MessageCircle, Phone, CalendarCheck } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, ChevronRight, LogIn, HelpCircle, Fuel, AlertTriangle, MessageCircle, Phone, CalendarCheck, ClipboardCheck, Plus } from "lucide-react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import { getStatusLabel, getStatusColor } from "@/lib/statusHelper";
@@ -253,7 +253,7 @@ export default function PublicCalendarPage() {
                 <div className="flex items-center justify-between w-full">
                     <h1 className="text-lg font-bold tracking-wide flex items-center gap-2">
                         <CalendarIcon className="w-5 h-5 opacity-80" />
-                        ปฏิทินการใช้รถ
+                        ปฏิทินปฏิบัติงาน
                     </h1>
                     <div className="flex gap-4 text-sm font-medium opacity-90 items-center">
                         <button onClick={() => {
@@ -274,16 +274,19 @@ export default function PublicCalendarPage() {
 
                             {/* Mobile Dropdown */}
                             {helpMenuOpen && (
-                                <div className="absolute right-0 top-8 w-56 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-50 text-gray-800 animate-in fade-in zoom-in-95 duration-200">
+                                <div className="absolute right-0 top-10 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 p-2 z-50 text-gray-800 animate-in fade-in zoom-in-95 duration-200">
                                     <Link
                                         href="/fuel"
                                         onClick={() => setHelpMenuOpen(false)}
-                                        className="flex items-center gap-3 w-full px-4 py-3 hover:bg-rose-50 rounded-lg transition-colors text-left group"
+                                        className="flex items-center gap-4 w-full p-3 hover:bg-rose-50/50 rounded-xl transition-all group"
                                     >
-                                        <div className="bg-rose-100 text-rose-600 p-2 rounded-lg">
-                                            <Fuel className="w-4 h-4" />
+                                        <div className="bg-gradient-to-br from-rose-500 to-pink-600 p-2.5 rounded-xl text-white shadow-lg shadow-rose-200 group-hover:scale-110 transition-transform duration-200">
+                                            <Fuel className="w-5 h-5" />
                                         </div>
-                                        <span className="text-sm font-bold">เบิกน้ำมัน</span>
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-bold text-gray-800">เบิกน้ำมันเชื้อเพลิง</span>
+                                            <span className="text-[10px] text-gray-500">สำหรับพนักงานขับรถ</span>
+                                        </div>
                                     </Link>
 
                                     <button
@@ -291,27 +294,46 @@ export default function PublicCalendarPage() {
                                             setHelpMenuOpen(false);
                                             setReportModalOpen(true);
                                         }}
-                                        className="flex items-center gap-3 w-full px-4 py-3 hover:bg-amber-50 rounded-lg transition-colors text-left group"
+                                        className="flex items-center gap-4 w-full p-3 hover:bg-amber-50/50 rounded-xl transition-all group text-left"
                                     >
-                                        <div className="bg-amber-100 text-amber-600 p-2 rounded-lg">
-                                            <AlertTriangle className="w-4 h-4" />
+                                        <div className="bg-gradient-to-br from-amber-500 to-orange-600 p-2.5 rounded-xl text-white shadow-lg shadow-amber-200 group-hover:scale-110 transition-transform duration-200">
+                                            <AlertTriangle className="w-5 h-5" />
                                         </div>
-                                        <span className="text-sm font-bold">แจ้งปัญหา</span>
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-bold text-gray-800">แจ้งปัญหาการใช้รถ</span>
+                                            <span className="text-[10px] text-gray-500">แจ้งซ่อมหรือพบปัญหาทั่วไป</span>
+                                        </div>
                                     </button>
+
+                                    <Link
+                                        href="/vehicle-inspection"
+                                        onClick={() => setHelpMenuOpen(false)}
+                                        className="flex items-center gap-4 w-full p-3 hover:bg-blue-50/50 rounded-xl transition-all group"
+                                    >
+                                        <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-2.5 rounded-xl text-white shadow-lg shadow-blue-200 group-hover:scale-110 transition-transform duration-200">
+                                            <ClipboardCheck className="w-5 h-5" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-bold text-gray-800">รายงานสภาพรถ</span>
+                                            <span className="text-[10px] text-gray-500">แบบบันทึกตรวจรถประจำวัน</span>
+                                        </div>
+                                    </Link>
+
+                                    <div className="h-px bg-gray-100 my-1 mx-2" />
 
                                     <a
                                         href="https://line.me/R/ti/p/@420uicrg"
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="flex items-center gap-3 w-full px-4 py-3 hover:bg-green-50 rounded-lg transition-colors text-left group"
+                                        className="flex items-center gap-4 w-full p-3 hover:bg-emerald-50/50 rounded-xl transition-all group"
                                         onClick={() => setHelpMenuOpen(false)}
                                     >
-                                        <div className="bg-green-100 text-green-600 p-2 rounded-lg">
-                                            <MessageCircle className="w-4 h-4" />
+                                        <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-2.5 rounded-xl text-white shadow-lg shadow-emerald-200 group-hover:scale-110 transition-transform duration-200">
+                                            <MessageCircle className="w-5 h-5" />
                                         </div>
                                         <div className="flex flex-col">
-                                            <span className="text-sm font-bold">ติดต่อเรา</span>
-                                            <span className="text-[10px] text-gray-500">Line: @420uicrg</span>
+                                            <span className="text-sm font-bold text-gray-800">ติดต่อสอบถาม</span>
+                                            <span className="text-[10px] text-gray-500">Line ID: @420uicrg</span>
                                         </div>
                                     </a>
                                 </div>
@@ -414,6 +436,21 @@ export default function PublicCalendarPage() {
                                             <span className="text-[10px] text-gray-500">สำหรับแจ้งซ่อม/ปัญหา</span>
                                         </div>
                                     </button>
+
+                                    {/* Vehicle Inspection Report */}
+                                    <Link
+                                        href="/vehicle-inspection"
+                                        onClick={() => setHelpMenuOpen(false)}
+                                        className="flex items-center gap-3 w-full px-4 py-3 hover:bg-blue-50 rounded-lg transition-colors text-left group"
+                                    >
+                                        <div className="bg-blue-100 text-blue-600 p-2 rounded-lg group-hover:bg-white group-hover:shadow-sm transition-all">
+                                            <ClipboardCheck className="w-5 h-5" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-bold text-gray-800">แบบรายงานสภาพรถ</span>
+                                            <span className="text-[10px] text-gray-500">บันทึกการตรวจสภาพรถ</span>
+                                        </div>
+                                    </Link>
 
                                     <a
                                         href="https://line.me/R/ti/p/@420uicrg"

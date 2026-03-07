@@ -63,6 +63,8 @@ export default function RequestForm({
   const [driverId, setDriverId] = useState<string>("");
   const [purpose, setPurpose] = useState<string>("");
 
+  const router = useRouter();
+
   // Requester State (Internal)
   const [reqId, setReqId] = useState<string>(requesterId);
   const [reqName, setReqName] = useState<string>(requesterName);
@@ -79,9 +81,18 @@ export default function RequestForm({
   const [profiles, setProfiles] = useState<Profile[]>([]);
 
   const [destination, setDestination] = useState<string>("");
+  const [isMobile, setIsMobile] = useState(false);
   const [position, setPosition] = useState<string>("");
-
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+
+  // -- Authentication Check --
+  useEffect(() => {
+    if (!requesterId) {
+      const currentPath = window.location.pathname + window.location.search;
+      router.push(`/login?redirect=${encodeURIComponent(currentPath)}`);
+    }
+  }, [requesterId, router]);
+
   const [showVehicleSelector, setShowVehicleSelector] = useState(false);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loadingVehicles, setLoadingVehicles] = useState<boolean>(false);
@@ -90,7 +101,6 @@ export default function RequestForm({
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [createdBooking, setCreatedBooking] = useState<any>(null);
-  const router = useRouter();
 
   // Load Profiles
   useEffect(() => {

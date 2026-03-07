@@ -1,0 +1,2 @@
+ALTER TABLE public.vehicle_inspections
+ADD COLUMN IF NOT EXISTS status VARCHAR DEFAULT 'ACTIVE';
