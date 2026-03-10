@@ -19,6 +19,7 @@ type Booking = {
 type Driver = {
   id: string;
   full_name: string;
+  line_picture_url?: string | null;
 };
 
 function DriverActiveTasksContent() {
@@ -32,44 +33,33 @@ function DriverActiveTasksContent() {
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
-  // 1. Fetch Drivers List (if no driverId)
+  // Fetch Data (Drivers & Tasks)
   useEffect(() => {
-    if (!driverId) {
-      const fetchDrivers = async () => {
-        try {
-          setLoading(true);
-          const res = await fetch("/api/driver/list");
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error || "โหลดรายชื่อไม่สำเร็จ");
-          setDrivers(data.drivers || []);
-        } catch (err: any) {
-          setError(err.message);
-        } finally {
-          setLoading(false);
-        }
-      };
-      fetchDrivers();
-    }
-  }, [driverId]);
+    const fetchData = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        // 1. Fetch Drivers (Always needed for names/pics)
+        const dRes = await fetch("/api/driver/list");
+        const dData = await dRes.json();
+        if (!dRes.ok) throw new Error(dData.error || "โหลดรายชื่อไม่สำเร็จ");
+        setDrivers(dData.drivers || []);
 
-  // 2. Fetch Tasks (if driverId present)
-  useEffect(() => {
-    if (driverId) {
-      const fetchTasks = async () => {
-        try {
-          setLoading(true);
-          const res = await fetch(`/api/driver/active-tasks?driver_id=${driverId}`);
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error || "ดึงข้อมูลงานไม่สำเร็จ");
-          setTasks(data.tasks || []);
-        } catch (err: any) {
-          setError(err.message);
-        } finally {
-          setLoading(false);
+        // 2. Fetch Tasks (Only if driverId is selected)
+        if (driverId) {
+          const tRes = await fetch(`/api/driver/active-tasks?driver_id=${driverId}`);
+          const tData = await tRes.json();
+          if (!tRes.ok) throw new Error(tData.error || "ดึงข้อมูลงานไม่สำเร็จ");
+          setTasks(tData.tasks || []);
         }
-      };
-      fetchTasks();
-    }
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, [driverId]);
 
   const formatDateTime = (isoString: string) => {
@@ -145,9 +135,17 @@ function DriverActiveTasksContent() {
                   className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between hover:border-blue-300 hover:bg-blue-50 active:scale-[0.98] transition-all group"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xl group-hover:bg-blue-600 group-hover:text-white transition-colors shadow-inner">
-                      {d.full_name.charAt(0)}
-                    </div>
+                    {d.line_picture_url ? (
+                      <img 
+                        src={d.line_picture_url} 
+                        alt={d.full_name} 
+                        className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-md"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xl group-hover:bg-blue-600 group-hover:text-white transition-colors shadow-inner">
+                        {d.full_name.charAt(0)}
+                      </div>
+                    )}
                     <span className="text-lg font-bold text-gray-800">{d.full_name}</span>
                   </div>
                   <ChevronRight className="w-6 h-6 text-gray-300 group-hover:text-blue-500 transform group-hover:translate-x-1 transition-all" />
@@ -172,9 +170,19 @@ function DriverActiveTasksContent() {
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-400/20 rounded-full blur-2xl"></div>
         <div className="relative z-10 flex justify-between items-end">
-          <div>
-            <h1 className="text-2xl font-bold mb-1">งานของฉัน</h1>
-            <p className="text-blue-100 text-sm">รายการงานที่ยังไม่เสร็จสิ้น</p>
+          <div className="flex items-center gap-4">
+            {/* Find current driver info from list to show pic if possible */}
+            {drivers.find(d => d.id === driverId)?.line_picture_url && (
+              <img 
+                src={drivers.find(d => d.id === driverId)?.line_picture_url!} 
+                alt="Profile" 
+                className="w-14 h-14 rounded-full border-2 border-white/50 shadow-lg object-cover"
+              />
+            )}
+            <div>
+              <h1 className="text-2xl font-bold mb-1">งานของฉัน</h1>
+              <p className="text-blue-100 text-sm">รายการงานที่ยังไม่เสร็จสิ้น</p>
+            </div>
           </div>
           <button 
             onClick={() => router.push("/driver/active-tasks")}
