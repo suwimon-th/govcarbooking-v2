@@ -18,7 +18,8 @@ import {
   Key,
   Shield,
   ShieldCheck,
-  RefreshCcw
+  RefreshCcw,
+  Image
 } from "lucide-react";
 
 // =========================
@@ -55,6 +56,7 @@ export default function UsersPage() {
   const [resetUser, setResetUser] = useState<UserRow | null>(null);
 
   const [toast, setToast] = useState<ToastState | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
   // โหลดข้อมูลผู้ใช้
   const loadData = async () => {
@@ -122,6 +124,27 @@ export default function UsersPage() {
 
     showToast("success", "ลบผู้ใช้สำเร็จ");
     loadData();
+  };
+
+  const handleSyncPictures = async () => {
+    if (!confirm("คุณต้องการดึงรูปโปรไฟล์จาก LINE ของทุกคนที่มีการเชื่อมต่อแล้วใช่หรือไม่?")) return;
+    
+    setSyncing(true);
+    try {
+      const res = await fetch("/api/admin/sync-line-pictures");
+      const json = await res.json();
+      
+      if (res.ok) {
+        showToast("success", `ดึงรูปสำเร็จ: ผู้ใช้ ${json.results.profiles.success} คน, คนขับ ${json.results.drivers.success} คน`);
+        loadData();
+      } else {
+        showToast("error", "ดึงรูปล้มเหลว: " + json.error);
+      }
+    } catch (err) {
+      showToast("error", "เกิดข้อผิดพลาดในการดึงรูป");
+    } finally {
+      setSyncing(false);
+    }
   };
 
   const getRoleBadge = (role: string) => {
@@ -207,14 +230,30 @@ export default function UsersPage() {
             </select>
           </div>
 
-          <button
-            onClick={() => setShowAdd(true)}
-            className="flex items-center justify-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl hover:bg-blue-700 shadow-md text-sm font-medium transition-transform active:scale-95"
-          >
-            <Plus className="w-5 h-5" />
-            <span className="md:hidden">เพิ่ม</span>
-            <span className="hidden md:inline">เพิ่มผู้ใช้</span>
-          </button>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <button
+              onClick={handleSyncPictures}
+              disabled={syncing}
+              className="flex items-center justify-center gap-2 bg-white text-gray-700 border border-gray-300 px-4 py-2.5 rounded-xl hover:bg-gray-50 text-sm font-medium transition-colors shadow-sm whitespace-nowrap flex-1 sm:flex-none"
+              title="ดึงรูปโปรไฟล์จาก LINE ทันที"
+            >
+              {syncing ? (
+                <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Image className="w-4 h-4 text-blue-600" />
+              )}
+              <span className="hidden xl:inline">ดึงรูป LINE</span>
+            </button>
+
+            <button
+              onClick={() => setShowAdd(true)}
+              className="flex items-center justify-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl hover:bg-blue-700 shadow-md text-sm font-medium transition-transform active:scale-95 flex-1 sm:flex-none whitespace-nowrap"
+            >
+              <Plus className="w-5 h-5" />
+              <span className="md:hidden">เพิ่ม</span>
+              <span className="hidden md:inline">เพิ่มผู้ใช้</span>
+            </button>
+          </div>
         </div>
       </div>
 
