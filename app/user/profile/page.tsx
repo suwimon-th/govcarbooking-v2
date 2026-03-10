@@ -141,11 +141,29 @@ export default function ProfilePage() {
                     <span className="relative z-10">เชื่อมต่อ LINE</span>
                   </button>
                 ) : (
-                  <div className="w-full flex items-center justify-center gap-3 bg-gray-100 text-gray-500 p-4 rounded-2xl font-bold border border-gray-200">
-                    <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 4.925-3.067 9.13-7.405 10.8a12.001 12.001 0 01-7.6-10.8c0-.681.057-1.35.166-2.001zM10 10.828l3.293-3.293a1 1 0 011.414 1.414l-4 4a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L10 10.828z" clipRule="evenodd" />
-                    </svg>
-                    เชื่อมต่อ LINE แล้ว
+                  <div className="space-y-3">
+                    <div className="w-full flex items-center justify-center gap-3 bg-gray-50 text-gray-500 p-4 rounded-2xl font-bold border border-gray-100 italic">
+                      <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 4.925-3.067 9.13-7.405 10.8a12.001 12.001 0 01-7.6-10.8c0-.681.057-1.35.166-2.001zM10 10.828l3.293-3.293a1 1 0 011.414 1.414l-4 4a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L10 10.828z" clipRule="evenodd" />
+                      </svg>
+                      เชื่อมต่อ LINE แล้ว
+                    </div>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!confirm("คุณต้องการยกเลิกการเชื่อมต่อ LINE ใช่หรือไม่?")) return;
+                        const res = await fetch("/api/user/unlink-line", { method: "POST" });
+                        if (res.ok) {
+                          alert("ยกเลิกการเชื่อมต่อสำเร็จ");
+                          window.location.reload();
+                        } else {
+                          alert("เกิดข้อผิดพลาด");
+                        }
+                      }}
+                      className="w-full text-red-500 text-sm font-bold hover:underline py-2"
+                    >
+                      ยกเลิกการเชื่อมต่อ LINE
+                    </button>
                   </div>
                 )}
               </div>
