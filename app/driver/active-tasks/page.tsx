@@ -115,12 +115,12 @@ function DriverActiveTasksContent() {
 
         <div className="px-6 -mt-10 relative z-20 space-y-4 max-w-lg mx-auto">
           {/* Search Box */}
-          <div className="bg-white rounded-2xl shadow-xl overflow-hidden flex items-center px-4 py-1 border border-blue-100">
-            <Search className="w-5 h-5 text-gray-400" />
+          <div className="bg-white rounded-2xl shadow-xl overflow-hidden flex items-center px-4 py-1 border border-blue-100 focus-within:border-blue-400 focus-within:ring-4 focus-within:ring-blue-50 transition-all">
+            <Search className="w-5 h-5 text-blue-400 ml-1" />
             <input 
               type="text" 
               placeholder="ค้นหาชื่อของคุณ..." 
-              className="w-full p-3 outline-none text-gray-700 bg-transparent text-lg"
+              className="w-full p-4 outline-none text-gray-700 bg-transparent text-lg font-medium placeholder:text-gray-300"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -134,21 +134,28 @@ function DriverActiveTasksContent() {
                   onClick={() => router.push(`/driver/active-tasks?driver_id=${d.id}`)}
                   className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between hover:border-blue-300 hover:bg-blue-50 active:scale-[0.98] transition-all group"
                 >
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
                     {d.line_picture_url ? (
                       <img 
                         src={d.line_picture_url} 
                         alt={d.full_name} 
-                        className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-md"
+                        className="w-14 h-14 rounded-full object-cover border-2 border-white shadow-md ring-1 ring-blue-100 shrink-0"
                       />
                     ) : (
-                      <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xl group-hover:bg-blue-600 group-hover:text-white transition-colors shadow-inner">
+                      <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 text-blue-600 flex items-center justify-center font-bold text-2xl group-hover:from-blue-600 group-hover:to-indigo-600 group-hover:text-white transition-all shadow-inner shrink-0">
                         {d.full_name.charAt(0)}
                       </div>
                     )}
-                    <span className="text-lg font-bold text-gray-800">{d.full_name}</span>
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-lg font-bold text-gray-800 truncate group-hover:text-blue-700 transition-colors">
+                        {d.full_name}
+                      </span>
+                      <span className="text-xs text-gray-400 font-medium truncate uppercase tracking-wider">พนักงานขับรถ</span>
+                    </div>
                   </div>
-                  <ChevronRight className="w-6 h-6 text-gray-300 group-hover:text-blue-500 transform group-hover:translate-x-1 transition-all" />
+                  <div className="bg-gray-50 p-2 rounded-full group-hover:bg-blue-100 group-hover:text-blue-600 transition-all shrink-0 ml-2">
+                    <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-blue-500 transform group-hover:translate-x-0.5 transition-all" />
+                  </div>
                 </button>
               ))
             ) : (
@@ -169,26 +176,38 @@ function DriverActiveTasksContent() {
       <div className="bg-gradient-to-br from-blue-700 to-indigo-800 pt-8 pb-14 px-6 rounded-b-[40px] shadow-lg relative overflow-hidden text-white">
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
         <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-400/20 rounded-full blur-2xl"></div>
-        <div className="relative z-10 flex justify-between items-end">
-          <div className="flex items-center gap-4">
+        <div className="relative z-10 flex justify-between items-center">
+          <div className="flex items-center gap-3 min-w-0">
             {/* Find current driver info from list to show pic if possible */}
-            {drivers.find(d => d.id === driverId)?.line_picture_url && (
-              <img 
-                src={drivers.find(d => d.id === driverId)?.line_picture_url!} 
-                alt="Profile" 
-                className="w-14 h-14 rounded-full border-2 border-white/50 shadow-lg object-cover"
-              />
-            )}
-            <div>
-              <h1 className="text-2xl font-bold mb-1">งานของฉัน</h1>
-              <p className="text-blue-100 text-sm">รายการงานที่ยังไม่เสร็จสิ้น</p>
+            <div className="relative shrink-0">
+              {drivers.find(d => d.id === driverId)?.line_picture_url ? (
+                <img 
+                  src={drivers.find(d => d.id === driverId)?.line_picture_url!} 
+                  alt="Profile" 
+                  className="w-16 h-16 rounded-full border-2 border-white/80 shadow-xl object-cover"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-full border-2 border-white/80 shadow-xl bg-blue-500/50 flex items-center justify-center text-2xl font-black">
+                  {drivers.find(d => d.id === driverId)?.full_name.charAt(0) || <User />}
+                </div>
+              )}
+              <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 border-2 border-blue-700 rounded-full shadow-inner"></div>
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-xl font-black mb-0.5 truncate leading-tight">
+                {drivers.find(d => d.id === driverId)?.full_name || "งานของฉัน"}
+              </h1>
+              <div className="flex items-center gap-1.5 text-blue-100/80 text-xs font-semibold uppercase tracking-widest">
+                <div className="w-1.5 h-1.5 bg-blue-300 rounded-full animate-pulse"></div>
+                ระบบงานคนขับ
+              </div>
             </div>
           </div>
           <button 
             onClick={() => router.push("/driver/active-tasks")}
-            className="text-white/70 text-xs bg-white/10 px-3 py-1.5 rounded-full backdrop-blur-sm border border-white/20 hover:bg-white/20 transition-colors"
+            className="shrink-0 text-white/90 text-[10px] font-bold bg-white/10 px-3 py-2 rounded-xl backdrop-blur-md border border-white/20 hover:bg-white/20 transition-all active:scale-95"
           >
-            เปลี่ยนชื่อคนขับ
+            สลับบัญชี
           </button>
         </div>
       </div>
