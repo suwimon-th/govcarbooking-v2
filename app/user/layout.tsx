@@ -111,6 +111,7 @@ export default function UserLayout({
               {[
                 { href: "/user", label: "ขอใช้รถ", icon: Car },
                 { href: "/user/my-requests", label: "ประวัติ", icon: FileText },
+                { href: "/user/profile", label: "ข้อมูลส่วนตัว", icon: UserCircle },
                 { href: "/user/change-password", label: "รหัสผ่าน", icon: Key },
               ].map((item) => (
                 <Link
@@ -206,6 +207,20 @@ export default function UserLayout({
               <span className="font-bold text-gray-700 group-hover:text-indigo-700 transition-colors">ประวัติการขอใช้รถ</span>
             </div>
             <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-indigo-400 transition-colors" />
+          </Link>
+
+          <Link
+            href="/user/profile"
+            onClick={() => setMobileMenuOpen(false)}
+            className="flex items-center justify-between p-3.5 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md hover:border-blue-200 transition-all group"
+          >
+            <div className="flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300 shadow-sm">
+                <UserCircle className="w-5 h-5" />
+              </div>
+              <span className="font-bold text-gray-700 group-hover:text-emerald-700 transition-colors">ข้อมูลส่วนตัว / LINE</span>
+            </div>
+            <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-emerald-400 transition-colors" />
           </Link>
 
           <div className="h-px bg-gray-200/60 my-2 mx-2" />
