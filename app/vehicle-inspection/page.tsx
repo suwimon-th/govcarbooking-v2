@@ -47,21 +47,7 @@ function InspectionFormContent() {
     const editIdParam = searchParams.get("edit");
     const router = useRouter();
 
-    // -- Authentication Check --
-    useEffect(() => {
-        const getCookie = (name: string) => {
-            const value = `; ${document.cookie}`;
-            const parts = value.split(`; ${name}=`);
-            if (parts.length === 2) return parts.pop()?.split(";").shift();
-            return null;
-        };
-        const userId = getCookie("user_id");
-        if (!userId) {
-            // Redirect to login with current path as redirect destination
-            const currentPath = window.location.pathname + window.location.search;
-            router.push(`/login?redirect=${encodeURIComponent(currentPath)}`);
-        }
-    }, [router]);
+    // -- Authentication Removed (Public Access for Drivers) --
 
     const [viewMode, setViewMode] = useState<"LOGBOOK" | "FORM">("LOGBOOK");
     const [inspections, setInspections] = useState<Inspection[]>([]);

@@ -101,6 +101,79 @@ export async function POST(req: Request) {
         });
 
         return NextResponse.json({ ok: true });
+      } else if (text === "งานของฉัน") {
+        // === 1. เช็คว่าเป็นคนขับรถในระบบหรือไม่ ===
+        const { data: driver } = await supabase
+          .from("drivers")
+          .select("id, full_name")
+          .eq("line_user_id", userId)
+          .single();
+
+        if (!driver) {
+          // แจ้งเตือนถ้าไม่ใช่คนขับ
+          await fetch("https://api.line.me/v2/bot/message/reply", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${ACCESS_TOKEN}`,
+            },
+            body: JSON.stringify({
+              replyToken,
+              messages: [{ type: "text", text: "คุณยังไม่ได้ลงทะเบียนเป็นพนักงานขับรถในระบบครับ กดเมนู 'ลงทะเบียน' ก่อนนะครับ" }]
+            }),
+          });
+          return NextResponse.json({ ok: true });
+        }
+
+        // === 2. สร้าง Flex Message พร้อมลิงก์ส่วนตัว ===
+        const tasksUrl = `${process.env.PUBLIC_DOMAIN}/driver/active-tasks?driver_id=${driver.id}`;
+        
+        const flexTasks = {
+          type: "bubble",
+          size: "mega",
+          body: {
+            type: "box",
+            layout: "vertical",
+            contents: [
+              { type: "text", text: "🚘 งานของฉัน", weight: "bold", color: "#1d4ed8", size: "xl" },
+              { type: "text", text: `พขร. ${driver.full_name}`, size: "sm", color: "#6b7280", margin: "md" },
+              { type: "text", text: "กดปุ่มด้านล่างเพื่อตรวจสอบงานที่ยังไม่เสร็จหรือรอดำเนินการ", wrap: true, color: "#4b5563", size: "sm", margin: "md" }
+            ]
+          },
+          footer: {
+            type: "box",
+            layout: "vertical",
+            spacing: "sm",
+            contents: [
+              {
+                type: "button",
+                style: "primary",
+                height: "sm",
+                color: "#2563eb",
+                action: {
+                  type: "uri",
+                  label: "ดูงานของฉัน",
+                  uri: tasksUrl
+                }
+              }
+            ],
+            flex: 0
+          }
+        };
+
+        await fetch("https://api.line.me/v2/bot/message/reply", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${ACCESS_TOKEN}`,
+          },
+          body: JSON.stringify({
+            replyToken,
+            messages: [{ type: "flex", altText: "งานของฉัน", contents: flexTasks }]
+          }),
+        });
+
+        return NextResponse.json({ ok: true });
       }
 
       return NextResponse.json({ ok: true });

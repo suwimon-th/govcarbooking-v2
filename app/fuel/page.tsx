@@ -23,20 +23,7 @@ export default function FuelPage() {
     const [viewMode, setViewMode] = useState<'LOGBOOK' | 'FORM'>('LOGBOOK');
     const router = useRouter();
 
-    // -- Authentication Check --
-    useEffect(() => {
-        const getCookie = (name: string) => {
-            const value = `; ${document.cookie}`;
-            const parts = value.split(`; ${name}=`);
-            if (parts.length === 2) return parts.pop()?.split(";").shift();
-            return null;
-        };
-        const userId = getCookie("user_id");
-        if (!userId) {
-            const currentPath = window.location.pathname + window.location.search;
-            router.push(`/login?redirect=${encodeURIComponent(currentPath)}`);
-        }
-    }, [router]);
+    // -- Authentication Removed (Public Access for Drivers) --
 
     const [fuelRequests, setFuelRequests] = useState<FuelRequest[]>([]);
     const [loadingLogbook, setLoadingLogbook] = useState(true);
