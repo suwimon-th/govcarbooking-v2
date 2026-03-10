@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, Suspense, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import liff from "@line/liff";
