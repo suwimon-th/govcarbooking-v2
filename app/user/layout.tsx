@@ -24,7 +24,7 @@ export default function UserLayout({
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [userProfile, setUserProfile] = useState<{ full_name: string; role: string } | null>(null);
+  const [userProfile, setUserProfile] = useState<{ full_name: string; role: string; line_picture_url?: string } | null>(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -155,8 +155,14 @@ export default function UserLayout({
           <div className="absolute bottom-0 right-0 w-20 h-20 bg-blue-400/20 rounded-full blur-xl"></div>
 
           <div className="flex items-center gap-4 relative z-10">
-            <div className="w-12 h-12 rounded-full bg-white/20 border border-white/30 text-white flex items-center justify-center shadow-inner backdrop-blur-sm">
-              <UserCircle className="w-7 h-7" />
+            <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white/30 shadow-inner backdrop-blur-sm bg-white/20">
+              {userProfile?.line_picture_url ? (
+                <img src={userProfile.line_picture_url} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-white">
+                  <UserCircle className="w-7 h-7" />
+                </div>
+              )}
             </div>
             <div className="flex flex-col">
               <span className="text-base font-bold text-white drop-shadow-sm truncate max-w-[150px]">
