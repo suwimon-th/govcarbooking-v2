@@ -36,26 +36,25 @@ function extractDriverId() {
 function DriverLinkPage() {
   const [status, setStatus] = useState<LinkStatus>("loading");
   const [message, setMessage] = useState("กำลังเริ่มระบบเชื่อมต่อ...");
-  const [driverName, setDriverName] = useState<string | null>(null);
+  const [displayName, setDisplayName] = useState<string | null>(null);
+  const [isUserMode, setIsUserMode] = useState(false);
 
   useEffect(() => {
     const run = async () => {
       try {
         if (!LIFF_ID) {
           setStatus("error");
-          setMessage("ไม่พบ LIFF ID (NEXT_PUBLIC_LINE_LIFF_ID_DRIVER)");
+          setMessage("ไม่พบ LIFF ID");
           return;
         }
 
         // 1) อ่าน driver_id
         const driverId = extractDriverId();
-        console.log("👉 DRIVER ID:", driverId);
+        console.log("👉 ID INFO:", { driverId });
 
-        if (!driverId) {
-          setStatus("error");
-          setMessage("ลิงก์ไม่ถูกต้อง: ไม่พบ driver_id");
-          return;
-        }
+        // If no driverId, we assume it's USER mode
+        const userMode = !driverId;
+        setIsUserMode(userMode);
 
         // 2) init LIFF
         setMessage("กำลังเชื่อมต่อกับ LINE...");
@@ -65,43 +64,54 @@ function DriverLinkPage() {
           return liff.login({ redirectUri: window.location.href });
         }
 
-        // 3) รับ LINE userId แบบครอบจักรวาล
+        // 3) รับ LINE userId
         let lineUserId = liff.getContext()?.userId;
-        console.log("👉 Context userId:", lineUserId);
-
         if (!lineUserId) {
           const profile = await liff.getProfile().catch(() => null);
           lineUserId = profile?.userId || undefined;
-          console.log("👉 Profile userId:", lineUserId);
         }
 
         if (!lineUserId) {
           setStatus("error");
-          setMessage("ไม่สามารถอ่าน LINE userId ได้ กรุณาเปิดผ่าน LINE OA");
+          setMessage("ไม่สามารถอ่านข้อมูล LINE ได้ กรุณาเปิดผ่าน LINE OA");
           return;
         }
 
-        // 4) ส่งไป API
-        setMessage("กำลังบันทึกข้อมูลการเชื่อมต่อ...");
+        // 4) ส่งไป API ตามโหมด
+        setMessage("กำลังบันทึกข้อมูล...");
 
-        const res = await fetch("/api/driver/link", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ driver_id: driverId, line_user_id: lineUserId }),
-        });
-
-        const json = await res.json().catch(() => ({}));
-        console.log("👉 API RESPONSE:", json);
-
-        if (!res.ok) {
-          setStatus("error");
-          setMessage(json?.error || "เชื่อม LINE ไม่สำเร็จ");
-          return;
+        if (userMode) {
+          // USER FLOW
+          const res = await fetch("/api/user/link-line", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ line_user_id: lineUserId }),
+          });
+          const json = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            setStatus("error");
+            setMessage(json?.error || "เชื่อมต่อไม่สำเร็จ (อาจต้องเข้าสู่ระบบเว็บไซต์ก่อน)");
+            return;
+          }
+          setDisplayName(json.full_name);
+        } else {
+          // DRIVER FLOW
+          const res = await fetch("/api/driver/link", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ driver_id: driverId, line_user_id: lineUserId }),
+          });
+          const json = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            setStatus("error");
+            setMessage(json?.error || "เชื่อม LINE ไม่สำเร็จ");
+            return;
+          }
+          setDisplayName(json.full_name);
         }
 
-        setDriverName(json.full_name ?? null);
         setStatus("success");
-        setMessage("เชื่อม LINE สำเร็จ ขอบคุณครับ");
+        setMessage("เชื่อมต่อ LINE สำเร็จเรียบร้อยแล้วครับ");
 
       } catch (err) {
         console.error("❌ ERROR:", err);
@@ -115,42 +125,60 @@ function DriverLinkPage() {
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6">
-      <div className="bg-white rounded-2xl shadow-lg max-w-md w-full p-8 text-center">
-        <h1 className="text-2xl font-bold text-blue-800 mb-4">
-          เชื่อมบัญชี LINE สำหรับพนักงานขับรถ
+      <div className="bg-white rounded-3xl shadow-xl max-w-md w-full p-10 text-center border border-gray-100">
+        <h1 className="text-2xl font-black text-blue-800 mb-6">
+          เชื่อมต่อบัญชี LINE
         </h1>
 
-        {driverName && (
-          <p className="mb-2 text-gray-700">
-            พนักงานขับรถ: <span className="font-semibold">{driverName}</span>
-          </p>
+        {displayName && (
+          <div className="bg-blue-50 p-4 rounded-2xl mb-6 border border-blue-100">
+            <p className="text-blue-800 text-sm font-bold">
+              บัญชี: {displayName}
+            </p>
+          </div>
         )}
 
         {status === "loading" && (
-          <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <div className="flex flex-col items-center">
+            <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4" />
+            <p className="text-blue-600 font-medium animate-pulse">{message}</p>
+          </div>
         )}
 
         {status === "success" && (
-          <div className="w-12 h-12 bg-green-500 text-white text-2xl rounded-full flex items-center justify-center mx-auto mb-4">
-            ✓
+          <div className="space-y-6">
+            <div className="w-16 h-16 bg-green-500 text-white rounded-full flex items-center justify-center mx-auto shadow-lg shadow-green-200">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <p className="text-green-600 font-bold text-lg">{message}</p>
+            {isUserMode && (
+              <button 
+                onClick={() => window.location.href = '/user/profile'}
+                className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold active:scale-95 transition-transform"
+              >
+                กลับไปที่หน้าโปรไฟล์
+              </button>
+            )}
           </div>
         )}
 
         {status === "error" && (
-          <div className="w-12 h-12 bg-red-500 text-white text-2xl rounded-full flex items-center justify-center mx-auto mb-4">
-            !
+          <div className="space-y-6">
+            <div className="w-16 h-16 bg-red-500 text-white rounded-full flex items-center justify-center mx-auto shadow-lg shadow-red-200">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
+            <p className="text-red-500 font-bold">{message}</p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold active:scale-95 transition-transform"
+            >
+              ลองใหม่อีกครั้ง
+            </button>
           </div>
-        )}
-
-        <p className="text-gray-700 mb-4">{message}</p>
-
-        {status === "error" && (
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg"
-          >
-            ลองใหม่อีกครั้ง
-          </button>
         )}
       </div>
     </div>

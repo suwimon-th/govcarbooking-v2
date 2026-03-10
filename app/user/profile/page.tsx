@@ -131,7 +131,7 @@ export default function ProfilePage() {
                 {!(me as any).line_user_id ? (
                   <button 
                     type="button"
-                    onClick={() => window.location.href = '/user/link'}
+                    onClick={() => window.location.href = '/driver/link'}
                     className="w-full flex items-center justify-center gap-3 bg-green-500 hover:bg-green-600 text-white p-4 rounded-2xl font-bold transition-all shadow-lg shadow-green-100 group overflow-hidden relative"
                   >
                     <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
