@@ -17,9 +17,29 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing line_user_id" }, { status: 400 });
     }
 
+    // Fetch LINE profile picture
+    let line_picture_url = null;
+    const ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+    if (ACCESS_TOKEN) {
+      try {
+        const lineResponse = await fetch(`https://api.line.me/v2/bot/profile/${line_user_id}`, {
+          headers: { Authorization: `Bearer ${ACCESS_TOKEN}` }
+        });
+        if (lineResponse.ok) {
+          const profile = await lineResponse.json();
+          line_picture_url = profile.pictureUrl || null;
+        }
+      } catch (err) {
+        console.error("Error fetching LINE picture:", err);
+      }
+    }
+
     const { error } = await supabase
       .from("profiles")
-      .update({ line_user_id })
+      .update({ 
+        line_user_id,
+        line_picture_url
+      })
       .eq("id", userId);
 
     if (error) throw error;

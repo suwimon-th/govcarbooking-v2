@@ -31,6 +31,30 @@ export async function POST(req: Request) {
       );
     }
 
+    // Refresh LINE profile picture to keep it fresh
+    let line_picture_url = user.line_picture_url;
+    const ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+    if (ACCESS_TOKEN) {
+      try {
+        const lineResponse = await fetch(`https://api.line.me/v2/bot/profile/${line_user_id}`, {
+          headers: { Authorization: `Bearer ${ACCESS_TOKEN}` }
+        });
+        if (lineResponse.ok) {
+          const profile = await lineResponse.json();
+          line_picture_url = profile.pictureUrl || null;
+          
+          if (line_picture_url !== user.line_picture_url) {
+            await supabase
+              .from("profiles")
+              .update({ line_picture_url })
+              .eq("line_user_id", line_user_id);
+          }
+        }
+      } catch (err) {
+        console.error("Error refreshing LINE picture during login:", err);
+      }
+    }
+
     // สร้าง Response และตั้งค่า Cookies เหมือนระบบ Login ปกติ
     const res = NextResponse.json({
       success: true,

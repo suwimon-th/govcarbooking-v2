@@ -31,6 +31,7 @@ interface UserRow {
   username: string | null;
   role: string;
   position: string | null;
+  line_picture_url: string | null;
 }
 
 type ToastType = "success" | "error" | "warning";
@@ -59,7 +60,7 @@ export default function UsersPage() {
   const loadData = async () => {
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, full_name, username, role, position")
+      .select("id, full_name, username, role, position, line_picture_url")
       .order("created_at", { ascending: false });
 
     if (!error && data) {
@@ -223,9 +224,17 @@ export default function UsersPage() {
           <div key={u.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-3">
             <div className="flex justify-between items-start">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 font-bold text-lg">
-                  {u.full_name?.charAt(0) || "U"}
-                </div>
+                {u.line_picture_url ? (
+                  <img 
+                    src={u.line_picture_url} 
+                    alt={u.full_name || ""} 
+                    className="w-10 h-10 rounded-full object-cover border border-gray-100"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 font-bold text-lg">
+                    {u.full_name?.charAt(0) || "U"}
+                  </div>
+                )}
                 <div>
                   <div className="font-bold text-gray-900">{u.full_name}</div>
                   <div className="text-gray-500 text-xs">{u.position || "-"}</div>
@@ -276,9 +285,17 @@ export default function UsersPage() {
                 <tr key={u.id} className="hover:bg-blue-50/30 transition-colors">
                   <td className="px-6 py-4 align-top">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 shrink-0">
-                        <User className="w-4 h-4" />
-                      </div>
+                      {u.line_picture_url ? (
+                        <img 
+                          src={u.line_picture_url} 
+                          alt={u.full_name || ""} 
+                          className="w-8 h-8 rounded-full object-cover border border-gray-100 shrink-0"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 shrink-0">
+                          <User className="w-4 h-4" />
+                        </div>
+                      )}
                       <span className="font-medium text-gray-900">{u.full_name}</span>
                     </div>
                   </td>
