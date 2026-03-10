@@ -38,6 +38,8 @@ function DriverLinkPage() {
   const [message, setMessage] = useState("กำลังเริ่มระบบเชื่อมต่อ...");
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [isUserMode, setIsUserMode] = useState(false);
+  const [redirectPath, setRedirectPath] = useState("/user/profile");
+  const [isLoginSuccess, setIsLoginSuccess] = useState(false);
 
   useEffect(() => {
     const run = async () => {
@@ -98,6 +100,12 @@ function DriverLinkPage() {
             setDisplayName(loginJson.full_name);
             setStatus("success");
             setMessage("เข้าสู่ระบบเรียบร้อยแล้วครับ");
+            setIsLoginSuccess(true);
+            
+            // Determine dashboard based on role
+            if (loginJson.role === "ADMIN") setRedirectPath("/admin");
+            else if (loginJson.role === "DRIVER") setRedirectPath("/driver");
+            else setRedirectPath("/calendar");
             return;
           }
 
@@ -115,6 +123,7 @@ function DriverLinkPage() {
               setDisplayName(linkJson.full_name);
               setStatus("success");
               setMessage("เชื่อมต่อ LINE สำเร็จเรียบร้อยแล้วครับ");
+              setRedirectPath("/user/profile");
               return;
             }
 
@@ -145,6 +154,7 @@ function DriverLinkPage() {
           setDisplayName(json.full_name);
           setStatus("success");
           setMessage("เชื่อมต่อ LINE สำหรับพนักงานขับรถสำเร็จ");
+          setRedirectPath("/driver");
         }
 
       } catch (err) {
@@ -187,14 +197,12 @@ function DriverLinkPage() {
               </svg>
             </div>
             <p className="text-green-600 font-bold text-lg">{message}</p>
-            {isUserMode && (
-              <button 
-                onClick={() => window.location.href = '/user/profile'}
-                className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold active:scale-95 transition-transform"
-              >
-                กลับไปที่หน้าโปรไฟล์
-              </button>
-            )}
+            <button 
+              onClick={() => window.location.href = redirectPath}
+              className="w-full bg-gray-900 text-white py-4 rounded-2xl font-bold active:scale-95 transition-transform"
+            >
+              {isLoginSuccess ? "เข้าสู่หน้าหลัก" : "กลับไปที่หน้าโปรไฟล์"}
+            </button>
           </div>
         )}
 
