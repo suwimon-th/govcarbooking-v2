@@ -15,16 +15,12 @@ function LoginForm() {
   const [loading, setLoading] = useState(false)
   const [lineLoading, setLineLoading] = useState(false);
 
-  // Auto-login with LINE if already redirected back from LINE
+  // Init LIFF but don't auto-login unless specifically triggered
   useEffect(() => {
     const initLiff = async () => {
       if (!LIFF_ID) return;
       try {
         await liff.init({ liffId: LIFF_ID });
-        if (liff.isLoggedIn()) {
-          const profile = await liff.getProfile();
-          handleLineLogin(profile.userId);
-        }
       } catch (err) {
         console.error("LIFF Init Error:", err);
       }
