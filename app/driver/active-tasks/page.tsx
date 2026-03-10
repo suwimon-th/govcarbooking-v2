@@ -19,6 +19,7 @@ type Booking = {
 type Driver = {
   id: string;
   full_name: string;
+  remark?: string | null;
   line_picture_url?: string | null;
 };
 
@@ -146,11 +147,13 @@ function DriverActiveTasksContent() {
                         {d.full_name.charAt(0)}
                       </div>
                     )}
-                    <div className="flex flex-col min-w-0">
+                    <div className="flex flex-col min-w-0 text-left">
                       <span className="text-lg font-bold text-gray-800 truncate group-hover:text-blue-700 transition-colors">
                         {d.full_name}
                       </span>
-                      <span className="text-xs text-gray-400 font-medium truncate uppercase tracking-wider">พนักงานขับรถ</span>
+                      <span className="text-xs text-gray-400 font-medium truncate uppercase tracking-wider">
+                        {d.remark || "พนักงานขับรถ"}
+                      </span>
                     </div>
                   </div>
                   <div className="bg-gray-50 p-2 rounded-full group-hover:bg-blue-100 group-hover:text-blue-600 transition-all shrink-0 ml-2">
