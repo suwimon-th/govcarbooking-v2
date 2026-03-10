@@ -18,7 +18,8 @@ import {
   RefreshCcw,
   Search,
   MessageCircle,
-  Filter
+  Filter,
+  Image
 } from "lucide-react";
 
 interface DriverRow {
@@ -45,6 +46,7 @@ export default function DriversPage() {
   const [toast, setToast] = useState<{ type: ToastType; message: string } | null>(
     null
   );
+  const [syncing, setSyncing] = useState(false);
 
   // ======================= Toast ==========================
   const showToast = (type: ToastType, message: string) => {
@@ -128,6 +130,27 @@ export default function DriversPage() {
 
     showToast("success", "ลบการเชื่อม LINE สำเร็จ");
     loadDrivers();
+  };
+
+  const handleSyncPictures = async () => {
+    if (!confirm("คุณต้องการดึงรูปโปรไฟล์จาก LINE ของทุกคนที่มีการเชื่อมต่อแล้วใช่หรือไม่?")) return;
+    
+    setSyncing(true);
+    try {
+      const res = await fetch("/api/admin/sync-line-pictures");
+      const json = await res.json();
+      
+      if (res.ok) {
+        showToast("success", `ดึงรูปสำเร็จ: ผู้ใช้ ${json.results.profiles.success} คน, คนขับ ${json.results.drivers.success} คน`);
+        loadDrivers();
+      } else {
+        showToast("error", "ดึงรูปล้มเหลว: " + json.error);
+      }
+    } catch (err) {
+      showToast("error", "เกิดข้อผิดพลาดในการดึงรูป");
+    } finally {
+      setSyncing(false);
+    }
   };
 
   // ======================= Render Helpers ==========================
@@ -235,6 +258,20 @@ export default function DriversPage() {
             >
               <RefreshCcw className="w-4 h-4" />
               <span className="hidden xl:inline">รีเซ็ต</span>
+            </button>
+
+            <button
+              onClick={handleSyncPictures}
+              disabled={syncing}
+              className="flex items-center justify-center gap-2 bg-white text-gray-700 border border-gray-300 px-4 py-2.5 rounded-xl hover:bg-gray-50 text-sm font-medium transition-colors shadow-sm whitespace-nowrap flex-1 sm:flex-none"
+              title="ดึงรูปโปรไฟล์จาก LINE ทันที"
+            >
+              {syncing ? (
+                <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Image className="w-4 h-4 text-blue-600" />
+              )}
+              <span className="hidden xl:inline">ดึงรูป LINE</span>
             </button>
 
             <button
