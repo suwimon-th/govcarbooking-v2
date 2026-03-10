@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Car, MapPin, Clock, ArrowRight, FileText, AlertCircle, CheckCircle2, User } from "lucide-react";
 import Link from "next/link";
@@ -16,8 +16,7 @@ type Booking = {
   status: string;
   vehicles?: { plate_number: string; brand: string; model: string };
 };
-
-export default function DriverActiveTasksPage() {
+function DriverActiveTasksContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const driverId = searchParams.get("driver_id");
@@ -178,4 +177,15 @@ export default function DriverActiveTasksPage() {
   );
 }
 
-
+export default function DriverActiveTasksPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
+        <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        <p className="mt-4 text-gray-600 font-medium">กำลังเตรียมโหลดข้อมูล...</p>
+      </div>
+    }>
+      <DriverActiveTasksContent />
+    </Suspense>
+  );
+}
