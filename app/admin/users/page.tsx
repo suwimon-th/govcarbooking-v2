@@ -238,7 +238,9 @@ export default function UsersPage() {
                 <div>
                   <div className="font-bold text-gray-900">{u.full_name}</div>
                   <div className="text-gray-500 text-xs">{u.position || "-"}</div>
-                  <div className="text-gray-500 text-xs font-mono">@{u.username}</div>
+                  {u.username && (
+                    <div className="text-gray-500 text-xs font-mono">@{u.username}</div>
+                  )}
                 </div>
               </div>
               <div>{getRoleBadge(u.role)}</div>

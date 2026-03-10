@@ -42,11 +42,29 @@ export async function POST(req: Request) {
       .update({ line_user_id: null })
       .eq("line_user_id", line_user_id);
 
+    // Fetch LINE profile picture
+    let line_picture_url = null;
+    const ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+    if (ACCESS_TOKEN) {
+      try {
+        const lineResponse = await fetch(`https://api.line.me/v2/bot/profile/${line_user_id}`, {
+          headers: { Authorization: `Bearer ${ACCESS_TOKEN}` }
+        });
+        if (lineResponse.ok) {
+          const profile = await lineResponse.json();
+          line_picture_url = profile.pictureUrl || null;
+        }
+      } catch (err) {
+        console.error("Error fetching Driver LINE picture:", err);
+      }
+    }
+
     // 3) อัปเดต driver คนปัจจุบัน
     const { data, error } = await supabaseAdmin
       .from("drivers")
       .update({
         line_user_id,
+        line_picture_url,
         active: true,
         status: "AVAILABLE",
       })

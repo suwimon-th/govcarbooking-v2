@@ -30,6 +30,7 @@ interface DriverRow {
   active: boolean;
   queue_order: number | null;
   line_user_id: string | null;
+  line_picture_url: string | null;
 }
 
 type ToastType = "success" | "error" | "info";
@@ -55,7 +56,7 @@ export default function DriversPage() {
   const loadDrivers = async () => {
     const { data, error } = await supabase
       .from("drivers")
-      .select("*")
+      .select("*, line_picture_url")
       // Sort: Active First -> Available First -> LOWEST Queue First
       .order("active", { ascending: false })
       .order("status", { ascending: true }) // AVAILABLE < BUSY < OFF (Approx) but better relies on client sort or custom logic if needed. 
@@ -254,9 +255,17 @@ export default function DriversPage() {
           <div key={d.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-3">
             <div className="flex justify-between items-start">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 font-bold shrink-0">
-                  #{d.queue_order || '-'}
-                </div>
+                {d.line_picture_url ? (
+                  <img 
+                    src={d.line_picture_url} 
+                    alt={d.full_name} 
+                    className="w-10 h-10 rounded-full object-cover border border-gray-100 shrink-0"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 font-bold shrink-0">
+                    {d.queue_order || '-'}
+                  </div>
+                )}
                 <div>
                   <div className="font-bold text-gray-900">{d.full_name}</div>
                   <div className="flex gap-2 mt-0.5">
@@ -343,9 +352,17 @@ export default function DriversPage() {
 
                   <td className="px-6 py-4 align-top">
                     <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 shrink-0">
-                        <User className="w-5 h-5" />
-                      </div>
+                      {d.line_picture_url ? (
+                        <img 
+                          src={d.line_picture_url} 
+                          alt={d.full_name} 
+                          className="w-10 h-10 rounded-full object-cover border border-gray-100 shrink-0"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 shrink-0">
+                          <User className="w-5 h-5" />
+                        </div>
+                      )}
                       <div>
                         <div className="font-bold text-gray-900">{d.full_name}</div>
                         {d.phone && (
