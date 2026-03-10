@@ -81,19 +81,54 @@ function DriverLinkPage() {
         setMessage("กำลังบันทึกข้อมูล...");
 
         if (userMode) {
-          // USER FLOW
-          const res = await fetch("/api/user/link-line", {
+          // ==============================
+          // USER FLOW: TRY LOGIN THEN LINK
+          // ==============================
+          
+          // Step 1: Try Login
+          const loginRes = await fetch("/api/line/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ line_user_id: lineUserId }),
           });
-          const json = await res.json().catch(() => ({}));
-          if (!res.ok) {
-            setStatus("error");
-            setMessage(json?.error || "เชื่อมต่อไม่สำเร็จ (อาจต้องเข้าสู่ระบบเว็บไซต์ก่อน)");
+          const loginJson = await loginRes.json().catch(() => ({}));
+
+          if (loginRes.ok) {
+            // Success Case A: Account already linked, successfully logged in
+            setDisplayName(loginJson.full_name);
+            setStatus("success");
+            setMessage("เข้าสู่ระบบเรียบร้อยแล้วครับ");
             return;
           }
-          setDisplayName(json.full_name);
+
+          // Step 2: If login failed because not linked (401), try Linking
+          if (loginRes.status === 401) {
+            const linkRes = await fetch("/api/user/link-line", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ line_user_id: lineUserId }),
+            });
+            const linkJson = await linkRes.json().catch(() => ({}));
+
+            if (linkRes.ok) {
+              // Success Case B: Successfully linked the account
+              setDisplayName(linkJson.full_name);
+              setStatus("success");
+              setMessage("เชื่อมต่อ LINE สำเร็จเรียบร้อยแล้วครับ");
+              return;
+            }
+
+            // Failure Case: Not logged in with password to link
+            setStatus("error");
+            setMessage(linkJson?.error || "กรุณาเข้าสู่ระบบด้วยรหัสผ่านก่อนเพื่อทำการเชื่อมต่อครับ");
+            return;
+          }
+
+          // General failure for login
+          setStatus("error");
+          setMessage(loginJson?.error || "เกิดข้อผิดพลาดในการเข้าสู่ระบบ");
+          return;
+
         } else {
           // DRIVER FLOW
           const res = await fetch("/api/driver/link", {
@@ -108,10 +143,9 @@ function DriverLinkPage() {
             return;
           }
           setDisplayName(json.full_name);
+          setStatus("success");
+          setMessage("เชื่อมต่อ LINE สำหรับพนักงานขับรถสำเร็จ");
         }
-
-        setStatus("success");
-        setMessage("เชื่อมต่อ LINE สำเร็จเรียบร้อยแล้วครับ");
 
       } catch (err) {
         console.error("❌ ERROR:", err);
