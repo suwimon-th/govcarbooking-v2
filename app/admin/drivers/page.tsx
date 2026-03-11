@@ -141,10 +141,11 @@ export default function DriversPage() {
       const json = await res.json();
       
       if (res.ok) {
-        showToast("success", `ดึงรูปสำเร็จ: ผู้ใช้ ${json.results.profiles.success} คน, คนขับ ${json.results.drivers.success} คน`);
+        const { profiles, drivers } = json.results;
+        showToast("success", `คนขับ: สำเร็จ ${drivers.success}, ข้าม ${drivers.skipped}, ล้มเหลว ${drivers.fail}`);
         loadDrivers();
       } else {
-        showToast("error", "ดึงรูปล้มเหลว: " + json.error);
+        showToast("error", "ดึงรูปล้มเหลว: " + (json.error || "Unknown Error"));
       }
     } catch (err) {
       showToast("error", "เกิดข้อผิดพลาดในการดึงรูป");
