@@ -27,9 +27,9 @@ export async function GET(req: Request) {
       .select("id, line_user_id, line_picture_url")
       .not("line_user_id", "is", null);
 
-    if (pErr) throw new Error("Profiles fetch error: " + pErr.message);
-
-    if (profiles) {
+    if (pErr) {
+      results.profiles.errors.push("Supabase fetch error: " + pErr.message);
+    } else if (profiles) {
       const targetProfiles = force ? profiles : profiles.filter(p => !p.line_picture_url);
       results.profiles.total = profiles.length;
       results.profiles.skipped = profiles.length - targetProfiles.length;
@@ -73,9 +73,9 @@ export async function GET(req: Request) {
       .select("id, line_user_id, line_picture_url")
       .not("line_user_id", "is", null);
 
-    if (dErr) throw new Error("Drivers fetch error: " + dErr.message);
-
-    if (drivers) {
+    if (dErr) {
+      results.drivers.errors.push("Supabase fetch error: " + dErr.message);
+    } else if (drivers) {
       const targetDrivers = force ? drivers : drivers.filter(d => !d.line_picture_url);
       results.drivers.total = drivers.length;
       results.drivers.skipped = drivers.length - targetDrivers.length;
@@ -115,6 +115,6 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ success: true, results });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error.message, results }, { status: 500 });
   }
 }
