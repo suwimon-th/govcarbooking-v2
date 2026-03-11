@@ -467,7 +467,11 @@ export default function FuelPage() {
                                         </div>
                                         <div>
                                             <label className="text-[10px] text-gray-500 font-bold uppercase block mb-1">จำนวนเติมจริง (ลิตร)</label>
-                                            {editingId === req.id ? (
+                                            {req.status === 'CANCELLED' ? (
+                                                <div className="h-10 px-3 flex items-center text-sm font-bold text-gray-300 border-b border-gray-100 bg-gray-50 rounded cursor-not-allowed">
+                                                    -- ยกเลิก --
+                                                </div>
+                                            ) : editingId === req.id ? (
                                                 <input type="number" step="0.01" value={editActAmt} onChange={e => setEditActAmt(e.target.value)} className="w-full h-10 px-3 text-sm border-2 border-blue-500 rounded-lg outline-none" placeholder="0.00" />
                                             ) : (
                                                 <div onClick={() => {
@@ -529,7 +533,11 @@ export default function FuelPage() {
                                     </div>
 
                                     <div className="col-span-2">
-                                        {editingId === req.id ? (
+                                        {req.status === 'CANCELLED' ? (
+                                            <div className="h-10 flex items-center justify-center text-sm font-bold text-gray-300 border-b border-gray-100 bg-gray-50 rounded px-2 cursor-not-allowed">
+                                                -- ยกเลิก --
+                                            </div>
+                                        ) : editingId === req.id ? (
                                             <div className="flex flex-col gap-1">
                                                 <input type="number" step="0.01" value={editActAmt} onChange={e => setEditActAmt(e.target.value)} className="w-full h-10 px-2 text-sm border-2 border-blue-500 rounded-lg outline-none text-center" placeholder="0.00" />
                                                 <div className="flex gap-1">
