@@ -35,8 +35,7 @@ export async function PATCH(req: Request) {
             .from("vehicle_issues")
             .update({
                 status,
-                admin_remark,
-                updated_at: new Date().toISOString()
+                admin_remark
             })
             .eq("id", id);
 
