@@ -467,7 +467,7 @@ export default function FuelPage() {
                                         </div>
                                         <div>
                                             <label className="text-[10px] text-gray-500 font-bold uppercase block mb-1">จำนวนเติมจริง (ลิตร)</label>
-                                            {req.status === 'CANCELLED' ? (
+                                            {req.status === 'REJECTED' ? (
                                                 <div className="h-10 px-3 flex items-center text-sm font-bold text-gray-300 border-b border-gray-100 bg-gray-50 rounded cursor-not-allowed">
                                                     -- ยกเลิก --
                                                 </div>
@@ -533,7 +533,7 @@ export default function FuelPage() {
                                     </div>
 
                                     <div className="col-span-2">
-                                        {req.status === 'CANCELLED' ? (
+                                        {req.status === 'REJECTED' ? (
                                             <div className="h-10 flex items-center justify-center text-sm font-bold text-gray-300 border-b border-gray-100 bg-gray-50 rounded px-2 cursor-not-allowed">
                                                 -- ยกเลิก --
                                             </div>
