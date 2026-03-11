@@ -9,8 +9,8 @@ const supabaseAdmin = createClient(
 
 export async function POST(req: Request) {
   try {
-    const { driver_id, line_user_id } = await req.json();
-    console.log("👉 INPUT:", { driver_id, line_user_id });
+    const { driver_id, line_user_id, line_picture_url: client_picture_url } = await req.json();
+    console.log("👉 INPUT:", { driver_id, line_user_id, client_picture_url });
 
     if (!driver_id || !line_user_id) {
       return NextResponse.json(
@@ -43,19 +43,21 @@ export async function POST(req: Request) {
       .eq("line_user_id", line_user_id);
 
     // Fetch LINE profile picture
-    let line_picture_url = null;
-    const ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN;
-    if (ACCESS_TOKEN) {
-      try {
-        const lineResponse = await fetch(`https://api.line.me/v2/bot/profile/${line_user_id}`, {
-          headers: { Authorization: `Bearer ${ACCESS_TOKEN}` }
-        });
-        if (lineResponse.ok) {
-          const profile = await lineResponse.json();
-          line_picture_url = profile.pictureUrl || null;
+    let line_picture_url = client_picture_url || null;
+    if (!line_picture_url) {
+      const ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+      if (ACCESS_TOKEN) {
+        try {
+          const lineResponse = await fetch(`https://api.line.me/v2/bot/profile/${line_user_id}`, {
+            headers: { Authorization: `Bearer ${ACCESS_TOKEN}` }
+          });
+          if (lineResponse.ok) {
+            const profile = await lineResponse.json();
+            line_picture_url = profile.pictureUrl || null;
+          }
+        } catch (err) {
+          console.error("Error fetching Driver LINE picture:", err);
         }
-      } catch (err) {
-        console.error("Error fetching Driver LINE picture:", err);
       }
     }
 

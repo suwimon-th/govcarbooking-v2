@@ -66,11 +66,15 @@ function DriverLinkPage() {
           return liff.login({ redirectUri: window.location.href });
         }
 
-        // 3) รับ LINE userId
+        // 3) รับ LINE userId และ profile 
         let lineUserId = liff.getContext()?.userId;
-        if (!lineUserId) {
-          const profile = await liff.getProfile().catch(() => null);
-          lineUserId = profile?.userId || undefined;
+        let pictureUrl: string | undefined = undefined;
+        try {
+          const profile = await liff.getProfile();
+          lineUserId = lineUserId || profile.userId;
+          pictureUrl = profile.pictureUrl;
+        } catch (e) {
+          console.warn("Could not get profile:", e);
         }
 
         if (!lineUserId) {
@@ -91,7 +95,7 @@ function DriverLinkPage() {
           const loginRes = await fetch("/api/line/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ line_user_id: lineUserId }),
+            body: JSON.stringify({ line_user_id: lineUserId, line_picture_url: pictureUrl }),
           });
           const loginJson = await loginRes.json().catch(() => ({}));
 
@@ -114,7 +118,7 @@ function DriverLinkPage() {
             const linkRes = await fetch("/api/user/link-line", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ line_user_id: lineUserId }),
+              body: JSON.stringify({ line_user_id: lineUserId, line_picture_url: pictureUrl }),
             });
             const linkJson = await linkRes.json().catch(() => ({}));
 
@@ -143,7 +147,7 @@ function DriverLinkPage() {
           const res = await fetch("/api/driver/link", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ driver_id: driverId, line_user_id: lineUserId }),
+            body: JSON.stringify({ driver_id: driverId, line_user_id: lineUserId, line_picture_url: pictureUrl }),
           });
           const json = await res.json().catch(() => ({}));
           if (!res.ok) {
