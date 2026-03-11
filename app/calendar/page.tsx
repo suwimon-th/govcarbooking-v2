@@ -319,6 +319,21 @@ export default function PublicCalendarPage() {
                                         </div>
                                     </Link>
 
+                                    {/* Vehicle Information Mobile */}
+                                    <Link
+                                        href="/vehicle-info"
+                                        onClick={() => setHelpMenuOpen(false)}
+                                        className="flex items-center gap-4 w-full p-3 hover:bg-indigo-50/50 rounded-xl transition-all group"
+                                    >
+                                        <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-2.5 rounded-xl text-white shadow-lg shadow-indigo-200 group-hover:scale-110 transition-transform duration-200">
+                                            <Car className="w-5 h-5" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-bold text-gray-800">ข้อมูลรถราชการ</span>
+                                            <span className="text-[10px] text-gray-500">ดูรายละเอียดรถทั้งหมด</span>
+                                        </div>
+                                    </Link>
+
                                     <div className="h-px bg-gray-100 my-1 mx-2" />
 
                                     <a
@@ -449,6 +464,21 @@ export default function PublicCalendarPage() {
                                         <div className="flex flex-col">
                                             <span className="text-sm font-bold text-gray-800">แบบรายงานสภาพรถ</span>
                                             <span className="text-[10px] text-gray-500">บันทึกการตรวจสภาพรถ</span>
+                                        </div>
+                                    </Link>
+
+                                    {/* Vehicle Information */}
+                                    <Link
+                                        href="/vehicle-info"
+                                        onClick={() => setHelpMenuOpen(false)}
+                                        className="flex items-center gap-3 w-full px-4 py-3 hover:bg-indigo-50 rounded-lg transition-colors text-left group"
+                                    >
+                                        <div className="bg-indigo-100 text-indigo-600 p-2 rounded-lg group-hover:bg-white group-hover:shadow-sm transition-all">
+                                            <Car className="w-5 h-5" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-bold text-gray-800">ข้อมูลรถราชการ</span>
+                                            <span className="text-[10px] text-gray-500">ดูรายละเอียดรถทั้งหมด</span>
                                         </div>
                                     </Link>
 
