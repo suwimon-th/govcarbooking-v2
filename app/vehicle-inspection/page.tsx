@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, Suspense, useMemo } from "react";
-import { Loader2, CheckCircle2, AlertCircle, ArrowLeft, Plus, History, Car, ClipboardCheck, Trash2, XCircle, RefreshCw, ChevronDown, ChevronUp, AlertTriangle, Pencil, Save, Calendar, Settings2, Search, X } from "lucide-react";
+import { Loader2, CheckCircle2, AlertCircle, ArrowLeft, Plus, History, Car, ClipboardCheck, Trash2, XCircle, RefreshCw, ChevronDown, ChevronUp, AlertTriangle, Pencil, Save, Calendar, Settings2, Search, X, FileText } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
@@ -415,6 +415,12 @@ function InspectionFormContent() {
                                                 </div>
                                             )}
                                             <div className="flex gap-2">
+                                                <a 
+                                                    href={`/api/inspection-word/${ins.id}`} 
+                                                    className="flex-[1.5] bg-indigo-50 text-indigo-600 py-2 rounded-xl text-xs font-bold hover:bg-indigo-100 transition-colors flex items-center justify-center gap-1.5 border border-indigo-100"
+                                                >
+                                                    <FileText size={14} /> พิมพ์รายงาน (Word)
+                                                </a>
                                                 {!isCancelled && (
                                                     <>
                                                         <button onClick={() => handleEdit(ins)} className="flex-1 bg-blue-50 text-blue-600 py-2 rounded-xl text-xs font-bold hover:bg-blue-100 transition-colors flex items-center justify-center gap-1.5 border border-blue-100">
