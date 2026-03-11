@@ -6,30 +6,33 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export async function GET() {
+export async function GET(req: Request) {
   const ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN;
   if (!ACCESS_TOKEN) {
     return NextResponse.json({ error: "Missing LINE_CHANNEL_ACCESS_TOKEN" }, { status: 500 });
   }
 
   const results = {
-    profiles: { success: 0, fail: 0, total: 0 },
-    drivers: { success: 0, fail: 0, total: 0 },
+    profiles: { success: 0, fail: 0, total: 0, skipped: 0, errors: [] as string[] },
+    drivers: { success: 0, fail: 0, total: 0, skipped: 0, errors: [] as string[] },
   };
 
   try {
+    const { searchParams } = new URL(req.url);
+    const force = searchParams.get("force") === "true";
+
     // 1. Sync Profiles
     const { data: profiles, error: pErr } = await supabase
       .from("profiles")
       .select("id, line_user_id, line_picture_url")
       .not("line_user_id", "is", null);
 
-    console.log("Sync DEBUG - Profiles found:", profiles?.length, "Error:", pErr);
+    if (pErr) throw new Error("Profiles fetch error: " + pErr.message);
 
     if (profiles) {
-      const targetProfiles = profiles.filter(p => !p.line_picture_url);
-      console.log("Sync DEBUG - Profiles target (need sync):", targetProfiles.length);
-      results.profiles.total = targetProfiles.length;
+      const targetProfiles = force ? profiles : profiles.filter(p => !p.line_picture_url);
+      results.profiles.total = profiles.length;
+      results.profiles.skipped = profiles.length - targetProfiles.length;
       
       for (const p of targetProfiles) {
         try {
@@ -39,18 +42,26 @@ export async function GET() {
           if (res.ok) {
             const data = await res.json();
             if (data.pictureUrl) {
-              await supabase.from("profiles").update({ line_picture_url: data.pictureUrl }).eq("id", p.id);
-              results.profiles.success++;
+              const { error: uErr } = await supabase
+                .from("profiles")
+                .update({ line_picture_url: data.pictureUrl })
+                .eq("id", p.id);
+              if (uErr) {
+                results.profiles.errors.push(`Update fail for ${p.id}: ${uErr.message}`);
+                results.profiles.fail++;
+              } else {
+                results.profiles.success++;
+              }
             } else {
-              results.profiles.fail++;
+              results.profiles.skipped++;
             }
           } else {
             const errText = await res.text();
-            console.error(`Sync DEBUG - LINE fetch failed for user ${p.id}:`, res.status, errText);
+            results.profiles.errors.push(`LINE fetch fail for ${p.id}: ${res.status} ${errText}`);
             results.profiles.fail++;
           }
-        } catch (e) {
-          console.error(`Sync DEBUG - Error syncing user ${p.id}:`, e);
+        } catch (e: any) {
+          results.profiles.errors.push(`Catch error for ${p.id}: ${e.message}`);
           results.profiles.fail++;
         }
       }
@@ -62,12 +73,12 @@ export async function GET() {
       .select("id, line_user_id, line_picture_url")
       .not("line_user_id", "is", null);
 
-    console.log("Sync DEBUG - Drivers found:", drivers?.length, "Error:", dErr);
+    if (dErr) throw new Error("Drivers fetch error: " + dErr.message);
 
     if (drivers) {
-      const targetDrivers = drivers.filter(d => !d.line_picture_url);
-      console.log("Sync DEBUG - Drivers target (need sync):", targetDrivers.length);
-      results.drivers.total = targetDrivers.length;
+      const targetDrivers = force ? drivers : drivers.filter(d => !d.line_picture_url);
+      results.drivers.total = drivers.length;
+      results.drivers.skipped = drivers.length - targetDrivers.length;
 
       for (const d of targetDrivers) {
         try {
@@ -77,18 +88,26 @@ export async function GET() {
           if (res.ok) {
             const data = await res.json();
             if (data.pictureUrl) {
-              await supabase.from("drivers").update({ line_picture_url: data.pictureUrl }).eq("id", d.id);
-              results.drivers.success++;
+              const { error: uErr } = await supabase
+                .from("drivers")
+                .update({ line_picture_url: data.pictureUrl })
+                .eq("id", d.id);
+              if (uErr) {
+                results.drivers.errors.push(`Update fail for ${d.id}: ${uErr.message}`);
+                results.drivers.fail++;
+              } else {
+                results.drivers.success++;
+              }
             } else {
-              results.drivers.fail++;
+              results.drivers.skipped++;
             }
           } else {
             const errText = await res.text();
-            console.error(`Sync DEBUG - LINE fetch failed for driver ${d.id}:`, res.status, errText);
+            results.drivers.errors.push(`LINE fetch fail for ${d.id}: ${res.status} ${errText}`);
             results.drivers.fail++;
           }
-        } catch (e) {
-          console.error(`Sync DEBUG - Error syncing driver ${d.id}:`, e);
+        } catch (e: any) {
+          results.drivers.errors.push(`Catch error for ${d.id}: ${e.message}`);
           results.drivers.fail++;
         }
       }
