@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback, Suspense } from "react";
-import { Loader2, CheckCircle2, AlertCircle, ArrowLeft, Plus, History, Car, ClipboardCheck, Trash2, XCircle, RefreshCw, ChevronDown, ChevronUp, AlertTriangle, Pencil, Save, Calendar, Settings2 } from "lucide-react";
+import { useEffect, useState, useCallback, Suspense, useMemo } from "react";
+import { Loader2, CheckCircle2, AlertCircle, ArrowLeft, Plus, History, Car, ClipboardCheck, Trash2, XCircle, RefreshCw, ChevronDown, ChevronUp, AlertTriangle, Pencil, Save, Calendar, Settings2, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
@@ -52,6 +52,7 @@ function InspectionFormContent() {
     const [viewMode, setViewMode] = useState<"LOGBOOK" | "FORM">("LOGBOOK");
     const [inspections, setInspections] = useState<Inspection[]>([]);
     const [loadingList, setLoadingList] = useState(true);
+    const [searchQuery, setSearchQuery] = useState("");
     const [vehicles, setVehicles] = useState<{ id: string; plate_number: string; brand: string; model?: string }[]>([]);
     const [users, setUsers] = useState<{ id: string; full_name: string; position: string | null }[]>([]);
     const [drivers, setDrivers] = useState<{ id: string; full_name: string }[]>([]);
@@ -139,6 +140,15 @@ function InspectionFormContent() {
                 });
         }
     }, [editIdParam, vehicles, users, inspectionItems]);
+
+    const filteredInspections = useMemo(() => {
+        if (!searchQuery.trim()) return inspections;
+        return inspections.filter(ins => 
+            ins.inspector_name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+            ins.plate_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (ins.driver_name && ins.driver_name.toLowerCase().includes(searchQuery.toLowerCase()))
+        );
+    }, [inspections, searchQuery]);
 
     const handleUserSelect = (id: string) => {
         setSelectedUserId(id);
@@ -307,17 +317,35 @@ function InspectionFormContent() {
 
                 {viewMode === "LOGBOOK" ? (
                     <div className="space-y-4">
+                        
+                        {/* Search Bar */}
+                        <div className="bg-white p-2 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-2 mb-4">
+                            <Search className="w-5 h-5 text-gray-400 ml-2" />
+                            <input 
+                                type="text" 
+                                placeholder="ค้นหาจากชื่อผู้ตรวจ, ทะเบียนรถ, หรือชื่อคนขับ..." 
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="flex-1 h-10 bg-transparent border-none outline-none text-sm font-medium text-gray-700 placeholder:text-gray-400"
+                            />
+                            {searchQuery && (
+                                <button onClick={() => setSearchQuery("")} className="p-2 text-gray-400 hover:text-gray-600 rounded-full">
+                                    <X className="w-4 h-4" />
+                                </button>
+                            )}
+                        </div>
+
                         {loadingList ? (
                             <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 text-blue-500 animate-spin" /></div>
-                        ) : inspections.length === 0 ? (
+                        ) : filteredInspections.length === 0 ? (
                             <div className="bg-white rounded-3xl p-12 text-center border border-gray-100 shadow-sm">
                                 <div className="bg-gray-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400">
                                     <History size={32} />
                                 </div>
-                                <p className="text-gray-500 font-medium">ยังไม่มีประวัติการส่งรายงาน</p>
+                                <p className="text-gray-500 font-medium">ไม่พบประวัติการส่งรายงาน</p>
                             </div>
                         ) : (
-                            inspections.map((ins) => {
+                            filteredInspections.map((ins, idx) => {
                                 const isCancelled = ins.status === 'CANCELLED';
                                 const results = ins.check_results || {};
 
@@ -333,10 +361,11 @@ function InspectionFormContent() {
                                 }, 0);
 
                                 return (
-                                    <details key={ins.id} className="group bg-white rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md">
+                                    <details key={ins.id} className="group bg-white rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md relative">
                                         <summary className="flex items-center justify-between p-4 cursor-pointer list-none">
+                                            <div className="absolute top-4 right-12 text-[10px] font-black text-gray-300">#{filteredInspections.length - idx}</div>
                                             <div className="flex items-center gap-4">
-                                                <div className={`shrink-0 flex items-center justify-center w-10 h-10 rounded-xl ${isCancelled ? 'bg-gray-50 text-gray-400' : problemCount > 0 ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-600'}`}>
+                                                <div className={`shrink-0 flex items-center justify-center w-10 h-10 rounded-xl z-10 ${isCancelled ? 'bg-gray-50 text-gray-400' : problemCount > 0 ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-600'}`}>
                                                     <Car className="w-5 h-5" />
                                                 </div>
                                                 <div>

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { Loader2, CheckCircle2, AlertCircle, Fuel, ArrowLeft, Plus, History, Edit2, Check, X, Car, User, Calendar, ClipboardList, Droplets } from "lucide-react";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import { Loader2, CheckCircle2, AlertCircle, Fuel, ArrowLeft, Plus, History, Edit2, Check, X, Car, User, Calendar, ClipboardList, Droplets, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import Link from "next/link";
@@ -27,6 +27,7 @@ export default function FuelPage() {
 
     const [fuelRequests, setFuelRequests] = useState<FuelRequest[]>([]);
     const [loadingLogbook, setLoadingLogbook] = useState(true);
+    const [searchQuery, setSearchQuery] = useState("");
 
     const [drivers, setDrivers] = useState<{ id: string; full_name: string }[]>([]);
     const [vehicles, setVehicles] = useState<{ id: string; plate_number: string }[]>([]);
@@ -81,6 +82,15 @@ export default function FuelPage() {
         if (data) setFuelRequests(data);
         setLoadingLogbook(false);
     }, []);
+
+    const filteredRequests = useMemo(() => {
+        if (!searchQuery.trim()) return fuelRequests;
+        return fuelRequests.filter(req => 
+            req.driver_name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+            req.plate_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (req.request_number && req.request_number.toLowerCase().includes(searchQuery.toLowerCase()))
+        );
+    }, [fuelRequests, searchQuery]);
 
     useEffect(() => {
         if (viewMode === 'LOGBOOK') {
@@ -356,7 +366,7 @@ export default function FuelPage() {
                 <div className="flex items-center gap-3">
                     <Link href="/calendar" className="text-gray-400 hover:text-gray-600 p-1 rounded-full"><ArrowLeft className="w-6 h-6" /></Link>
                     <div>
-                        <h1 className="text-lg font-bold text-gray-800">สมุดบันทึกการเบิกน้ำมัน</h1>
+                        <h1 className="text-lg font-bold text-gray-800">บันทึกการเบิกน้ำมัน</h1>
                         <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">Fuel Logbook & History</p>
                     </div>
                 </div>
@@ -373,8 +383,27 @@ export default function FuelPage() {
                     </div>
                 ) : (
                     <div className="space-y-4 max-w-5xl mx-auto">
+                        
+                        {/* Search Bar */}
+                        <div className="bg-white p-2 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-2 mb-4">
+                            <Search className="w-5 h-5 text-gray-400 ml-2" />
+                            <input 
+                                type="text" 
+                                placeholder="ค้นหาจากชื่อคนขับ, ทะเบียนรถ, หรือเลขที่ใบเบิก..." 
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="flex-1 h-10 bg-transparent border-none outline-none text-sm font-medium text-gray-700 placeholder:text-gray-400"
+                            />
+                            {searchQuery && (
+                                <button onClick={() => setSearchQuery("")} className="p-2 text-gray-400 hover:text-gray-600 rounded-full">
+                                    <X className="w-4 h-4" />
+                                </button>
+                            )}
+                        </div>
+
                         {/* Legend Header (Desktop Only) */}
-                        <div className="hidden md:grid grid-cols-14 gap-2 bg-gray-200 p-3 rounded-xl mb-2 text-[10px] font-black text-gray-600 uppercase tracking-widest text-center shadow-inner">
+                        <div className="hidden md:grid grid-cols-15 gap-2 bg-gray-200 p-3 rounded-xl mb-2 text-[10px] font-black text-gray-600 uppercase tracking-widest text-center shadow-inner">
+                            <div className="col-span-1">ลำดับ</div>
                             <div className="col-span-2">วันที่เบิก / งวด</div>
                             <div className="col-span-2">ผู้เบิก</div>
                             <div className="col-span-2">ทะเบียน / เครื่องพ่น</div>
@@ -384,11 +413,12 @@ export default function FuelPage() {
                             <div className="col-span-2">จำนวนเติมจริง</div>
                         </div>
 
-                        {fuelRequests.map((req) => (
+                        {filteredRequests.map((req, idx) => (
                             <div key={req.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300">
                                 {/* Mobile View Card */}
-                                <div className="md:hidden p-4 flex flex-col gap-4">
-                                    <div className="flex justify-between items-start">
+                                <div className="md:hidden p-4 flex flex-col gap-4 relative">
+                                    <div className="absolute top-4 right-4 text-[10px] font-black text-gray-300">#{filteredRequests.length - idx}</div>
+                                    <div className="flex justify-between items-start pr-8">
                                         <div className="flex items-center gap-3">
                                             <div className="bg-gray-50 p-2.5 rounded-xl border border-gray-100">
                                                 <User className="w-5 h-5 text-gray-500" />
@@ -466,7 +496,8 @@ export default function FuelPage() {
                                 </div>
 
                                 {/* Desktop View Grid */}
-                                <div className="hidden md:grid grid-cols-14 gap-2 p-3 items-center text-center">
+                                <div className="hidden md:grid grid-cols-15 gap-2 p-3 items-center text-center">
+                                    <div className="col-span-1 text-sm font-bold text-gray-400">{filteredRequests.length - idx}</div>
                                     <div className="col-span-2 flex flex-col items-center">
                                         <span className="text-xs font-bold text-gray-700">{new Date(req.request_date).toLocaleDateString("th-TH")}</span>
                                         <span className="text-[9px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded font-black uppercase mt-1">{req.period}</span>
@@ -525,7 +556,7 @@ export default function FuelPage() {
                             </div>
                         ))}
 
-                        {fuelRequests.length === 0 && (
+                        {filteredRequests.length === 0 && (
                             <div className="text-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm">
                                 <History className="w-16 h-16 text-gray-100 mx-auto mb-4" />
                                 <p className="text-gray-400 font-bold uppercase tracking-widest text-sm">ยังไม่มีประวัติการเบิกน้ำมัน</p>
