@@ -18,6 +18,16 @@ interface Vehicle {
   registration_year: number | null;
   fuel_type: string | null;
   last_maintenance: string | null;
+  photo_urls: string[] | null;
+  asset_number: string | null;
+  received_date: string | null;
+  weight: number | null;
+  tax_expire_date: string | null;
+  engine_size: string | null;
+  drive_type: string | null;
+  emission_standard: string | null;
+  name: string | null;
+  remark: string | null;
 }
 
 export default function VehicleInfoPage() {
@@ -125,51 +135,115 @@ export default function VehicleInfoPage() {
                 key={v.id} 
                 className="bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100/50 overflow-hidden hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 group flex flex-col"
               >
-                {/* Card Top / Header */}
-                <div className="relative p-6 pb-5 bg-gradient-to-b from-gray-50/80 to-white flex items-start gap-4 border-b border-gray-50">
-                  <div className="w-16 h-16 rounded-2xl bg-white shadow-sm border border-gray-100 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                    {getVehicleIcon(v.type)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[10px] font-bold tracking-wider text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100/50">
+                {/* Card Top / Header (Image + Title) */}
+                <div className="relative">
+                  {/* Photo Section */}
+                  <div className="h-48 w-full bg-gray-100 relative overflow-hidden group-hover:bg-gray-200 transition-colors">
+                    {v.photo_urls && v.photo_urls.length > 0 ? (
+                      <img 
+                        src={v.photo_urls[0]} 
+                        alt={`รถ ${v.plate_number}`} 
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        onError={(e) => {
+                          // Fallback if image fails to load
+                          (e.target as HTMLImageElement).style.display = 'none';
+                          (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                        }}
+                      />
+                    ) : null}
+                    {/* Fallback Icon */}
+                    <div className={`absolute inset-0 flex items-center justify-center ${v.photo_urls && v.photo_urls.length > 0 ? 'hidden' : ''}`}>
+                      <Car className="w-16 h-16 text-gray-300" />
+                    </div>
+                    
+                    {/* Badges Overlay */}
+                    <div className="absolute top-3 right-3 flex flex-col items-end gap-2">
+                      <span className="text-[10px] font-bold tracking-wider text-white bg-blue-600/90 backdrop-blur-sm px-2.5 py-1 rounded-full shadow-sm">
                         {v.type || "รถยนต์"}
                       </span>
-                      {v.color && (
+                    </div>
+
+                    <div className="absolute top-3 left-3">
+                       {v.color && (
                          <div 
-                          className="w-3 h-3 rounded-full shadow-sm border border-gray-200" 
+                          className="w-5 h-5 rounded-full shadow-md border-2 border-white" 
                           style={{ backgroundColor: v.color }}
                           title={`สี: ${v.color}`}
                          />
                       )}
                     </div>
-                    <h2 className="text-xl font-extrabold text-gray-900 truncate tracking-tight">{v.plate_number}</h2>
-                    <p className="text-sm text-gray-500 truncate mt-0.5 font-medium">{v.brand} {v.model}</p>
+                  </div>
+
+                  {/* Header Text */}
+                  <div className="p-5 pb-4 bg-white border-b border-gray-50 flex flex-col">
+                    <h2 className="text-2xl font-extrabold text-gray-900 truncate tracking-tight mb-1">{v.plate_number}</h2>
+                    <p className="text-sm text-gray-500 truncate font-medium">{v.brand} {v.model || v.name}</p>
+                    
+                    {v.asset_number && (
+                      <div className="mt-3 flex items-center gap-1.5 text-xs text-gray-400 font-mono bg-gray-50 self-start px-2 py-1 rounded-md border border-gray-100">
+                        <span className="font-semibold text-gray-500">เลขครุภัณฑ์:</span> {v.asset_number}
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 {/* Card Body / Details */}
-                <div className="p-6 pt-5 flex-1 flex flex-col gap-4 bg-white">
-                  <div className="grid grid-cols-2 gap-y-4 gap-x-3 text-sm">
-                    
+                <div className="p-5 pt-4 flex-1 flex flex-col gap-5 bg-white">
+                  
+                  {/* Grid 1: Basic Stats */}
+                  <div className="grid grid-cols-2 gap-y-3 gap-x-3 text-sm">
                     {/* Fuel Type */}
-                    <div className="bg-gray-50/50 p-3 rounded-xl border border-gray-100/50">
-                      <span className="block text-[10px] uppercase font-bold text-gray-400 mb-1 tracking-wider">เชื้อเพลิง</span>
-                      <span className="font-semibold text-gray-800 flex items-center gap-1.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-                        {v.fuel_type || "-"}
+                    <div className="flex items-center gap-2">
+                       <span className="text-gray-400 text-xs w-16">เชื้อเพลิง:</span>
+                       <span className="font-semibold text-gray-800 text-xs">{v.fuel_type || "-"}</span>
+                    </div>
+                    {/* Engine Size */}
+                    <div className="flex items-center gap-2">
+                       <span className="text-gray-400 text-xs w-16">เครื่องยนต์:</span>
+                       <span className="font-semibold text-gray-800 text-xs">{v.engine_size || "-"}</span>
+                    </div>
+                    {/* Drive Type */}
+                    <div className="flex items-center gap-2">
+                       <span className="text-gray-400 text-xs w-16">ระบบขับ:</span>
+                       <span className="font-semibold text-gray-800 text-xs">{v.drive_type || "-"}</span>
+                    </div>
+                    {/* Weight */}
+                    <div className="flex items-center gap-2">
+                       <span className="text-gray-400 text-xs w-16">น้ำหนัก:</span>
+                       <span className="font-semibold text-gray-800 text-xs">{v.weight ? `${v.weight} กก.` : "-"}</span>
+                    </div>
+                  </div>
+
+                  <div className="h-px w-full bg-gray-100"></div>
+
+                  {/* Grid 2: Dates & Admin Info */}
+                  <div className="grid grid-cols-1 gap-y-2 text-sm">
+                    <div className="flex justify-between items-center bg-rose-50/50 p-2 rounded-lg border border-rose-100/50">
+                      <span className="text-rose-600/80 text-xs font-semibold">วันหมดอายุภาษี:</span>
+                      <span className="font-bold text-rose-700 text-xs">
+                        {v.tax_expire_date 
+                          ? new Date(v.tax_expire_date).toLocaleDateString("th-TH", { year: 'numeric', month: 'short', day: 'numeric' }) 
+                          : "-"}
                       </span>
                     </div>
-
-                    {/* Seats */}
-                    <div className="bg-gray-50/50 p-3 rounded-xl border border-gray-100/50">
-                      <span className="block text-[10px] uppercase font-bold text-gray-400 mb-1 tracking-wider">ที่นั่ง (คน)</span>
-                      <span className="font-semibold text-gray-800 flex items-center gap-1.5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
-                        {v.seats || "-"}
+                    <div className="flex justify-between items-center bg-gray-50 p-2 rounded-lg border border-gray-100">
+                      <span className="text-gray-500 text-xs font-semibold">วันที่รับรถ:</span>
+                      <span className="font-semibold text-gray-700 text-xs">
+                        {v.received_date 
+                          ? new Date(v.received_date).toLocaleDateString("th-TH", { year: 'numeric', month: 'short', day: 'numeric' }) 
+                          : "-"}
                       </span>
                     </div>
                   </div>
+
+                  {/* Remarks */}
+                  {v.remark && (
+                    <div className="mt-auto pt-3 border-t border-gray-50">
+                      <p className="text-[11px] text-gray-500 leading-relaxed italic">
+                        <span className="font-semibold not-italic text-gray-400">หมายเหตุ:</span> {v.remark}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
