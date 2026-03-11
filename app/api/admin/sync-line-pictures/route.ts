@@ -19,54 +19,76 @@ export async function GET() {
 
   try {
     // 1. Sync Profiles
-    const { data: profiles } = await supabase
+    const { data: profiles, error: pErr } = await supabase
       .from("profiles")
-      .select("id, line_user_id")
-      .is("line_picture_url", null)
+      .select("id, line_user_id, line_picture_url")
       .not("line_user_id", "is", null);
 
+    console.log("Sync DEBUG - Profiles found:", profiles?.length, "Error:", pErr);
+
     if (profiles) {
-      results.profiles.total = profiles.length;
-      for (const p of profiles) {
+      const targetProfiles = profiles.filter(p => !p.line_picture_url);
+      console.log("Sync DEBUG - Profiles target (need sync):", targetProfiles.length);
+      results.profiles.total = targetProfiles.length;
+      
+      for (const p of targetProfiles) {
         try {
           const res = await fetch(`https://api.line.me/v2/bot/profile/${p.line_user_id}`, {
             headers: { Authorization: `Bearer ${ACCESS_TOKEN}` }
           });
           if (res.ok) {
             const data = await res.json();
-            await supabase.from("profiles").update({ line_picture_url: data.pictureUrl }).eq("id", p.id);
-            results.profiles.success++;
+            if (data.pictureUrl) {
+              await supabase.from("profiles").update({ line_picture_url: data.pictureUrl }).eq("id", p.id);
+              results.profiles.success++;
+            } else {
+              results.profiles.fail++;
+            }
           } else {
+            const errText = await res.text();
+            console.error(`Sync DEBUG - LINE fetch failed for user ${p.id}:`, res.status, errText);
             results.profiles.fail++;
           }
         } catch (e) {
+          console.error(`Sync DEBUG - Error syncing user ${p.id}:`, e);
           results.profiles.fail++;
         }
       }
     }
 
     // 2. Sync Drivers
-    const { data: drivers } = await supabase
+    const { data: drivers, error: dErr } = await supabase
       .from("drivers")
-      .select("id, line_user_id")
-      .is("line_picture_url", null)
+      .select("id, line_user_id, line_picture_url")
       .not("line_user_id", "is", null);
 
+    console.log("Sync DEBUG - Drivers found:", drivers?.length, "Error:", dErr);
+
     if (drivers) {
-      results.drivers.total = drivers.length;
-      for (const d of drivers) {
+      const targetDrivers = drivers.filter(d => !d.line_picture_url);
+      console.log("Sync DEBUG - Drivers target (need sync):", targetDrivers.length);
+      results.drivers.total = targetDrivers.length;
+
+      for (const d of targetDrivers) {
         try {
           const res = await fetch(`https://api.line.me/v2/bot/profile/${d.line_user_id}`, {
             headers: { Authorization: `Bearer ${ACCESS_TOKEN}` }
           });
           if (res.ok) {
             const data = await res.json();
-            await supabase.from("drivers").update({ line_picture_url: data.pictureUrl }).eq("id", d.id);
-            results.drivers.success++;
+            if (data.pictureUrl) {
+              await supabase.from("drivers").update({ line_picture_url: data.pictureUrl }).eq("id", d.id);
+              results.drivers.success++;
+            } else {
+              results.drivers.fail++;
+            }
           } else {
+            const errText = await res.text();
+            console.error(`Sync DEBUG - LINE fetch failed for driver ${d.id}:`, res.status, errText);
             results.drivers.fail++;
           }
         } catch (e) {
+          console.error(`Sync DEBUG - Error syncing driver ${d.id}:`, e);
           results.drivers.fail++;
         }
       }

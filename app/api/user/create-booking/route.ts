@@ -310,7 +310,7 @@ export async function POST(req: Request) {
     if (error) {
       console.error("BOOKING INSERT ERROR:", error);
       return NextResponse.json(
-        { error: "ไม่สามารถบันทึกคำขอได้" },
+        { error: `ไม่สามารถบันทึกคำขอได้: ${error.message || JSON.stringify(error)}` },
         { status: 500 }
       );
     }
