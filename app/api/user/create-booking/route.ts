@@ -51,7 +51,7 @@ async function generateRequestCode(vehicleId: string) {
     .select("request_code")
     .eq("vehicle_id", vehicleId)
     .like("request_code", `${prefix}%`)
-    .order("created_at", { ascending: false })
+    .order("request_code", { ascending: false })
     .limit(1);
 
   let running = 1;
