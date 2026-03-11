@@ -10,7 +10,7 @@ import type { EventClickArg } from "@fullcalendar/core";
 import EventDetailModal from "@/app/components/EventDetailModal";
 import ReportIssueModal from "@/app/components/ReportIssueModal";
 import DailyBookingList from "@/app/components/DailyBookingList";
-import { Calendar as CalendarIcon, Clock, ChevronRight, LogIn, HelpCircle, Fuel, AlertTriangle, MessageCircle, Phone, CalendarCheck, ClipboardCheck, Plus, User, Car, ClipboardList } from "lucide-react";
+import { Calendar as CalendarIcon, MapPin, Search, Filter, Phone, User, Clock, CheckCircle2, XCircle, AlertCircle, FileText, Moon, Sunrise, Sunset, Loader2, Navigation, MessageCircle, AlertTriangle, Fuel, ClipboardCheck, Info, HelpCircle, LogIn, Car, CalendarCheck, ChevronRight, ClipboardList } from 'lucide-react';
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import { getStatusLabel, getStatusColor } from "@/lib/statusHelper";
@@ -326,7 +326,7 @@ export default function PublicCalendarPage() {
                                         className="flex items-center gap-4 w-full p-3 hover:bg-indigo-50/50 rounded-xl transition-all group"
                                     >
                                         <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-2.5 rounded-xl text-white shadow-lg shadow-indigo-200 group-hover:scale-110 transition-transform duration-200">
-                                            <Car className="w-5 h-5" />
+                                            <Info className="w-5 h-5" />
                                         </div>
                                         <div className="flex flex-col">
                                             <span className="text-sm font-bold text-gray-800">ข้อมูลรถราชการ</span>

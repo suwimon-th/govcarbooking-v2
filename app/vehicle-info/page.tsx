@@ -63,6 +63,29 @@ export default function VehicleInfoPage() {
     return <Car className="w-8 h-8 text-blue-600" />;
   };
 
+  const calculateVehicleAge = (receivedDate: string | null) => {
+    if (!receivedDate) return "-";
+    const date = new Date(receivedDate);
+    if (isNaN(date.getTime())) return "-";
+
+    const today = new Date();
+    let years = today.getFullYear() - date.getFullYear();
+    let months = today.getMonth() - date.getMonth();
+
+    if (months < 0) {
+      years--;
+      months += 12;
+    }
+
+    if (years === 0 && months === 0) return "ไม่ถึง 1 เดือน";
+    
+    let ageStr = "";
+    if (years > 0) ageStr += `${years} ปี `;
+    if (months > 0) ageStr += `${months} เดือน`;
+    
+    return ageStr.trim();
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* HEADER */}
@@ -226,13 +249,21 @@ export default function VehicleInfoPage() {
                           : "-"}
                       </span>
                     </div>
-                    <div className="flex justify-between items-center bg-gray-50 p-2 rounded-lg border border-gray-100">
-                      <span className="text-gray-500 text-xs font-semibold">วันที่รับรถ:</span>
-                      <span className="font-semibold text-gray-700 text-xs">
-                        {v.received_date 
-                          ? new Date(v.received_date).toLocaleDateString("th-TH", { year: 'numeric', month: 'short', day: 'numeric' }) 
-                          : "-"}
-                      </span>
+                    <div className="flex flex-col gap-2 bg-gray-50 border border-gray-100 p-3 rounded-xl">
+                      <div className="flex justify-between items-center bg-white p-2 text-xs rounded-lg shadow-sm border border-gray-50">
+                        <span className="text-gray-500 font-semibold">วันที่รับรถ:</span>
+                        <span className="font-semibold text-gray-700">
+                          {v.received_date 
+                            ? new Date(v.received_date).toLocaleDateString("th-TH", { year: 'numeric', month: 'short', day: 'numeric' }) 
+                            : "-"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs px-2">
+                         <span className="text-indigo-500/80 font-bold uppercase tracking-wider">อายุการใช้งาน</span>
+                         <span className="font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-100/50">
+                           {calculateVehicleAge(v.received_date)}
+                         </span>
+                      </div>
                     </div>
                   </div>
 
