@@ -125,26 +125,33 @@ export async function POST(req: Request) {
         veh?.model?.toLowerCase().includes("van");
 
       if (isVan) {
-        // Calculate Calendar Week
-        // Logic: Calculate which "Calendar Row" this date falls into.
-        // Week 1 is the row containing the 1st of the month.
-        const bookingDate = new Date(date); // YYYY-MM-DD
-        const dayOfWeek = bookingDate.getDay(); // 0=Sun, 1=Mon, ...
+        // ✅ EXCEPTION: User "suwimon" (สุวิมล ทองดี) can bypass this restriction
+        const isBypassUser =
+          requester_id === "160bb347-c2ac-43c9-95d1-1cfcd809fade" ||
+          requester_name?.includes("สุวิมล");
 
-        // Check if Monday (1)
-        if (dayOfWeek === 1) {
-          const firstDayOfMonth = new Date(bookingDate.getFullYear(), bookingDate.getMonth(), 1);
-          const offset = firstDayOfMonth.getDay(); // 0=Sun..6=Sat
+        if (!isBypassUser) {
+          // Calculate Calendar Week
+          // Logic: Calculate which "Calendar Row" this date falls into.
+          // Week 1 is the row containing the 1st of the month.
+          const bookingDate = new Date(date); // YYYY-MM-DD
+          const dayOfWeek = bookingDate.getDay(); // 0=Sun, 1=Mon, ...
 
-          // Formula: Math.ceil( (DayOfMonth + Offset) / 7 )
-          const dayOfMonth = bookingDate.getDate(); // 1..31
-          const weekNumber = Math.ceil((dayOfMonth + offset) / 7);
+          // Check if Monday (1)
+          if (dayOfWeek === 1) {
+            const firstDayOfMonth = new Date(bookingDate.getFullYear(), bookingDate.getMonth(), 1);
+            const offset = firstDayOfMonth.getDay(); // 0=Sun..6=Sat
 
-          if (weekNumber === 3) {
-            return NextResponse.json(
-              { error: "รถตู้ไม่สามารถจองได้\nในวันจันทร์สัปดาห์ที่ 3 ของเดือน\n(รถเวร)" },
-              { status: 400 }
-            );
+            // Formula: Math.ceil( (DayOfMonth + Offset) / 7 )
+            const dayOfMonth = bookingDate.getDate(); // 1..31
+            const weekNumber = Math.ceil((dayOfMonth + offset) / 7);
+
+            if (weekNumber === 3) {
+              return NextResponse.json(
+                { error: "รถตู้ไม่สามารถจองได้\nในวันจันทร์สัปดาห์ที่ 3 ของเดือน\n(รถเวร)" },
+                { status: 400 }
+              );
+            }
           }
         }
       }
