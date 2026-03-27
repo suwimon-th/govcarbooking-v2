@@ -34,7 +34,23 @@ export default function VehicleInfoPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [backUrl, setBackUrl] = useState("/calendar");
   const router = useRouter();
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const res = await fetch("/api/auth/session");
+        const data = await res.json();
+        if (data.loggedIn) {
+          setBackUrl("/user");
+        }
+      } catch (e) {
+        console.error("Session check failed", e);
+      }
+    };
+    checkAuth();
+  }, []);
 
   useEffect(() => {
     const fetchVehicles = async () => {
@@ -92,7 +108,7 @@ export default function VehicleInfoPage() {
       <div className="bg-gradient-to-br from-indigo-700 to-blue-800 text-white shadow-md relative z-10 hidden md:block">
         <div className="max-w-[1200px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link href="/calendar" className="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition-colors">
+            <Link href={backUrl} className="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition-colors">
               <ArrowLeft className="w-5 h-5 text-white" />
             </Link>
             <div className="flex items-center gap-3">
@@ -109,7 +125,7 @@ export default function VehicleInfoPage() {
       <div className="md:hidden bg-gradient-to-br from-indigo-700 to-blue-800 text-white pt-12 pb-6 px-6 rounded-b-[30px] shadow-lg relative z-10">
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10"></div>
         <div className="relative z-10">
-          <button onClick={() => router.push('/calendar')} className="mb-4 bg-white/20 p-2 rounded-full inline-flex">
+          <button onClick={() => router.push(backUrl)} className="mb-4 bg-white/20 p-2 rounded-full inline-flex">
             <ArrowLeft className="w-5 h-5 text-white" />
           </button>
           <div className="flex items-center gap-3">

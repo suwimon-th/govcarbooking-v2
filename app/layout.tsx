@@ -34,14 +34,7 @@ export default function RootLayout({
   return (
     <html lang="th" className="light">
       <body
-        className={`
-          bg-[var(--background)]
-          text-[var(--foreground)]
-          ${prompt.variable}
-          ${geistSans.variable}
-          ${geistMono.variable}
-          antialiased
-        `}
+        className={`bg-[var(--background)] text-[var(--foreground)] ${prompt.variable} ${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
       </body>

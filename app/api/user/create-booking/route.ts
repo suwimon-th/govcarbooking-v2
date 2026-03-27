@@ -44,12 +44,13 @@ async function generateRequestCode(vehicleId: string) {
   const plateSuffix = digits.slice(-2) || "00";
 
   const prefix = `ENV-${plateSuffix}/`;
-
-  // 2. Find last code with this prefix AND this vehicle_id
+  
+  // 2. Find last code with this prefix AND this vehicle_id (Exclude cancelled/null codes)
   const { data } = await supabase
     .from("bookings")
     .select("request_code")
     .eq("vehicle_id", vehicleId)
+    .not("request_code", "is", null)
     .like("request_code", `${prefix}%`)
     .order("request_code", { ascending: false })
     .limit(1);

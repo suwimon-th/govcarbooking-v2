@@ -26,6 +26,8 @@ export async function POST(req: Request) {
       );
     }
 
+    // Use UTC+7 timezone (Thailand) for all timestamps
+    const thaiNow = new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().replace('Z', '+07:00');
     const distance =
       Number(mileage) - Number(booking.start_mileage ?? 0);
 
@@ -34,7 +36,8 @@ export async function POST(req: Request) {
       .update({
         end_mileage: Number(mileage),
         distance,
-        completed_at: new Date().toISOString(),
+        completed_at: thaiNow,
+        end_at: thaiNow,
         status: "COMPLETED",
       })
       .eq("id", bookingId);

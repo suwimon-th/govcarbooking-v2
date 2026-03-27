@@ -18,7 +18,10 @@ import {
   Users,
   Save,
   CheckCircle2,
-  Sparkles
+  Sparkles,
+  Star,
+  ThumbsUp,
+  ThumbsDown
 } from "lucide-react";
 
 // =======================
@@ -89,7 +92,10 @@ export default function EditBookingModal({
     is_ot: booking.is_ot || false,
     start_mileage: booking.start_mileage || "",
     end_mileage: booking.end_mileage || "",
+    manual_driver_name: "",
   });
+  
+  const [isManualDriver, setIsManualDriver] = useState(false);
 
   // ===============================
   // LOAD LIST DATA
@@ -179,6 +185,7 @@ export default function EditBookingModal({
           is_ot: formData.is_ot,
           start_mileage: formData.start_mileage ? Number(formData.start_mileage) : null,
           end_mileage: formData.end_mileage ? Number(formData.end_mileage) : null,
+          manual_driver_name: formData.manual_driver_name || null,
         }),
       });
 
@@ -517,7 +524,8 @@ export default function EditBookingModal({
                 </label>
                 <div className="relative">
                   <select
-                    className="w-full pl-3 pr-8 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all appearance-none shadow-sm"
+                    disabled={isManualDriver}
+                    className="w-full pl-3 pr-8 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all appearance-none shadow-sm disabled:opacity-50 disabled:bg-gray-100"
                     value={formData.driver_id}
                     onChange={(e) => {
                       const newDriverId = e.target.value;
@@ -538,6 +546,33 @@ export default function EditBookingModal({
                   <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
                   </div>
+                </div>
+
+                {/* Manual Driver Checkbox & Input */}
+                <div className="mt-2 text-sm flex flex-col gap-2">
+                  <label className="flex items-center gap-2 text-gray-600 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      className="rounded text-blue-600 focus:ring-blue-500"
+                      checked={isManualDriver}
+                      onChange={(e) => {
+                        setIsManualDriver(e.target.checked);
+                        if (e.target.checked) setFormData(p => ({ ...p, driver_id: "" }));
+                        else setFormData(p => ({ ...p, manual_driver_name: "" }));
+                      }}
+                    />
+                    กำหนดชื่อคนขับเอง (กรณีคนนอก/ยืมรถ)
+                  </label>
+                  
+                  {isManualDriver && (
+                    <input
+                      type="text"
+                      placeholder="พิมพ์ชื่อคนขับ..."
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium"
+                      value={formData.manual_driver_name}
+                      onChange={(e) => setFormData(p => ({ ...p, manual_driver_name: e.target.value }))}
+                    />
+                  )}
                 </div>
               </div>
 
@@ -607,6 +642,37 @@ export default function EditBookingModal({
               </div>
             )}
           </div>
+
+          {/* SECTION 4: ผลการประเมินจากผู้ใช้งาน */}
+          {booking.is_satisfied !== null && booking.is_satisfied !== undefined && (
+            <>
+              <div className="h-px bg-gray-100 mt-6"></div>
+              <div className="space-y-4 mt-6">
+                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                  <Star className="w-4 h-4" /> ผลการประเมินจากผู้ใช้
+                </h3>
+                <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                  <div className="flex items-center gap-3 mb-2">
+                    {booking.is_satisfied ? (
+                       <span className="flex items-center gap-1.5 text-green-600 bg-green-50 px-3 py-1 rounded-full text-sm font-bold">
+                         <ThumbsUp className="w-4 h-4" /> พึงพอใจ
+                       </span>
+                    ) : (
+                       <span className="flex items-center gap-1.5 text-rose-600 bg-rose-50 px-3 py-1 rounded-full text-sm font-bold">
+                         <ThumbsDown className="w-4 h-4" /> ไม่พึงพอใจ
+                       </span>
+                    )}
+                  </div>
+                  {booking.evaluation_comment && (
+                    <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg mt-2 font-medium">
+                      <span className="font-bold block mb-1 text-gray-700">ข้อเสนอแนะ:</span>
+                      {booking.evaluation_comment}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
 
         </div>
 

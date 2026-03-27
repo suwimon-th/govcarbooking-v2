@@ -21,7 +21,23 @@ interface FuelRequest {
 
 export default function FuelPage() {
     const [viewMode, setViewMode] = useState<'LOGBOOK' | 'FORM'>('LOGBOOK');
+    const [backUrl, setBackUrl] = useState("/calendar");
     const router = useRouter();
+
+    useEffect(() => {
+        const checkAuth = async () => {
+            try {
+                const res = await fetch("/api/auth/session");
+                const data = await res.json();
+                if (data.loggedIn) {
+                    setBackUrl("/user");
+                }
+            } catch (e) {
+                console.error("Session check failed", e);
+            }
+        };
+        checkAuth();
+    }, []);
 
     // -- Authentication Removed (Public Access for Drivers) --
 
@@ -364,7 +380,7 @@ export default function FuelPage() {
         <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
             <div className="bg-white px-6 py-4 shadow-sm sticky top-0 z-20 flex items-center justify-between border-b border-gray-100 leading-tight">
                 <div className="flex items-center gap-3">
-                    <Link href="/calendar" className="text-gray-400 hover:text-gray-600 p-1 rounded-full"><ArrowLeft className="w-6 h-6" /></Link>
+                    <Link href={backUrl} className="text-gray-400 hover:text-gray-600 p-1 rounded-full"><ArrowLeft className="w-6 h-6" /></Link>
                     <div>
                         <h1 className="text-lg font-bold text-gray-800">บันทึกการเบิกน้ำมัน</h1>
                         <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">Fuel Logbook & History</p>

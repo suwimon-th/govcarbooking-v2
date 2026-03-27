@@ -34,7 +34,8 @@ export async function POST(req: Request) {
         start_mileage: Number(startMileage),
         end_mileage: Number(endMileage),
         status: "COMPLETED",
-        completed_at: new Date().toISOString()
+        completed_at: new Date().toISOString(),
+        end_at: new Date().toISOString() // Set return time to now
       })
       .eq("id", bookingId);
 

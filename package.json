@@ -24,7 +24,8 @@
     "nodemailer": "^7.0.13",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
-    "sweetalert2": "^11.26.17"
+    "sweetalert2": "^11.26.17",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

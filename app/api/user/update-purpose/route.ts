@@ -16,9 +16,9 @@ export async function PUT(req: Request) {
     }
 
     // 📥 รับข้อมูล
-    const { id, purpose, destination } = await req.json();
+    const { id, purpose, destination, start_time, end_time } = await req.json();
 
-    if (!id || (!purpose && !destination)) {
+    if (!id || (!purpose && !destination && !start_time)) {
       return NextResponse.json(
         { error: "ข้อมูลไม่ครบถ้วน" },
         { status: 400 }
@@ -52,6 +52,23 @@ export async function PUT(req: Request) {
     const updates: any = {};
     if (purpose) updates.purpose = purpose;
     if (destination !== undefined) updates.destination = destination;
+
+    // Handle Time Update
+    if (start_time) {
+      // Need original booking date for time reconstruction
+      const { data: bData } = await supabase.from("bookings").select("start_at").eq("id", id).single();
+      if (bData) {
+        const bDate = bData.start_at.split('T')[0];
+        const padTime = (t: string) => (t && t.length === 5) ? `${t}:00` : t;
+        
+        updates.start_at = `${bDate}T${padTime(start_time)}+07:00`;
+        if (end_time) {
+          updates.end_at = `${bDate}T${padTime(end_time)}+07:00`;
+        } else {
+          updates.end_at = null;
+        }
+      }
+    }
 
     const { error: updateErr } = await supabase
       .from("bookings")

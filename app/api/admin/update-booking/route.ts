@@ -20,6 +20,35 @@ async function generateRequestCode(vehicleId: string): Promise<string> {
     const plateSuffix = digits.slice(-2) || "00";
     const prefix = `ENV-${plateSuffix}/`;
 
+    // --- REUSE CANCELLED CODE LOGIC ---
+    const { data: cancelledData } = await supabase
+        .from("bookings")
+        .select("request_code")
+        .like("request_code", `${prefix}%`)
+        .eq("status", "CANCELLED");
+
+    if (cancelledData && cancelledData.length > 0) {
+        // Collect all active codes for this prefix
+        const { data: activeData } = await supabase
+            .from("bookings")
+            .select("request_code")
+            .like("request_code", `${prefix}%`)
+            .neq("status", "CANCELLED");
+            
+        const activeCodes = new Set(activeData?.map(d => d.request_code) || []);
+        
+        // Find a cancelled code that is NOT in activeCodes
+        const availableCodes = cancelledData
+            .map(d => d.request_code)
+            .filter(code => !activeCodes.has(code))
+            .sort();
+            
+        if (availableCodes.length > 0) {
+            return availableCodes[0];
+        }
+    }
+    // ----------------------------------
+
     // ⚠️ Query ทุก booking ที่มี prefix นี้ (ไม่ว่าจะ vehicle_id ใด)
     // เพื่อป้องกัน duplicate key เมื่อรถเปลี่ยนมือ
     // ใช้ ORDER BY request_code DESC (ไม่ใช่ created_at) เพื่อได้เลขสูงสุดจริงๆ
@@ -61,7 +90,34 @@ export async function POST(req: Request) {
             is_ot,
             start_mileage,
             end_mileage, // New
+            manual_driver_name,
         } = body;
+
+        let finalDriverId = driver_id;
+
+        if (manual_driver_name) {
+            // Find existing manual driver with same name or create new one
+            const { data: existing } = await supabase
+                .from("drivers")
+                .select("id")
+                .eq("full_name", manual_driver_name)
+                .single();
+            if (existing) {
+                finalDriverId = existing.id;
+            } else {
+                const { data: newDriver } = await supabase
+                    .from("drivers")
+                    .insert([{ 
+                        full_name: manual_driver_name, 
+                        status: 'AVAILABLE', 
+                        active: false,
+                        remark: 'เพิ่มชื่อจากระบบแอดมิน (คนนอก)' 
+                    }])
+                    .select()
+                    .single();
+                if (newDriver) finalDriverId = newDriver.id;
+            }
+        }
 
         if (!id) {
             return NextResponse.json({ error: "Missing ID" }, { status: 400 });
@@ -77,7 +133,7 @@ export async function POST(req: Request) {
         // 1) ดึงข้อมูลเดิมก่อน update (เพื่อเทียบว่า driver / vehicle เปลี่ยนไหม)
         const { data: oldBooking } = await supabase
             .from("bookings")
-            .select("driver_id, status, vehicle_id, request_code")
+            .select("driver_id, status, vehicle_id, request_code, requester_id")
             .eq("id", id)
             .single();
 
@@ -94,7 +150,19 @@ export async function POST(req: Request) {
             distance: distance,
         };
 
-        if (driver_id !== undefined) updateData.driver_id = driver_id || null;
+        // Fetch new requester name if changed
+        if (requester_id && requester_id !== oldBooking?.requester_id) {
+            const { data: newRequester } = await supabase
+                .from("profiles")
+                .select("full_name")
+                .eq("id", requester_id)
+                .single();
+            if (newRequester?.full_name) {
+                updateData.requester_name = newRequester.full_name;
+            }
+        }
+
+        if (finalDriverId !== undefined) updateData.driver_id = finalDriverId || null;
         if (vehicle_id !== undefined) updateData.vehicle_id = vehicle_id || null;
         if (start_at) updateData.start_at = start_at;
         if (end_at) updateData.end_at = end_at;

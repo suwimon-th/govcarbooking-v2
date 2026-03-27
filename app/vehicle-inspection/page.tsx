@@ -45,11 +45,27 @@ export default function VehicleInspectionPage() {
 function InspectionFormContent() {
     const searchParams = useSearchParams();
     const editIdParam = searchParams.get("edit");
+    const [backUrl, setBackUrl] = useState("/calendar");
     const router = useRouter();
+
+    useEffect(() => {
+        const checkAuth = async () => {
+            try {
+                const res = await fetch("/api/auth/session");
+                const data = await res.json();
+                if (data.loggedIn) {
+                    setBackUrl("/user");
+                }
+            } catch (e) {
+                console.error("Session check failed", e);
+            }
+        };
+        checkAuth();
+    }, []);
 
     // -- Authentication Removed (Public Access for Drivers) --
 
-    const [viewMode, setViewMode] = useState<"LOGBOOK" | "FORM">("LOGBOOK");
+    const [viewMode, setViewMode] = useState<"LOGBOOK" | "FORM">("FORM");
     const [inspections, setInspections] = useState<Inspection[]>([]);
     const [loadingList, setLoadingList] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
@@ -287,7 +303,7 @@ function InspectionFormContent() {
             {/* Header */}
             <div className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-10">
                 <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
-                    <Link href="/calendar" className="flex items-center gap-2 text-gray-500 hover:text-gray-800 text-sm font-medium transition-colors">
+                    <Link href={backUrl} className="flex items-center gap-2 text-gray-500 hover:text-gray-800 text-sm font-medium transition-colors">
                         <ArrowLeft className="w-4 h-4" /> กลับหน้าหลัก
                     </Link>
                     <div className="flex items-center gap-2">

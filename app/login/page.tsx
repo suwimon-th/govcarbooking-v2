@@ -2,7 +2,9 @@
 
 import React, { useState, Suspense, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import Link from "next/link"
 import liff from "@line/liff";
+import { ChevronLeft } from "lucide-react";
 
 const LIFF_ID = process.env.NEXT_PUBLIC_LINE_LIFF_ID_DRIVER!;
 
@@ -40,7 +42,7 @@ function LoginForm() {
 
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Login with LINE failed");
+        setError(data.error || "เข้าสู่ระบบด้วย LINE ไม่สำเร็จ");
         liff.logout(); // Logout from LIFF to allow retrying
         setLineLoading(false);
         return;
@@ -105,14 +107,26 @@ function LoginForm() {
       {/* Decorative background element */}
       <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full -mr-16 -mt-16 blur-3xl opacity-50"></div>
       
+      {/* Back Button */}
+      <Link 
+        href="/calendar" 
+        className="absolute top-6 left-6 p-2 rounded-xl bg-gray-50 text-gray-400 hover:bg-white hover:text-blue-600 hover:shadow-sm transition-all z-20 border border-transparent hover:border-blue-100 group"
+        title="กลับไปหน้าหลัก"
+      >
+        <ChevronLeft className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform" />
+      </Link>
+      
       <div className="relative z-10">
-        <h1 className="text-4xl font-black text-blue-900 mb-8 text-center tracking-tight">
-          เข้าสู่ระบบ
-        </h1>
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-black text-blue-900 tracking-tight">
+            เข้าสู่ระบบ
+          </h1>
+          <p className="text-sm font-bold text-gray-500 mt-2">ระบบบริหารการใช้รถราชการ</p>
+        </div>
 
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
-            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">Username</label>
+            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">ชื่อผู้ใช้ (Username)</label>
             <input
               type="text"
               placeholder="กรอกชื่อผู้ใช้"
@@ -123,7 +137,7 @@ function LoginForm() {
           </div>
 
           <div>
-            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">Password</label>
+            <label className="text-xs font-black text-gray-400 uppercase tracking-widest ml-1 mb-1 block">รหัสผ่าน (Password)</label>
             <input
               type="password"
               placeholder="กรอกรหัสผ่าน"
@@ -140,6 +154,15 @@ function LoginForm() {
           >
             {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
           </button>
+          
+          <div className="flex justify-between items-center pt-2 px-1">
+            <Link href="/register" className="text-sm font-bold text-gray-400 hover:text-blue-600 transition-colors">
+              สมัครใช้งาน
+            </Link>
+            <Link href="/forgot-password" className="text-sm font-bold text-gray-400 hover:text-blue-600 transition-colors">
+              ลืมรหัสผ่าน
+            </Link>
+          </div>
         </form>
 
         <div className="flex items-center my-8">
@@ -178,7 +201,7 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4 font-sans">
-      <Suspense fallback={<div className="text-blue-800 font-black animate-pulse uppercase tracking-widest text-sm">Loading...</div>}>
+      <Suspense fallback={<div className="text-blue-800 font-black animate-pulse uppercase tracking-widest text-sm">กำลังโหลด...</div>}>
         <LoginForm />
       </Suspense>
     </div>

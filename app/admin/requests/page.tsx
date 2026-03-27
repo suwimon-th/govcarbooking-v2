@@ -21,7 +21,9 @@ import {
   MessageCircle,
   CheckCircle2,
   Plus,
-  X
+  X,
+  AlertTriangle,
+  Search
 } from "lucide-react";
 import { generateBookingDocument } from "@/lib/documentGenerator";
 import RetroactiveRequestModal from "@/app/components/RetroactiveRequestModal"; // Added
@@ -41,6 +43,7 @@ interface VehicleInfo {
   plate_number: string | null;
   brand: string | null;
   model: string | null;
+  photo_urls: string[] | null;
 }
 
 export interface BookingRow {
@@ -65,6 +68,8 @@ export interface BookingRow {
   distance: number | null;
 
   is_line_notified?: boolean; // Added
+  is_satisfied?: boolean | null;
+  evaluation_comment?: string | null;
 
   requester: RequesterInfo | null;
   driver: DriverInfo | null;
@@ -139,9 +144,9 @@ function AdminRequestsContent() {
     }
   };
 
-  // Bulk Select State
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [nextDriver, setNextDriver] = useState<{ name: string, id: string } | null>(null);
+  const [noDriverAvailable, setNoDriverAvailable] = useState(false);
   const [isDriverQueueModalOpen, setIsDriverQueueModalOpen] = useState(false);
 
   // Create Modal State
@@ -226,10 +231,12 @@ function AdminRequestsContent() {
         start_mileage,
         end_mileage,
         distance,
+        is_satisfied,
+        evaluation_comment,
 
         requester:requester_id(full_name, position),
         driver:driver_id(full_name),
-        vehicle:vehicle_id(plate_number, brand, model)
+        vehicle:vehicle_id(plate_number, brand, model, photo_urls)
       `)
       .order("created_at", { ascending: false });
 
@@ -243,13 +250,18 @@ function AdminRequestsContent() {
 
   const loadNextQueue = async () => {
     try {
-      const res = await fetch("/api/admin/get-next-queue");
-      const json = await res.json();
-      if (json.driver) {
-        setNextDriver({ name: json.driver.name, id: json.driver.id });
+      const [queueRes, statusRes] = await Promise.all([
+        fetch("/api/admin/get-next-queue"),
+        fetch("/api/admin/driver-status"),
+      ]);
+      const queueJson = await queueRes.json();
+      const statusJson = await statusRes.json();
+      if (queueJson.driver) {
+        setNextDriver({ name: queueJson.driver.name, id: queueJson.driver.id });
       } else {
         setNextDriver(null);
       }
+      setNoDriverAvailable(statusJson.no_driver_available ?? false);
     } catch (err) {
       console.error(err);
     }
@@ -343,20 +355,33 @@ function AdminRequestsContent() {
   return (
     <div className="p-4 md:p-8 max-w-[1400px] mx-auto min-h-screen bg-gray-50/50">
 
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <FileText className="w-8 h-8 text-blue-600" />
+      {/* Row 1: Title & Search */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <div className="shrink-0">
+          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2 whitespace-nowrap">
             จัดการคำขอใช้รถ
           </h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <p className="text-gray-500 text-sm mt-1 whitespace-nowrap">
             รายการคำขอทั้งหมด {rows.length} รายการ
           </p>
         </div>
 
+        {/* Search Box: Top Right */}
+        <div className="relative w-full md:w-80 lg:w-96">
+          <input
+            type="text"
+            placeholder="ค้นหา: เลขที่งาน / ชื่อผู้ขอ / ทะเบียน..."
+            className="px-4 py-2.5 border border-gray-200 rounded-xl w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-sm hover:border-blue-300 transition-all"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+      </div>
 
-        {/* Highlight Next Queue */}
-        <div className="flex-1 flex justify-center md:justify-start md:pl-12">
+      {/* Row 2: Status & Actions */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4 bg-white/50 p-4 rounded-2xl border border-gray-100 shadow-sm">
+        {/* Highlight Next Queue & Special Actions */}
+        <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
           <button
             onClick={handleHeaderQueueClick}
             className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl shadow-lg shadow-blue-200 flex items-center gap-4 animate-in fade-in zoom-in-95 duration-300 border border-blue-400/30 hover:scale-105 active:scale-95 transition-all text-left"
@@ -372,19 +397,59 @@ function AdminRequestsContent() {
               <span className="text-[10px] text-blue-200 mt-0.5 font-normal">คลิกเพื่อเลือกคนขับ...</span>
             </div>
           </button>
+
+          <button
+            onClick={async () => {
+              try {
+                const newState = !noDriverAvailable;
+                const res = await fetch("/api/admin/driver-status", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ no_driver_available: newState }),
+                });
+                if (res.ok) setNoDriverAvailable(newState);
+              } catch (e) {
+                console.error(e);
+              }
+            }}
+            className={`px-4 py-3 rounded-xl shadow-sm flex items-center gap-2 border transition-all active:scale-95 ${
+              noDriverAvailable
+                ? "bg-red-600 text-white border-red-700 hover:bg-red-700 shadow-lg shadow-red-200"
+                : "bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
+            }`}
+          >
+            <AlertTriangle className="w-5 h-5 shrink-0" />
+            <div className="flex items-center gap-2 leading-none">
+              <span className="text-[10px] uppercase font-bold tracking-wider opacity-80 whitespace-nowrap">สถานะคนขับ:</span>
+              <span className="font-bold text-sm whitespace-nowrap">
+                {noDriverAvailable ? "✕ ยกเลิกแจ้งเตือน" : "ไม่มีคนขับว่าง"}
+              </span>
+            </div>
+          </button>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-          {/* Search */}
-          <div className="relative grow">
-            <input
-              type="text"
-              placeholder="เลขที่งาน / ชื่อผู้ขอ / ทะเบียนรถ..."
-              className="pl-4 pr-4 py-2.5 border rounded-xl w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-sm"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
+
+        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto items-center">
+
+
+          {/* Today Filter Button */}
+          <button
+            onClick={() => {
+              const today = new Date().toISOString().slice(0, 10);
+              if (filterDateFrom === today && filterDateTo === today) {
+                applyDatePreset('clear');
+              } else {
+                applyDatePreset('today');
+              }
+            }}
+            className={`px-4 py-2.5 rounded-xl border text-sm font-bold transition-all shadow-sm whitespace-nowrap ${
+              (filterDateFrom === new Date().toISOString().slice(0, 10)) 
+                ? "bg-blue-600 text-white border-blue-700" 
+                : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+            }`}
+          >
+            วันนี้
+          </button>
 
           {/* Filter Status */}
           <div className="relative min-w-[160px]">
@@ -416,114 +481,9 @@ function AdminRequestsContent() {
         </div>
       </div>
 
-      {/* ===== FILTER ROW ===== */}
-
-      {/* Mobile: Toggle Button */}
-      <div className="md:hidden mb-3">
-        <button
-          onClick={() => setFilterOpen(p => !p)}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all w-full justify-between
-            ${filterOpen || activeFilterCount > 0
-              ? 'bg-blue-50 border-blue-200 text-blue-700'
-              : 'bg-white border-gray-200 text-gray-600'}`}
-        >
-          <span className="flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" /></svg>
-            ตัวกรอง
-            {activeFilterCount > 0 && (
-              <span className="bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{activeFilterCount}</span>
-            )}
-          </span>
-          <span className="text-xs text-gray-400">แสดง {filteredRows.length}/{rows.length}</span>
-        </button>
-
-        {/* Mobile expanded panel */}
-        {filterOpen && (
-          <div className="mt-2 bg-white border border-gray-100 rounded-2xl shadow-sm p-4 flex flex-col gap-3">
-            {/* Quick Presets */}
-            <div>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">ช่วงวันที่</p>
-              <div className="flex gap-2">
-                {(['today', 'week', 'month'] as const).map((p) => (
-                  <button key={p} onClick={() => applyDatePreset(p)}
-                    className="flex-1 py-2 text-xs font-semibold rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 text-gray-600 transition-all">
-                    {p === 'today' ? 'วันนี้' : p === 'week' ? 'สัปดาห์นี้' : 'เดือนนี้'}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] text-gray-400">ตั้งแต่</label>
-                <input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)}
-                  className="border border-gray-200 rounded-lg px-2 py-2 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white w-full" />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] text-gray-400">ถึง</label>
-                <input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)}
-                  className="border border-gray-200 rounded-lg px-2 py-2 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white w-full" />
-              </div>
-            </div>
-            <input type="text" placeholder="กรองชื่อผู้ขอ..."
-              value={filterRequester} onChange={(e) => setFilterRequester(e.target.value)}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white w-full" />
-            <input type="text" placeholder="กรองชื่อคนขับ..."
-              value={filterDriver} onChange={(e) => setFilterDriver(e.target.value)}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white w-full" />
-            {activeFilterCount > 0 && (
-              <button onClick={() => { applyDatePreset('clear'); setFilterDriver(''); setFilterRequester(''); }}
-                className="flex items-center justify-center gap-1 py-2 text-xs font-semibold rounded-lg bg-red-50 text-red-500 border border-red-100">
-                <X className="w-3.5 h-3.5" /> ล้างตัวกรอง
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Desktop: Full inline filter bar */}
-      <div className="hidden md:flex bg-white border border-gray-100 rounded-2xl shadow-sm p-4 mb-6 flex-wrap gap-3 items-center">
-        {/* Quick Presets */}
-        <span className="text-xs font-bold text-gray-400 uppercase tracking-wider mr-1">ช่วงวันที่:</span>
-        {(['today', 'week', 'month'] as const).map((p) => (
-          <button
-            key={p}
-            onClick={() => applyDatePreset(p)}
-            className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 text-gray-600 transition-all"
-          >
-            {p === 'today' ? 'วันนี้' : p === 'week' ? 'สัปดาห์นี้' : 'เดือนนี้'}
-          </button>
-        ))}
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs text-gray-400">ตั้งแต่</span>
-          <input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)}
-            className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white cursor-pointer" />
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs text-gray-400">ถึง</span>
-          <input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)}
-            className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white cursor-pointer" />
-        </div>
-        <div className="flex items-center gap-1.5">
-          <User className="w-3.5 h-3.5 text-gray-400" />
-          <input type="text" placeholder="กรองชื่อผู้ขอ..."
-            value={filterRequester} onChange={(e) => setFilterRequester(e.target.value)}
-            className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white w-36" />
-        </div>
-        <div className="flex items-center gap-1.5 ml-auto">
-          <User className="w-3.5 h-3.5 text-gray-400" />
-          <input type="text" placeholder="กรองชื่อคนขับ..."
-            value={filterDriver} onChange={(e) => setFilterDriver(e.target.value)}
-            className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white w-36" />
-        </div>
-        {activeFilterCount > 0 && (
-          <button
-            onClick={() => { applyDatePreset('clear'); setFilterDriver(''); setFilterRequester(''); }}
-            className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-50 text-red-500 border border-red-100 hover:bg-red-100 transition-colors"
-          >
-            <X className="w-3.5 h-3.5" /> ล้างตัวกรอง
-          </button>
-        )}
-        <span className="text-xs text-gray-400 ml-auto">
+      {/* Filter Row Removed for simplification */}
+      <div className="mb-6 flex justify-end">
+        <span className="text-xs text-gray-400">
           แสดง <span className="font-bold text-gray-700">{filteredRows.length}</span> / {rows.length} รายการ
         </span>
       </div>
@@ -607,8 +567,12 @@ function AdminRequestsContent() {
 
                 {/* Header: Code & Status */}
                 <div className="flex items-start gap-3 pr-8 mb-1">
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 shrink-0 shadow-sm border border-blue-100">
-                    <Car className="w-5 h-5" />
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 shrink-0 shadow-sm border border-blue-100 overflow-hidden">
+                    {b.vehicle?.photo_urls && b.vehicle.photo_urls.length > 0 ? (
+                      <img src={b.vehicle.photo_urls[0]} alt="vehicle" className="w-full h-full object-cover" />
+                    ) : (
+                      <Car className="w-5 h-5" />
+                    )}
                   </div>
                   <div className="flex flex-col items-start">
                     <span className="text-blue-900 font-bold text-base leading-tight">
@@ -759,8 +723,12 @@ function AdminRequestsContent() {
                         {/* งาน (Request Icon + Details) */}
                         <td className="px-6 py-4 align-top">
                           <div className="flex items-start gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 shrink-0 border border-blue-100 shadow-sm">
-                              <Car className="w-5 h-5" />
+                            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 shrink-0 border border-blue-100 shadow-sm overflow-hidden">
+                              {b.vehicle?.photo_urls && b.vehicle.photo_urls.length > 0 ? (
+                                <img src={b.vehicle.photo_urls[0]} alt="vehicle" className="w-full h-full object-cover" />
+                              ) : (
+                                <Car className="w-5 h-5" />
+                              )}
                             </div>
                             <div>
                               <div className="font-bold text-gray-900 text-sm whitespace-nowrap">{b.request_code}</div>

@@ -381,6 +381,14 @@ export default function DriverTaskPage() {
                                     <span className="text-gray-500">ไมล์กลับ:</span>
                                     <span className="font-mono font-bold">{endMileage}</span>
                                 </div>
+                                {booking.end_at && (
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-500">เวลากลับ:</span>
+                                        <span className="font-bold text-blue-700">
+                                            {new Date(booking.end_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
+                                        </span>
+                                    </div>
+                                )}
                                 <div className="border-t pt-2 mt-2 flex justify-between text-green-700 font-bold">
                                     <span>ระยะทางรวม:</span>
                                     <span>{Number(endMileage) - Number(startMileage)} กม.</span>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X, Loader2, CheckCircle2, AlertCircle, AlertTriangle } from "lucide-react";
+import { X, Loader2, CheckCircle2, AlertCircle, AlertTriangle, ChevronRight } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 
 interface ReportIssueModalProps {
@@ -92,14 +92,19 @@ export default function ReportIssueModal({ open, onClose }: ReportIssueModalProp
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
                 {/* Header */}
-                <div className="bg-amber-500 px-6 py-4 flex items-center justify-between">
-                    <h3 className="text-white font-bold text-lg flex items-center gap-2">
-                        <AlertTriangle className="w-5 h-5" />
-                        แจ้งปัญหาการใช้งานรถ
+                <div className="bg-gradient-to-r from-amber-500 to-orange-600 px-6 py-5 flex items-center justify-between shadow-lg relative overflow-hidden">
+                    {/* Decorative Background Pattern */}
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+                    
+                    <h3 className="text-white font-black text-xl md:text-2xl flex items-center gap-4 relative z-10 uppercase tracking-widest">
+                        <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-md shadow-inner border border-white/20">
+                            <AlertTriangle className="w-7 h-7 text-white" />
+                        </div>
+                        แจ้งปัญหาการใช้งาน
                     </h3>
                     <button
                         onClick={onClose}
-                        className="text-amber-100 hover:text-white hover:bg-amber-600/50 p-1 rounded-full transition-colors"
+                        className="relative z-10 bg-black/10 hover:bg-black/20 text-white p-2 rounded-xl transition-all duration-300 hover:rotate-90"
                     >
                         <X className="w-5 h-5" />
                     </button>
@@ -134,7 +139,8 @@ export default function ReportIssueModal({ open, onClose }: ReportIssueModalProp
                             )}
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label className="block text-sm font-black text-gray-600 mb-2 uppercase tracking-wide flex items-center gap-1.5">
+                                    <span className="w-1 h-4 bg-amber-500 rounded-full"></span>
                                     ชื่อผู้แจ้ง <span className="text-red-500">*</span>
                                 </label>
                                 <input
@@ -143,30 +149,37 @@ export default function ReportIssueModal({ open, onClose }: ReportIssueModalProp
                                     value={reporterName}
                                     onChange={(e) => setReporterName(e.target.value)}
                                     placeholder="ระบุชื่อของคุณ..."
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all"
+                                    className="w-full bg-gray-50 border-none p-4 rounded-2xl focus:ring-2 focus:ring-amber-500 font-bold text-gray-800 transition-all shadow-inner"
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label className="block text-sm font-black text-gray-600 mb-2 uppercase tracking-wide flex items-center gap-1.5">
+                                    <span className="w-1 h-4 bg-orange-400 rounded-full"></span>
                                     หมายเลขทะเบียนรถ (ถ้ามี)
                                 </label>
-                                <select
-                                    value={vehicleId}
-                                    onChange={(e) => setVehicleId(e.target.value)}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all appearance-none bg-white"
-                                >
-                                    <option value="">-- ไม่ระบุ / รถอื่นๆ --</option>
-                                    {vehicles.map((v) => (
-                                        <option key={v.id} value={v.id}>
-                                            {v.plate_number ? `รถ ${v.plate_number}` : 'รถอื่นๆ'}
-                                        </option>
-                                    ))}
-                                </select>
+                                <div className="relative">
+                                    <select
+                                        value={vehicleId}
+                                        onChange={(e) => setVehicleId(e.target.value)}
+                                        className="w-full bg-gray-50 border-none p-4 rounded-2xl focus:ring-2 focus:ring-amber-500 font-bold text-gray-800 transition-all shadow-inner appearance-none cursor-pointer"
+                                    >
+                                        <option value="">-- ไม่ระบุ / รถอื่นๆ --</option>
+                                        {vehicles.map((v) => (
+                                            <option key={v.id} value={v.id}>
+                                                {v.plate_number ? `รถ ${v.plate_number}` : 'รถอื่นๆ'}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                                        <ChevronRight className="w-5 h-5 rotate-90" />
+                                    </div>
+                                </div>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label className="block text-sm font-black text-gray-600 mb-2 uppercase tracking-wide flex items-center gap-1.5">
+                                    <span className="w-1 h-4 bg-red-400 rounded-full"></span>
                                     อาการ / ปัญหาที่พบ <span className="text-red-500">*</span>
                                 </label>
                                 <textarea
@@ -175,7 +188,7 @@ export default function ReportIssueModal({ open, onClose }: ReportIssueModalProp
                                     value={description}
                                     onChange={(e) => setDescription(e.target.value)}
                                     placeholder="ระบุรายละเอียดปัญหาที่พบ..."
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all resize-none"
+                                    className="w-full bg-gray-50 border-none p-4 rounded-2xl focus:ring-2 focus:ring-amber-500 font-bold text-gray-800 transition-all shadow-inner resize-none"
                                 />
                             </div>
 
@@ -183,12 +196,12 @@ export default function ReportIssueModal({ open, onClose }: ReportIssueModalProp
                                 <button
                                     type="submit"
                                     disabled={loading || !reporterName || !description}
-                                    className="w-full bg-amber-500 hover:bg-amber-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold py-2.5 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2"
+                                    className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white font-black py-5 rounded-2xl shadow-lg shadow-amber-200 hover:shadow-amber-400 transform hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-3 uppercase tracking-[0.2em] text-lg"
                                 >
                                     {loading ? (
                                         <>
-                                            <Loader2 className="w-5 h-5 animate-spin" />
-                                            กำลังส่งข้อมูล...
+                                            <Loader2 className="w-6 h-6 animate-spin" />
+                                            กำลังส่งข้อมูล
                                         </>
                                     ) : (
                                         "แจ้งปัญหา"

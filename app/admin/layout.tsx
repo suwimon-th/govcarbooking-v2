@@ -35,6 +35,7 @@ export default function AdminLayout({
   const [loggingOut, setLoggingOut] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [userProfile, setUserProfile] = useState<{ full_name: string; role: string; line_picture_url?: string } | null>(null);
 
   // ===== Breadcrumb Titles =====
   const breadcrumbTitles: Record<string, string> = {
@@ -43,7 +44,7 @@ export default function AdminLayout({
     "/admin/vehicles": "รถทั้งหมด",
     "/admin/drivers": "คนขับรถ",
     "/admin/users": "ผู้ใช้งาน",
-    "/admin/reports": "รายงานสรุป",
+    "/admin/reports": "รายงาน",
     "/admin/inspections": "แบบรายงานสภาพรถ",
   };
 
@@ -79,6 +80,24 @@ export default function AdminLayout({
     };
   }, []);
 
+  // Fetch Profile
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const res = await fetch('/api/user/me');
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.full_name) {
+            setUserProfile(data);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching admin profile:", err);
+      }
+    };
+    fetchProfile();
+  }, []);
+
   // ===== Legacy Logout (keeps compatibility) =====
   const handleLogout = async (): Promise<void> => {
     try {
@@ -93,7 +112,7 @@ export default function AdminLayout({
       document.cookie = "role=; path=/; max-age=0";
       document.cookie = "full_name=; path=/; max-age=0";
 
-      router.replace("/login");
+      router.replace("/calendar");
     } finally {
       setLoggingOut(false);
     }
@@ -201,8 +220,8 @@ export default function AdminLayout({
                       <Link href="/admin/inspections" className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 rounded-lg text-gray-700">
                         <ClipboardCheck className="w-4 h-4 text-blue-500" /> แบบรายงานสภาพรถ
                       </Link>
-                      <Link href="/admin/reports" className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 rounded-lg text-gray-700">
-                        <FileText className="w-4 h-4 text-orange-500" /> รายงานสรุป
+                      <Link href="/admin/reports" className="flex items-center gap-2 px-4 py-2 hover:bg-orange-50 rounded-lg text-gray-700 transition-colors">
+                        <FileText className="w-4 h-4 text-orange-500" /> รายงาน
                       </Link>
                     </div>
                   </div>
@@ -241,13 +260,32 @@ export default function AdminLayout({
 
               <div className="h-6 w-px bg-gray-200 mx-2"></div>
 
+              {/* User Profile Section PC */}
+              {userProfile && (
+                <div className="flex items-center gap-3 px-3 py-1.5 bg-gray-50 rounded-xl border border-gray-100 mr-2 shadow-sm">
+                  <div className="w-8 h-8 rounded-full overflow-hidden border border-gray-200 bg-white shadow-inner flex items-center justify-center">
+                    {userProfile.line_picture_url ? (
+                      <img src={userProfile.line_picture_url} alt="Profile" className="w-full h-full object-cover" />
+                    ) : (
+                      <Users className="w-4 h-4 text-gray-400" />
+                    )}
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs font-bold text-gray-800 leading-tight truncate max-w-[120px]">
+                      {userProfile.full_name}
+                    </span>
+                    <span className="text-[10px] text-gray-400 font-medium">แอดมิน</span>
+                  </div>
+                </div>
+              )}
+
               <button
                 onClick={handleLogout}
                 disabled={loggingOut}
-                className="flex items-center gap-2 text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors"
+                className="flex items-center gap-2 text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors border border-red-100"
               >
                 <LogOut className="w-4 h-4" />
-                {loggingOut ? "..." : "ออก"}
+                {loggingOut ? "..." : "ออกจากระบบ"}
               </button>
             </div>
           </div>
@@ -271,6 +309,25 @@ export default function AdminLayout({
                 <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
+
+            {/* User Profile Section Mobile */}
+            {userProfile && (
+              <div className="mb-6 p-4 bg-gradient-to-br from-gray-50 to-blue-50/30 rounded-2xl border border-gray-100 flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-sm flex items-center justify-center bg-white">
+                  {userProfile.line_picture_url ? (
+                    <img src={userProfile.line_picture_url} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <Users className="w-6 h-6 text-gray-300" />
+                  )}
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-0.5">Admin Profile</span>
+                  <span className="text-base font-bold text-gray-800 leading-tight truncate max-w-[140px]">
+                    {userProfile.full_name}
+                  </span>
+                </div>
+              </div>
+            )}
 
             <div className="space-y-6">
 
@@ -331,8 +388,8 @@ export default function AdminLayout({
                   <Link href="/admin/inspections" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 text-gray-600 rounded-lg">
                     <ClipboardCheck className="w-4 h-4" /> แบบรายงานสภาพรถ
                   </Link>
-                  <Link href="/admin/reports" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 text-gray-600 rounded-lg">
-                    <FileText className="w-4 h-4" /> รายงานสรุป
+                  <Link href="/admin/reports" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2 hover:bg-orange-50 text-gray-600 rounded-lg transition-colors">
+                    <FileText className="w-4 h-4 text-orange-500" /> รายงาน
                   </Link>
                 </div>
               </div>

@@ -82,13 +82,19 @@ export default function DriversPage() {
   });
 
   // ======================= Delete ==========================
-  const handleDelete = async (id: string) => {
-    if (!confirm("ต้องการลบคนขับนี้ใช่หรือไม่?")) return;
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`ต้องการลบคนขับ "${name}" ใช่หรือไม่?\n\n⚠️ หมายเหตุ: หากคนขับเคยถูกมอบหมายงานแล้ว จะไม่อนุญาตให้ลบออกจากระบบ (แนะนำให้ใช้การ 'ปิดการใช้งาน' หรือ Active: Disabled แทน)`)) return;
 
     const { error } = await supabase.from("drivers").delete().eq("id", id);
 
     if (error) {
-      showToast("error", "ลบข้อมูลล้มเหลว");
+      console.error("DELETE_DRIVER_ERROR:", error);
+      // PostgREST/PostgreSQL error code 23503 is foreign key violation
+      if (error.code === '23503') {
+        showToast("error", "ไม่สามารถลบได้เนื่องจากมีประวัติการจอง กรุณาใช้การปิดใช้งานแทน");
+      } else {
+        showToast("error", "ลบข้อมูลล้มเหลว: " + error.message);
+      }
       return;
     }
 
@@ -352,7 +358,7 @@ export default function DriversPage() {
               <button onClick={() => setEditing(d)} className="flex-1 py-2 rounded-lg bg-yellow-50 text-yellow-700 text-xs font-medium flex items-center justify-center gap-1">
                 <Pencil className="w-3.5 h-3.5" /> แก้ไข
               </button>
-              <button onClick={() => handleDelete(d.id)} className="flex-1 py-2 rounded-lg bg-red-50 text-red-700 text-xs font-medium flex items-center justify-center gap-1">
+              <button onClick={() => handleDelete(d.id, d.full_name)} className="flex-1 py-2 rounded-lg bg-red-50 text-red-700 text-xs font-medium flex items-center justify-center gap-1">
                 <Trash2 className="w-3.5 h-3.5" /> ลบ
               </button>
             </div>
@@ -479,7 +485,7 @@ export default function DriversPage() {
                       </button>
 
                       <button
-                        onClick={() => handleDelete(d.id)}
+                        onClick={() => handleDelete(d.id, d.full_name)}
                         className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors tooltip"
                         title="ลบ"
                       >

@@ -63,12 +63,22 @@ function DriverActiveTasksContent() {
     fetchData();
   }, [driverId]);
 
-  const formatDateTime = (isoString: string) => {
+  const formatDateTime = (isoString: string, endIsoString?: string | null) => {
     const d = new Date(isoString);
-    return new Intl.DateTimeFormat('th-TH', { 
+    const startStr = new Intl.DateTimeFormat('th-TH', { 
       day: 'numeric', month: 'short', year: 'numeric',
       hour: '2-digit', minute: '2-digit'
     }).format(d);
+
+    if (endIsoString) {
+      const e = new Date(endIsoString);
+      const endTimeStr = new Intl.DateTimeFormat('th-TH', {
+        hour: '2-digit', minute: '2-digit'
+      }).format(e);
+      return `${startStr} - ${endTimeStr}`;
+    }
+
+    return startStr;
   };
 
   const filteredDrivers = drivers.filter(d => 
@@ -264,7 +274,7 @@ function DriverActiveTasksContent() {
                   <div>
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">วัน-เวลา นัดหมาย</p>
                     <p className="text-base font-bold text-gray-800 leading-none mt-1">
-                      {formatDateTime(task.start_at)}
+                      {formatDateTime(task.start_at, task.end_at)}
                     </p>
                   </div>
                 </div>

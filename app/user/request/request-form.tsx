@@ -15,6 +15,7 @@ interface Vehicle {
   model: string | null;
   status: string;
   type: string | null;
+  photo_urls?: string[] | null;
 }
 
 interface Driver {
@@ -205,7 +206,7 @@ export default function RequestForm({
         setLoadingVehicles(true);
         const { data, error } = await supabase
           .from("vehicles")
-          .select("id, plate_number, brand, model, status, type")
+          .select("id, plate_number, brand, model, status, type, photo_urls")
           .eq("status", "ACTIVE")
           .order("plate_number", { ascending: true });
 
@@ -866,11 +867,18 @@ export default function RequestForm({
         </div>
 
         {/* Action Buttons */}
-        <div className="pt-4 border-t border-gray-100">
+        <div className="pt-4 border-t border-gray-100 flex flex-col sm:flex-row gap-3">
+          <button
+            type="button"
+            onClick={() => router.push('/calendar')}
+            className="flex-1 px-6 py-4 rounded-2xl bg-gray-100 text-gray-600 font-bold hover:bg-gray-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+          >
+            ย้อนกลับ
+          </button>
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full relative group overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white font-bold py-4 shadow-lg shadow-blue-200 transition-all hover:shadow-blue-300 hover:scale-[1.01] active:scale-[0.98] disabled:opacity-70 disabled:pointer-events-none"
+            className="flex-[2] relative group overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white font-bold py-4 shadow-lg shadow-blue-200 transition-all hover:shadow-blue-300 hover:scale-[1.01] active:scale-[0.98] disabled:opacity-70 disabled:pointer-events-none"
           >
             <div className="relative z-10 flex items-center justify-center gap-2">
               {isSubmitting ? (
@@ -939,8 +947,12 @@ export default function RequestForm({
                             ? 'border-blue-500 bg-blue-50'
                             : 'border-gray-100 bg-white hover:border-blue-200 hover:bg-blue-50/30'}`}
                       >
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isSelected ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                          <Car className="w-5 h-5" />
+                        <div className={`w-14 h-14 rounded-xl flex items-center justify-center shrink-0 overflow-hidden ${isSelected ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                          {v.photo_urls && v.photo_urls.length > 0 ? (
+                            <img src={v.photo_urls[0]} alt={v.plate_number || ""} className="w-full h-full object-cover" />
+                          ) : (
+                            <Car className="w-6 h-6" />
+                          )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">

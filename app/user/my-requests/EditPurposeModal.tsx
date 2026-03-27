@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { X, Save, Pencil, MapPin } from "lucide-react";
+import { X, Save, Pencil, MapPin, Clock } from "lucide-react";
+import TimePicker24 from "@/app/components/TimePicker24";
 
 interface Props {
     booking: {
@@ -9,14 +10,29 @@ interface Props {
         request_code: string;
         purpose: string;
         destination?: string;
+        start_at: string;
+        end_at: string | null;
     };
     onClose: () => void;
     onUpdated: () => void;
 }
 
 export default function EditPurposeModal({ booking, onClose, onUpdated }: Props) {
+    // Helper to extract HH:mm from ISO string
+    const extractTime = (isoStr: string | null) => {
+        if (!isoStr) return "";
+        try {
+            const date = new Date(isoStr);
+            return `${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}`;
+        } catch (e) {
+            return "";
+        }
+    };
+
     const [purpose, setPurpose] = useState(booking.purpose);
     const [destination, setDestination] = useState(booking.destination || "");
+    const [startTime, setStartTime] = useState(extractTime(booking.start_at));
+    const [endTime, setEndTime] = useState(extractTime(booking.end_at));
     const [loading, setLoading] = useState(false);
 
     const handleSave = async () => {
@@ -30,6 +46,11 @@ export default function EditPurposeModal({ booking, onClose, onUpdated }: Props)
             return;
         }
 
+        if (!startTime) {
+            alert("กรุณาระบุเวลาเริ่ม");
+            return;
+        }
+
         setLoading(true);
         try {
             const res = await fetch("/api/user/update-purpose", {
@@ -39,6 +60,8 @@ export default function EditPurposeModal({ booking, onClose, onUpdated }: Props)
                     id: booking.id,
                     purpose: purpose,
                     destination: destination,
+                    start_time: startTime,
+                    end_time: endTime || null,
                 }),
             });
 
@@ -84,6 +107,36 @@ export default function EditPurposeModal({ booking, onClose, onUpdated }: Props)
                 {/* CONTENT */}
                 <div className="p-6 bg-gray-50/30 space-y-4">
 
+                    {/* Time Selection Row */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-1.5">
+                                <Clock className="w-4 h-4 text-gray-500" /> เวลาเริ่ม
+                            </label>
+                            <div className="bg-white border border-gray-200 rounded-2xl px-1 shadow-sm">
+                                <TimePicker24
+                                    id="startTime"
+                                    name="startTime"
+                                    value={startTime}
+                                    onChange={setStartTime}
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-1.5">
+                                <Clock className="w-4 h-4 text-gray-500" /> เวลาสิ้นสุด (ถ้ามี)
+                            </label>
+                            <div className="bg-white border border-gray-200 rounded-2xl px-1 shadow-sm">
+                                <TimePicker24
+                                    id="endTime"
+                                    name="endTime"
+                                    value={endTime}
+                                    onChange={setEndTime}
+                                />
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Destination Field */}
                     <div>
                         <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-1.5">
@@ -105,7 +158,7 @@ export default function EditPurposeModal({ booking, onClose, onUpdated }: Props)
                         </label>
                         <textarea
                             className="w-full p-4 bg-white border border-gray-200 rounded-2xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none shadow-sm text-base leading-relaxed"
-                            rows={4}
+                            rows={3}
                             value={purpose}
                             onChange={(e) => setPurpose(e.target.value)}
                             placeholder="ระบุรายละเอียดการเดินทาง..."

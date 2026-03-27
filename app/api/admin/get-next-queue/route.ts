@@ -7,9 +7,8 @@ export async function GET() {
         // Active + Available + Lowest Queue Order
         const { data: driver, error } = await supabase
             .from("drivers")
-            .select("full_name, id, queue_order")
+            .select("full_name, id, queue_order, status")
             .eq("is_active", true)
-            .eq("status", "AVAILABLE")
             .order("queue_order", { ascending: true })
             .limit(1)
             .maybeSingle();

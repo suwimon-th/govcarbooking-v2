@@ -227,6 +227,7 @@ export default function UsersPage() {
               <option value="ทั้งหมด">สถานะ: ทั้งหมด</option>
               <option value="ADMIN">ADMIN</option>
               <option value="USER">USER</option>
+              <option value="TESTER">TESTER</option>
             </select>
           </div>
 

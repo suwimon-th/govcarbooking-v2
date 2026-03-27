@@ -65,7 +65,7 @@ export default function UserLayout({
     try {
       setLoggingOut(true);
       await supabase.auth.signOut().catch(() => { });
-      router.push("/login");
+      router.push("/calendar");
     } finally {
       setLoggingOut(false);
     }
@@ -74,25 +74,26 @@ export default function UserLayout({
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
 
-      {/* ===== HEADER (Modern Glass) ===== */}
-      <header className="w-full bg-white/80 backdrop-blur-md shadow-sm border-b border-gray-100 fixed top-0 left-0 z-40 transition-all duration-300">
-        <div className="max-w-[1400px] mx-auto px-4 md:px-6 h-16 flex items-center justify-between gap-4">
+      {/* ===== HEADER (Modern High-Visibility Blue) ===== */}
+      <header className="w-full bg-[#1e40af] border-b border-blue-800 fixed top-0 left-0 z-50 transition-all duration-300 shadow-lg">
+        <div className="max-w-[1400px] mx-auto px-4 md:px-6 h-[72px] flex items-center justify-between gap-4">
 
           {/* Left: Logo/Icon */}
-          <Link href="/user" className="shrink-0 flex items-center gap-2 group cursor-pointer">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-md group-hover:shadow-lg transition-all transform group-hover:scale-105">
-              <Car className="w-5 h-5" />
+          <Link href="/user" className="shrink-0 flex items-center gap-3 group cursor-pointer">
+            <div className="w-10 h-10 rounded-xl bg-white text-[#1e40af] flex items-center justify-center shadow-md group-hover:shadow-lg transition-all transform group-hover:scale-105 border border-white">
+              <Car className="w-6 h-6 px-0.5" />
             </div>
             <div className="hidden md:flex flex-col">
-              <span className="font-bold text-gray-800 text-sm leading-tight group-hover:text-blue-700 transition-colors">GovCarBooking</span>
-              <span className="text-[10px] text-gray-500 font-medium">ระบบบริหารการใช้รถราชการ</span>
+              <span className="font-black text-white text-base leading-tight tracking-wide group-hover:text-blue-100 transition-colors uppercase">GovCarBooking</span>
+              <span className="text-[10px] text-blue-100 font-black uppercase tracking-[0.2em]">ระบบบริหารการใช้รถราชการ</span>
             </div>
           </Link>
 
           {/* Center: Title (Mobile Only) */}
           <div className="md:hidden flex-1 text-center">
-            <h1 className="text-base font-bold text-gray-800 truncate">
-              บริหารยานพาหนะ
+            <h1 className="text-sm font-black text-white truncate uppercase tracking-widest flex items-center justify-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.5)]"></div>
+              GOV CAR
             </h1>
           </div>
 
@@ -100,14 +101,14 @@ export default function UserLayout({
           <div className="shrink-0 flex items-center">
             {/* Mobile Menu Toggle */}
             <button
-              className="md:hidden p-2 text-gray-600 hover:bg-gray-100 hover:text-blue-600 rounded-xl transition-colors active:scale-95"
+              className="md:hidden p-2 text-white hover:bg-white/10 rounded-xl transition-colors active:scale-95 border border-white/20"
               onClick={() => setMobileMenuOpen(true)}
             >
               <Menu className="w-6 h-6" />
             </button>
 
             {/* Desktop Menu */}
-            <nav className="hidden md:flex items-center gap-1">
+            <nav className="hidden md:flex items-center gap-2">
               {[
                 { href: "/user", label: "ขอใช้รถ", icon: Car },
                 { href: "/user/my-requests", label: "ประวัติ", icon: FileText },
@@ -117,22 +118,41 @@ export default function UserLayout({
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-all"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black text-blue-50 hover:text-white hover:bg-white/10 transition-all uppercase tracking-wider"
                 >
-                  <item.icon className="w-4 h-4" />
+                  <item.icon className="w-4 h-4 opacity-80" />
                   {item.label}
                 </Link>
               ))}
 
-              <div className="h-6 w-px bg-gray-200 mx-3"></div>
+              <div className="h-6 w-px bg-white/20 mx-3"></div>
+
+              {/* User Profile Section PC */}
+              {userProfile && (
+                <div className="flex items-center gap-3 px-4 py-1.5 bg-white/10 rounded-2xl border border-white/10 mr-2 backdrop-blur-sm">
+                  <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-white/20 bg-white/20 shadow-inner flex items-center justify-center">
+                    {userProfile.line_picture_url ? (
+                      <img src={userProfile.line_picture_url} alt="Profile" className="w-full h-full object-cover" />
+                    ) : (
+                      <UserCircle className="w-6 h-6 text-blue-100" />
+                    )}
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xs font-black text-white leading-tight truncate max-w-[150px] uppercase tracking-wide">
+                      {userProfile.full_name}
+                    </span>
+                    <span className="text-[10px] text-blue-200 font-bold uppercase tracking-tighter">ผู้ใช้งาน</span>
+                  </div>
+                </div>
+              )}
 
               <button
                 onClick={handleLogout}
                 disabled={loggingOut}
-                className="flex items-center gap-2 text-white bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-all hover:shadow hover:-translate-y-0.5"
+                className="group flex items-center gap-2 bg-white text-[#1e40af] px-6 py-2.5 rounded-full transition-all duration-300 text-sm font-black uppercase tracking-widest shadow-[0_8px_20px_rgba(0,0,0,0.15)] hover:shadow-[0_12px_25px_rgba(0,0,0,0.2)] hover:-translate-y-1 active:scale-95 border border-white"
               >
-                <LogOut className="w-4 h-4" />
-                {loggingOut ? "..." : "ออก"}
+                <LogOut className="w-4 h-4 group-hover:rotate-12 transition-transform" />
+                {loggingOut ? "..." : "ออกจากระบบ"}
               </button>
             </nav>
           </div>
@@ -256,7 +276,7 @@ export default function UserLayout({
       </div>
 
       {/* ===== CONTENT ===== */}
-      <div className="pt-16 flex-1 w-full bg-gray-50/50">
+      <div className="pt-[72px] flex-1 w-full bg-gray-50/50">
         <main className="w-full h-full">{children}</main>
       </div>
     </div>

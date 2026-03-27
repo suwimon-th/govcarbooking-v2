@@ -13,7 +13,10 @@ import {
   AlertCircle,
   ChevronRight,
   Printer,
-  Search
+  Search,
+  Star,
+  ThumbsUp,
+  ThumbsDown
 } from "lucide-react";
 import Link from "next/link";
 import { generateBookingDocument } from "@/lib/documentGenerator";
@@ -36,6 +39,7 @@ type MyRequest = {
     brand: string | null;
     model: string | null;
     color: string | null;
+    photo_urls?: string[] | null;
   } | null;
   driver: {
     full_name: string;
@@ -48,6 +52,8 @@ type MyRequest = {
   passenger_count?: number;
   passengers?: { type: string; name: string; position: string }[];
   is_ot?: boolean;
+  is_satisfied?: boolean | null;
+  evaluation_comment?: string | null;
 };
 
 /* =========================
@@ -321,8 +327,18 @@ export default function MyRequestsPage() {
                   <tr key={it.id} className="group hover:bg-blue-50/30 transition-all duration-300">
                     <td className="px-8 py-6">
                       <div className="flex items-start gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-white group-hover:text-blue-600 group-hover:shadow-md transition-all shrink-0">
-                          <Car className="w-6 h-6" />
+                        <div 
+                          className="w-12 h-12 rounded-2xl flex items-center justify-center group-hover:shadow-md transition-all shrink-0 overflow-hidden border"
+                          style={{
+                            backgroundColor: it.vehicle?.color ? `${it.vehicle.color}10` : '#F8FAFC',
+                            borderColor: it.vehicle?.color ? `${it.vehicle.color}30` : '#F1F5F9'
+                          }}
+                        >
+                          {it.vehicle?.photo_urls && it.vehicle.photo_urls.length > 0 ? (
+                            <img src={it.vehicle.photo_urls[0]} alt={it.vehicle.plate_number || ""} className="w-full h-full object-cover" />
+                          ) : (
+                            <Car className="w-6 h-6" style={{ color: it.vehicle?.color || '#94A3B8' }} />
+                          )}
                         </div>
                         <div>
                           <p className="text-base font-black text-gray-900 mb-1">{it.request_code}</p>
@@ -382,6 +398,46 @@ export default function MyRequestsPage() {
                     </td>
                     <td className="px-8 py-6 text-center">
                       <div className="flex items-center justify-center gap-1">
+                        {it.status === "COMPLETED" && it.is_satisfied === null && it.evaluation_comment !== "__SKIP__" && (
+                          <div className="flex flex-col gap-1.5">
+                            <Link 
+                              href={`/user/evaluate/${it.id}`} 
+                              className="flex items-center gap-2 px-3 py-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-xl transition-all border border-emerald-100 font-bold text-xs"
+                              title="ประเมินการบริการ"
+                            >
+                              <Star className="w-3.5 h-3.5 fill-emerald-600" />
+                              <span>ประเมิน</span>
+                            </Link>
+                            <button
+                              onClick={async () => {
+                                if(confirm("คุณต้องการข้ามการประเมินนี้ใช่หรือไม่?")) {
+                                  await fetch("/api/user/evaluate", {
+                                    method: "POST",
+                                    headers: {"Content-Type": "application/json"},
+                                    body: JSON.stringify({ booking_id: it.id, is_satisfied: null, evaluation_comment: "__SKIP__" })
+                                  });
+                                  location.reload();
+                                }
+                              }}
+                              className="text-[10px] font-bold text-gray-400 hover:text-gray-600 underline"
+                            >
+                              ไม่ต้องประเมิน
+                            </button>
+                          </div>
+                        )}
+                        {it.is_satisfied !== null && (
+                          <Link href={`/user/evaluate/${it.id}`} className="flex flex-col items-center gap-1 group/eval hover:opacity-80 transition-opacity">
+                            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border ${it.is_satisfied ? 'bg-green-50 text-green-700 border-green-100' : 'bg-rose-50 text-rose-700 border-rose-100'}`}>
+                              {it.is_satisfied ? <ThumbsUp className="w-3 h-3" /> : <ThumbsDown className="w-3 h-3" />}
+                              <span>{it.is_satisfied ? 'ประเมินแล้ว' : 'ประเมินแล้ว'}</span>
+                            </div>
+                            {it.evaluation_comment && it.evaluation_comment !== "__SKIP__" && (
+                              <p className="text-[10px] text-gray-400 italic max-w-[150px] truncate leading-tight mt-0.5" title={it.evaluation_comment}>
+                                "{it.evaluation_comment}"
+                              </p>
+                            )}
+                          </Link>
+                        )}
                         <button
                           onClick={() => handleDownloadDoc(it)}
                           className="p-3 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
@@ -441,28 +497,79 @@ export default function MyRequestsPage() {
                       {it.start_at && isOffHours(it.start_at) && <span className="text-amber-600">OT</span>}
                     </p>
                   </div>
-                  <div className="bg-gray-50 rounded-2xl p-3">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">รถและผู้ขับ</p>
+                  <div className="bg-gray-50 rounded-2xl p-3 flex gap-3">
                     {it.vehicle ? (
                       <>
-                        <p className="text-xs font-black text-gray-700">{it.vehicle.plate_number}</p>
-                        <p className="text-[10px] text-gray-400 mt-1 truncate">{it.vehicle.brand}</p>
-                        {it.driver && (
-                          <div className="mt-2 pt-2 border-t border-gray-200 flex items-center gap-1.5">
-                            <div className="w-4 h-4 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 shrink-0">
-                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-2.5 h-2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+                        <div className="w-12 h-12 rounded-xl border bg-white flex items-center justify-center shrink-0 overflow-hidden">
+                          {it.vehicle.photo_urls && it.vehicle.photo_urls.length > 0 ? (
+                            <img src={it.vehicle.photo_urls[0]} alt={it.vehicle.plate_number || ""} className="w-full h-full object-cover" />
+                          ) : (
+                            <Car className="w-6 h-6 text-gray-400" />
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">รถและผู้ขับ</p>
+                          <p className="text-xs font-black text-gray-700 truncate">{it.vehicle.plate_number}</p>
+                          <p className="text-[10px] text-gray-400 truncate">{it.vehicle.brand} {it.vehicle.model}</p>
+                          {it.driver && (
+                            <div className="mt-2 pt-2 border-t border-gray-200 flex items-center gap-1.5">
+                              <div className="w-4 h-4 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-2.5 h-2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+                              </div>
+                              <span className="text-[10px] font-bold text-gray-600 truncate">{it.driver.full_name}</span>
                             </div>
-                            <span className="text-[10px] font-bold text-gray-600">{it.driver.full_name}</span>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </>
                     ) : (
-                      <p className="text-xs text-gray-400 font-medium">รอจัดรถ...</p>
+                      <div className="flex-1 flex items-center justify-center py-2 text-center">
+                        <p className="text-[10px] text-gray-400 font-medium italic">รอพิจารณาจัดรถ...</p>
+                      </div>
                     )}
-                  </div>
-                </div>
+                  </div>                </div>
 
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
+                  {it.status === "COMPLETED" && it.is_satisfied === null && it.evaluation_comment !== "__SKIP__" && (
+                    <div className="flex flex-col gap-2 mb-2">
+                      <Link
+                        href={`/user/evaluate/${it.id}`}
+                        className="w-full py-3 bg-green-50 border border-green-200 rounded-xl text-xs font-bold text-green-700 flex items-center justify-center gap-2 shadow-sm"
+                      >
+                        <Star className="w-4 h-4 text-green-600" /> ประเมินความพึงพอใจการใช้รถ
+                      </Link>
+                      <button
+                        onClick={async () => {
+                          if (confirm("คุณต้องการข้ามการประเมินนี้ใช่หรือไม่?")) {
+                            await fetch("/api/user/evaluate", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ booking_id: it.id, is_satisfied: null, evaluation_comment: "__SKIP__" })
+                            });
+                            location.reload();
+                          }
+                        }}
+                        className="w-full py-2 text-[10px] font-bold text-gray-400 hover:text-gray-600 bg-gray-50 rounded-lg"
+                      >
+                        ไม่ต้องประเมิน (ข้าม)
+                      </button>
+                    </div>
+                  )}
+                  {it.is_satisfied !== null && (
+                    <Link href={`/user/evaluate/${it.id}`} className={`w-full p-3 rounded-2xl border mb-3 flex flex-col gap-2 transition-opacity active:opacity-70 ${it.is_satisfied ? 'bg-green-50/50 border-green-100' : 'bg-rose-50/50 border-rose-100'}`}>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">ผลการประเมิน (แตะเพื่อแก้ไข)</span>
+                        <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${it.is_satisfied ? 'text-green-700' : 'text-rose-700'}`}>
+                          {it.is_satisfied ? <ThumbsUp className="w-3 h-3" /> : <ThumbsDown className="w-3 h-3" />}
+                          <span>{it.is_satisfied ? 'พึงพอใจ' : 'ไม่พึงพอใจ'}</span>
+                        </div>
+                      </div>
+                      {it.evaluation_comment && it.evaluation_comment !== "__SKIP__" && (
+                        <p className="text-xs text-gray-600 italic leading-relaxed py-2 px-3 bg-white/50 rounded-xl border border-white">
+                          "{it.evaluation_comment}"
+                        </p>
+                      )}
+                    </Link>
+                  )}
                   <button
                     onClick={() => handleDownloadDoc(it)}
                     className="flex-1 py-3 bg-white border border-gray-200 rounded-xl text-xs font-bold text-gray-600 flex items-center justify-center gap-2 shadow-sm"

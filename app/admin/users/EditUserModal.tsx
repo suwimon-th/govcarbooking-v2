@@ -99,6 +99,7 @@ export default function EditUserModal({ user, onClose, onUpdated }: any) {
             >
               <option value="ADMIN">ADMIN</option>
               <option value="USER">USER</option>
+              <option value="TESTER">TESTER</option>
             </select>
           </div>
 

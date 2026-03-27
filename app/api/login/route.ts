@@ -23,7 +23,7 @@ export async function POST(req: Request) {
       .from("profiles")
       .select("*")
       .ilike("username", username)
-      .ilike("password", password)
+      .eq("password", password)
       .maybeSingle();
 
     // ไม่พบ user

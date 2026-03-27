@@ -25,10 +25,14 @@ export async function GET() {
       passenger_count,
       passengers,
       is_ot,
+      is_satisfied,
+      evaluation_comment,
       vehicle:vehicles (
         plate_number,
         brand,
-        model
+        model,
+        photo_urls,
+        color
       ),
       driver:drivers (
         full_name

@@ -56,10 +56,13 @@ export async function PUT(req: Request) {
       );
     }
 
-    // 🔄 อัปเดตสถานะเป็น CANCELLED
+    // 🔄 อัปเดตสถานะเป็น CANCELLED และลบเลขที่คำขอ (ตามคำขอของผู้ใช้)
     const { error } = await supabase
       .from("bookings")
-      .update({ status: "CANCELLED" })
+      .update({ 
+        status: "CANCELLED",
+        request_code: null 
+      })
       .eq("id", id);
 
     if (error) throw error;
