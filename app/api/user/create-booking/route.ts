@@ -36,41 +36,8 @@ async function generateRequestCode(vehicleId: string): Promise<string> {
   const plateSuffix = digits.slice(-2) || "00";
   const prefix = `ENV-${plateSuffix}/`;
 
-  // --- REUSE CANCELLED CODE LOGIC ---
-  const { data: cancelledData } = await supabase
-    .from("bookings")
-    .select("request_code")
-    .like("request_code", `${prefix}%`)
-    .eq("status", "CANCELLED");
-
-  if (cancelledData && cancelledData.length > 0) {
-    // Collect all active codes for this prefix
-    const { data: activeData } = await supabase
-      .from("bookings")
-      .select("request_code")
-      .like("request_code", `${prefix}%`)
-      .neq("status", "CANCELLED");
-
-    const activeCodes = new Set(activeData?.map((d) => d.request_code) || []);
-
-    // Find a cancelled code that is NOT in activeCodes
-    const availableCodes = cancelledData
-      .map((d) => d.request_code)
-      .filter((code) => !activeCodes.has(code))
-      .sort();
-
-    if (availableCodes.length > 0) {
-      const codeToReuse = availableCodes[0];
-      // ⚠️ MUST FREE UP THE CODE FIRST TO AVOID UNIQUE CONSTRAINT VIOLATION
-      await supabase
-        .from("bookings")
-        .update({ request_code: null })
-        .eq("request_code", codeToReuse)
-        .eq("status", "CANCELLED");
-
-      return codeToReuse;
-    }
-  }
+  // --- REUSE CANCELLED CODE LOGIC (REMOVED) ---
+  // ผู้ใช้ไม่ต้องการนำเลขเดิมที่ยกเลิกกลับมาใช้ใหม่ (ต้องการให้ข้ามไปเลย)
   // ----------------------------------
 
   // ⚠️ Query ทุก booking ที่มี prefix นี้ (ไม่ว่าจะ vehicle_id ใด)
