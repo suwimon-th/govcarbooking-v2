@@ -44,7 +44,15 @@ async function generateRequestCode(vehicleId: string): Promise<string> {
             .sort();
             
         if (availableCodes.length > 0) {
-            return availableCodes[0];
+            const codeToReuse = availableCodes[0];
+            // ⚠️ MUST FREE UP THE CODE FIRST TO AVOID UNIQUE CONSTRAINT VIOLATION
+            await supabase
+                .from("bookings")
+                .update({ request_code: null })
+                .eq("request_code", codeToReuse)
+                .eq("status", "CANCELLED");
+
+            return codeToReuse;
         }
     }
     // ----------------------------------
