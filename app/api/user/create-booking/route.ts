@@ -21,16 +21,10 @@ function padTime(t: string) {
    XXXX = รันต่อเนื่องทั้งปี
 ---------------------------- */
 /* ---------------------------
-   สร้างเลขคำขอ ENV-YY/XXXX
-   YY = ปี พ.ศ. 2 หลัก (เช่น 2569 -> 69)
-   XXXX = รันต่อเนื่องตามรถแต่ละคัน (ไม่รวมทะเบียนใน prefix)
-   
-   เช่น 
-   รถ A: ENV-69/001, ENV-69/002
-   รถ B: ENV-69/001, ENV-69/002
+   generate request code เหมือนใน update-booking
+   ENV-{plate2digits}/{seq3}
 ---------------------------- */
-async function generateRequestCode(vehicleId: string) {
-  // 1. Fetch vehicle plate number
+async function generateRequestCode(vehicleId: string): Promise<string> {
   const { data: vehicle } = await supabase
     .from("vehicles")
     .select("plate_number")
@@ -38,39 +32,60 @@ async function generateRequestCode(vehicleId: string) {
     .single();
 
   const plate = vehicle?.plate_number || "";
-  // Extract only digits from plate number (e.g. "ฮฮ 3605" -> "3605")
   const digits = plate.replace(/\D/g, "");
-  // Take last 2 digits (e.g. "3605" -> "05")
   const plateSuffix = digits.slice(-2) || "00";
-
   const prefix = `ENV-${plateSuffix}/`;
-  
-  // 2. Find last code with this prefix AND this vehicle_id (Exclude cancelled/null codes)
+
+  // --- REUSE CANCELLED CODE LOGIC ---
+  const { data: cancelledData } = await supabase
+    .from("bookings")
+    .select("request_code")
+    .like("request_code", `${prefix}%`)
+    .eq("status", "CANCELLED");
+
+  if (cancelledData && cancelledData.length > 0) {
+    // Collect all active codes for this prefix
+    const { data: activeData } = await supabase
+      .from("bookings")
+      .select("request_code")
+      .like("request_code", `${prefix}%`)
+      .neq("status", "CANCELLED");
+
+    const activeCodes = new Set(activeData?.map((d) => d.request_code) || []);
+
+    // Find a cancelled code that is NOT in activeCodes
+    const availableCodes = cancelledData
+      .map((d) => d.request_code)
+      .filter((code) => !activeCodes.has(code))
+      .sort();
+
+    if (availableCodes.length > 0) {
+      return availableCodes[0];
+    }
+  }
+  // ----------------------------------
+
+  // ⚠️ Query ทุก booking ที่มี prefix นี้ (ไม่ว่าจะ vehicle_id ใด)
+  // เพื่อป้องกัน duplicate key เมื่อรถเปลี่ยนมือ
+  // ใช้ ORDER BY request_code DESC (ไม่ใช่ created_at) เพื่อได้เลขสูงสุดจริงๆ
   const { data } = await supabase
     .from("bookings")
     .select("request_code")
-    .eq("vehicle_id", vehicleId)
-    .not("request_code", "is", null)
     .like("request_code", `${prefix}%`)
     .order("request_code", { ascending: false })
     .limit(1);
 
   let running = 1;
-
   if (data && data.length > 0) {
     const last = data[0].request_code;
     const parts = last.split("/");
     if (parts.length === 2) {
-      const numPart = parts[1]; // "001"
-      const parsed = Number(numPart);
-      if (!isNaN(parsed)) {
-        running = parsed + 1;
-      }
+      const parsed = Number(parts[1]);
+      if (!isNaN(parsed)) running = parsed + 1;
     }
   }
 
-  const run3 = String(running).padStart(3, "0");
-  return `${prefix}${run3}`;
+  return `${prefix}${String(running).padStart(3, "0")}`;
 }
 
 export async function POST(req: Request) {
