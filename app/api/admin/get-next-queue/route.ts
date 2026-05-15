@@ -9,6 +9,7 @@ export async function GET() {
             .from("drivers")
             .select("full_name, id, queue_order, status")
             .eq("is_active", true)
+            .eq("status", "AVAILABLE")
             .order("queue_order", { ascending: true })
             .limit(1)
             .maybeSingle();
