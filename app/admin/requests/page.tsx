@@ -23,7 +23,8 @@ import {
   Plus,
   X,
   AlertTriangle,
-  Search
+  Search,
+  Clock
 } from "lucide-react";
 import { generateBookingDocument } from "@/lib/documentGenerator";
 import RetroactiveRequestModal from "@/app/components/RetroactiveRequestModal"; // Added
@@ -604,6 +605,10 @@ function AdminRequestsContent() {
                       {b.end_at && <span>ถึง: {formatThaiDateTime(b.end_at)}</span>}
                     </div>
                   </div>
+                  <div className="flex gap-2 pt-1 border-t border-gray-100/60 mt-1">
+                    <Clock className="w-4 h-4 text-gray-400 shrink-0" />
+                    <span className="text-[11px] text-gray-500">ยื่นคำขอเมื่อ: {formatThaiDateTime(b.created_at)}</span>
+                  </div>
                 </div>
 
                 {/* Driver & Car */}
@@ -767,11 +772,19 @@ function AdminRequestsContent() {
                             {/* End Date */}
                             {b.end_at && (
                               <div className="flex flex-col pt-1 border-t border-dashed border-gray-100 mt-1">
-                                <div className="pl-[22px] text-[10px] text-gray-400">
+                                <div className="pl-[22px] text-[10px] text-gray-500 font-medium">
                                   <span>ถึง {formatThaiDateTime(b.end_at)}</span>
                                 </div>
                               </div>
                             )}
+
+                            {/* Requested At */}
+                            <div className="flex flex-col pt-1.5 border-t border-gray-100 mt-1.5">
+                              <div className="flex items-center gap-1.5 text-[10px] text-gray-400">
+                                <Clock className="w-3 h-3 text-gray-300 shrink-0" />
+                                <span>ยื่นเมื่อ: {formatThaiDateTime(b.created_at)}</span>
+                              </div>
+                            </div>
                           </div>
                         </td>
 
