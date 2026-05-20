@@ -132,16 +132,20 @@ export default function DriversPage() {
   const handleDelete = async (id: string, name: string) => {
     if (!confirm(`ต้องการลบคนขับ "${name}" ใช่หรือไม่?\n\n⚠️ หมายเหตุ: หากคนขับเคยถูกมอบหมายงานแล้ว จะไม่อนุญาตให้ลบออกจากระบบ (แนะนำให้ใช้การ 'ปิดการใช้งาน' หรือ Active: Disabled แทน)`)) return;
 
-    const { error } = await supabase.from("drivers").delete().eq("id", id);
+    try {
+      const res = await fetch("/api/admin/delete-driver", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      const json = await res.json();
 
-    if (error) {
-      console.error("DELETE_DRIVER_ERROR:", error);
-      // PostgREST/PostgreSQL error code 23503 is foreign key violation
-      if (error.code === '23503') {
-        showToast("error", "ไม่สามารถลบได้เนื่องจากมีประวัติการจอง กรุณาใช้การปิดใช้งานแทน");
-      } else {
-        showToast("error", "ลบข้อมูลล้มเหลว: " + error.message);
+      if (!res.ok) {
+        showToast("error", json.error || "ลบข้อมูลล้มเหลว");
+        return;
       }
+    } catch (err) {
+      showToast("error", "เกิดข้อผิดพลาดในการเชื่อมต่อ");
       return;
     }
 
