@@ -51,6 +51,7 @@ export async function POST(req: Request) {
         distance,
         status: "COMPLETED",
         completed_at: new Date().toISOString(),
+        end_at: new Date().toISOString(), // User requested: update end_at when driver finishes job
       })
       .eq("id", bookingId);
 
