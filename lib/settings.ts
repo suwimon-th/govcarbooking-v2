@@ -1,50 +1,43 @@
-/**
- * File-based persistent settings store
- * ✅ ไม่ต้องสร้าง DB table ใหม่
- * ✅ Persistent ข้าม request และ restart
- * เก็บใน: settings.json ใน root ของ project
- */
+import { createClient } from "@supabase/supabase-js";
 
-import fs from "fs";
-import path from "path";
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-const SETTINGS_FILE = path.join(process.cwd(), "settings.json");
+// Use a dummy profile to store global settings
+const SYSTEM_CONFIG_ID = "00000000-0000-0000-0000-000000000000";
 
-type Settings = {
-  auto_assign_enabled: boolean;
-};
-
-const DEFAULT_SETTINGS: Settings = {
-  auto_assign_enabled: true,
-};
-
-function readSettings(): Settings {
+export async function getAutoAssignEnabled(): Promise<boolean> {
   try {
-    if (!fs.existsSync(SETTINGS_FILE)) {
-      writeSettings(DEFAULT_SETTINGS);
-      return DEFAULT_SETTINGS;
-    }
-    const raw = fs.readFileSync(SETTINGS_FILE, "utf-8");
-    return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
-  } catch {
-    return DEFAULT_SETTINGS;
-  }
-}
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("position")
+      .eq("id", SYSTEM_CONFIG_ID)
+      .single();
 
-function writeSettings(settings: Settings): void {
-  try {
-    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2), "utf-8");
+    if (error) return true; // Default ON
+
+    if (data?.position === "AUTO_ASSIGN_OFF") return false;
+    return true;
   } catch (err) {
-    console.error("[Settings] ❌ เขียนไฟล์ล้มเหลว:", err);
+    console.error("[Settings] Read Error:", err);
+    return true;
   }
 }
 
-export function getAutoAssignEnabled(): boolean {
-  return readSettings().auto_assign_enabled;
-}
+export async function setAutoAssignEnabled(value: boolean): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from("profiles")
+      .update({ position: value ? "AUTO_ASSIGN_ON" : "AUTO_ASSIGN_OFF" })
+      .eq("id", SYSTEM_CONFIG_ID);
 
-export function setAutoAssignEnabled(value: boolean): void {
-  const current = readSettings();
-  writeSettings({ ...current, auto_assign_enabled: value });
-  console.log(`[Settings] Auto-assign: ${value ? "✅ ENABLED" : "⛔ DISABLED"}`);
+    if (error) {
+      console.error("[Settings] Write Error:", error);
+    } else {
+      console.log(`[Settings] Auto-assign: ${value ? "✅ ENABLED" : "⛔ DISABLED"}`);
+    }
+  } catch (err) {
+    console.error("[Settings] ❌ เขียน DB ล้มเหลว:", err);
+  }
 }

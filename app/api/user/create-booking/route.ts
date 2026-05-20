@@ -327,8 +327,10 @@ export async function POST(req: Request) {
       timeZone: "Asia/Bangkok",
     }); // returns YYYY-MM-DD in safe format
 
+    const isAutoAssign = await getAutoAssignEnabled();
+
     if (!is_retroactive && DOMAIN && date === today && !driver_id) {
-      if (getAutoAssignEnabled()) {
+      if (isAutoAssign) {
         console.log("🤖 [AUTO-ASSIGN] เปิดอยู่ — กำลังมอบหมายคนขับอัตโนมัติ...");
         fetch(`${DOMAIN}/api/auto-assign`, {
           method: "POST",
@@ -392,7 +394,7 @@ export async function POST(req: Request) {
             const subject = `🔔 มีการจองรถใหม่: ${data.request_code}`;
             const html = generateBookingEmailHtml(data, date, start_time);
             await sendAdminEmail(subject, html);
-          } else if (!getAutoAssignEnabled()) {
+          } else if (!isAutoAssign) {
             // Auto-assign ปิด → ส่ง email แจ้ง Admin มอบหมายเอง
             console.log("📧 [EMAIL] Auto-assign ปิด → ส่ง 'New Booking' email แทน");
             const subject = `🔔 มีการจองรถใหม่ (กรุณามอบหมายคนขับ): ${data.request_code}`;

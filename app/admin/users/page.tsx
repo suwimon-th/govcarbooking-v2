@@ -63,6 +63,7 @@ export default function UsersPage() {
     const { data, error } = await supabase
       .from("profiles")
       .select("id, full_name, username, role, position, line_picture_url")
+      .neq("username", "system_config")
       .order("created_at", { ascending: false });
 
     if (!error && data) {
