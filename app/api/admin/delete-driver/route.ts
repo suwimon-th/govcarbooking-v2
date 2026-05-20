@@ -13,16 +13,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing driver ID" }, { status: 400 });
     }
 
+    // 1) ปลดคนขับออกจากประวัติการจองทั้งหมด (Set driver_id to null)
+    await supabase.from("bookings").update({ driver_id: null }).eq("driver_id", id);
+    
+    // 2) ปลดคนขับออกจากประวัติไมล์ทั้งหมด (Set driver_id to null)
+    await supabase.from("mileage_logs").update({ driver_id: null }).eq("driver_id", id);
+
+    // 3) ลบคนขับออกจากระบบ
     const { error } = await supabase.from("drivers").delete().eq("id", id);
 
     if (error) {
       console.error("DELETE_DRIVER_API_ERROR:", error);
-      if (error.code === '23503') {
-        return NextResponse.json(
-          { error: "ไม่สามารถลบได้เนื่องจากคนขับรายนี้มีประวัติการจองอยู่ในระบบ กรุณาใช้การปิดใช้งานแทน" },
-          { status: 400 }
-        );
-      }
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 

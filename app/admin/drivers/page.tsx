@@ -130,7 +130,7 @@ export default function DriversPage() {
 
   // ======================= Delete ==========================
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`ต้องการลบคนขับ "${name}" ใช่หรือไม่?\n\n⚠️ หมายเหตุ: หากคนขับเคยถูกมอบหมายงานแล้ว จะไม่อนุญาตให้ลบออกจากระบบ (แนะนำให้ใช้การ 'ปิดการใช้งาน' หรือ Active: Disabled แทน)`)) return;
+    if (!confirm(`ต้องการลบคนขับ "${name}" ใช่หรือไม่?\n\n⚠️ คำเตือน: การลบคนขับจะทำให้ข้อมูลชื่อคนขับในประวัติการขับรถที่ผ่านมาถูกล้างออกทั้งหมด (ไม่สามารถกู้คืนได้)`)) return;
 
     try {
       const res = await fetch("/api/admin/delete-driver", {
