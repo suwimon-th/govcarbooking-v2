@@ -57,7 +57,7 @@ export default function PublicQueueCard({ theme = 'light' }: Props) {
                 <div className="flex flex-col min-w-0">
                     <div className="flex items-center gap-2">
                         <span className={`text-[10px] font-black uppercase tracking-wider ${isGlass ? 'text-red-100' : 'text-red-500'}`}>
-                            คิวต่อไป:
+                            สถานะคนขับ:
                         </span>
                         <div className={`
                             px-1.5 py-0.5 text-[8px] font-black rounded-md border flex items-center gap-1
@@ -71,7 +71,7 @@ export default function PublicQueueCard({ theme = 'light' }: Props) {
                         </div>
                     </div>
                     <span className={`font-black text-xs md:text-sm truncate leading-tight ${isGlass ? 'text-white' : 'text-slate-800'}`}>
-                        {driverName || "ไม่มีคนขับว่าง"}
+                        ไม่มีคนขับว่าง
                     </span>
                 </div>
             </div>
@@ -108,11 +108,11 @@ export default function PublicQueueCard({ theme = 'light' }: Props) {
                         font-bold text-xs md:text-sm truncate
                         ${isGlass ? 'text-white' : 'text-gray-800'}
                     `}>
-                        {driverName || "ยังไม่มีคิว"}
+                        {driverName || "ไม่มีคนขับว่าง"}
                     </div>
                 </div>
             </div>
-            {driverName && (
+            {driverName ? (
                 <div className={`
                     shrink-0 px-2 py-0.5 md:px-3 md:py-1 text-[9px] md:text-[10px] font-bold rounded-full border flex items-center gap-1
                     ${isGlass
@@ -122,6 +122,17 @@ export default function PublicQueueCard({ theme = 'light' }: Props) {
                 `}>
                     <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${isGlass ? 'bg-green-300' : 'bg-green-500'}`} />
                     READY
+                </div>
+            ) : (
+                <div className={`
+                    shrink-0 px-2 py-0.5 md:px-3 md:py-1 text-[9px] md:text-[10px] font-bold rounded-full border flex items-center gap-1
+                    ${isGlass
+                        ? 'bg-red-500/20 border-red-400/30 text-red-100'
+                        : 'bg-red-50 border-red-100 text-red-700'
+                    }
+                `}>
+                    <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${isGlass ? 'bg-red-300' : 'bg-red-500'}`} />
+                    BUSY
                 </div>
             )}
         </div>
