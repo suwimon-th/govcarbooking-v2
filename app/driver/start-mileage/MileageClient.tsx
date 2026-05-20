@@ -33,6 +33,7 @@ export default function MileageClient() {
   const [booking, setBooking] = useState<Booking | null>(null);
   const [startMileage, setStartMileage] = useState("");
   const [endMileage, setEndMileage] = useState("");
+  const [lastMileage, setLastMileage] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -58,7 +59,14 @@ export default function MileageClient() {
         const res = await fetch(`/api/mileage/get-booking?booking=${bookingId}`);
         const json = await res.json();
         if (json.error) setError(json.error);
-        else setBooking(json.booking);
+        else {
+          setBooking(json.booking);
+          // ✅ Pre-fill เลขไมล์ขาออกด้วยเลขไมล์ล่าสุดของรถคันนี้
+          if (json.last_mileage != null) {
+            setLastMileage(json.last_mileage);
+            setStartMileage(String(json.last_mileage));
+          }
+        }
       } catch (err) {
         setError("โหลดข้อมูลไม่สำเร็จ");
       } finally {
@@ -261,6 +269,12 @@ export default function MileageClient() {
                 />
                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">กม.</span>
               </div>
+              {lastMileage != null && (
+                <p className="text-xs text-emerald-600 flex items-center gap-1 mt-1">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  เติมจากเลขไมล์ล่าสุดของรถคันนี้ ({lastMileage.toLocaleString()} กม.) — แก้ไขได้ถ้าต้องการ
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">

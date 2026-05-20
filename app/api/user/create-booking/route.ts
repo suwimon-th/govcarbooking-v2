@@ -6,6 +6,7 @@ import {
   generateBookingEmailHtml,
   generateDriverAssignmentEmailHtml,
 } from "@/lib/email";
+import { getAutoAssignEnabled } from "@/lib/settings";
 
 /* ---------------------------
    helper: เติมวินาทีให้เวลา
@@ -327,13 +328,18 @@ export async function POST(req: Request) {
     }); // returns YYYY-MM-DD in safe format
 
     if (!is_retroactive && DOMAIN && date === today && !driver_id) {
-      fetch(`${DOMAIN}/api/auto-assign`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingId: data.id }),
-      }).catch((err) =>
-        console.error("AUTO_ASSIGN_CALL_FAILED:", err)
-      );
+      if (getAutoAssignEnabled()) {
+        console.log("🤖 [AUTO-ASSIGN] เปิดอยู่ — กำลังมอบหมายคนขับอัตโนมัติ...");
+        fetch(`${DOMAIN}/api/auto-assign`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ bookingId: data.id }),
+        }).catch((err) =>
+          console.error("AUTO_ASSIGN_CALL_FAILED:", err)
+        );
+      } else {
+        console.log("⛔ [AUTO-ASSIGN] ปิดอยู่ — ข้ามการมอบหมายอัตโนมัติ");
+      }
     }
 
     // --- Notifications logic ---
@@ -384,6 +390,12 @@ export async function POST(req: Request) {
           // (Either sending "Assigned" on success, or "New Booking" on failure)
           if (date !== today) {
             const subject = `🔔 มีการจองรถใหม่: ${data.request_code}`;
+            const html = generateBookingEmailHtml(data, date, start_time);
+            await sendAdminEmail(subject, html);
+          } else if (!getAutoAssignEnabled()) {
+            // Auto-assign ปิด → ส่ง email แจ้ง Admin มอบหมายเอง
+            console.log("📧 [EMAIL] Auto-assign ปิด → ส่ง 'New Booking' email แทน");
+            const subject = `🔔 มีการจองรถใหม่ (กรุณามอบหมายคนขับ): ${data.request_code}`;
             const html = generateBookingEmailHtml(data, date, start_time);
             await sendAdminEmail(subject, html);
           } else {

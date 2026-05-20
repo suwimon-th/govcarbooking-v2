@@ -19,7 +19,10 @@ import {
   Search,
   MessageCircle,
   Filter,
-  Image
+  Image,
+  Bot,
+  BotOff,
+  Zap,
 } from "lucide-react";
 
 interface DriverRow {
@@ -48,6 +51,49 @@ export default function DriversPage() {
   );
   const [syncing, setSyncing] = useState(false);
 
+  // ======================= Auto-Assign Toggle ==========================
+  const [autoAssign, setAutoAssign] = useState<boolean | null>(null);
+  const [togglingAA, setTogglingAA] = useState(false);
+
+  const loadAutoAssignSetting = async () => {
+    try {
+      const res = await fetch("/api/admin/settings");
+      const json = await res.json();
+      setAutoAssign(json.auto_assign_enabled);
+    } catch {
+      setAutoAssign(true);
+    }
+  };
+
+  const handleToggleAutoAssign = async () => {
+    if (togglingAA || autoAssign === null) return;
+    setTogglingAA(true);
+    const newVal = !autoAssign;
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ auto_assign_enabled: newVal }),
+      });
+      const json = await res.json();
+      if (res.ok) {
+        setAutoAssign(json.auto_assign_enabled);
+        showToast(
+          "success",
+          json.auto_assign_enabled
+            ? "✅ เปิดการมอบหมายงานอัตโนมัติแล้ว"
+            : "⛔ ปิดการมอบหมายงานอัตโนมัติแล้ว"
+        );
+      } else {
+        showToast("error", "เปลี่ยนการตั้งค่าล้มเหลว");
+      }
+    } catch {
+      showToast("error", "เกิดข้อผิดพลาดในการเชื่อมต่อ");
+    } finally {
+      setTogglingAA(false);
+    }
+  };
+
   // ======================= Toast ==========================
   const showToast = (type: ToastType, message: string) => {
     setToast({ type, message });
@@ -72,6 +118,7 @@ export default function DriversPage() {
 
   useEffect(() => {
     loadDrivers();
+    loadAutoAssignSetting();
   }, []);
 
   // ======================= Filter ==========================
@@ -140,12 +187,12 @@ export default function DriversPage() {
 
   const handleSyncPictures = async () => {
     if (!confirm("คุณต้องการดึงรูปโปรไฟล์จาก LINE ของทุกคนที่มีการเชื่อมต่อแล้วใช่หรือไม่?")) return;
-    
+
     setSyncing(true);
     try {
       const res = await fetch("/api/admin/sync-line-pictures");
       const json = await res.json();
-      
+
       if (res.ok) {
         const { profiles, drivers } = json.results;
         showToast("success", `คนขับ: สำเร็จ ${drivers.success}, ข้าม ${drivers.skipped}, ล้มเหลว ${drivers.fail}`);
@@ -221,6 +268,71 @@ export default function DriversPage() {
       )}
 
       {/* Page Content */}
+
+      {/* ===== Auto-Assign Toggle Card ===== */}
+      <div
+        className={`mb-6 rounded-2xl border-2 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm transition-all duration-300 ${
+          autoAssign === null
+            ? "bg-gray-50 border-gray-200"
+            : autoAssign
+            ? "bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-200"
+            : "bg-gradient-to-r from-orange-50 to-amber-50 border-orange-200"
+        }`}
+      >
+        <div className="flex items-center gap-3">
+          <div
+            className={`p-2.5 rounded-xl ${
+              autoAssign === null
+                ? "bg-gray-100 text-gray-400"
+                : autoAssign
+                ? "bg-emerald-100 text-emerald-600"
+                : "bg-orange-100 text-orange-500"
+            }`}
+          >
+            {autoAssign ? <Bot className="w-5 h-5" /> : <BotOff className="w-5 h-5" />}
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-bold text-gray-800 text-sm">มอบหมายงานอัตโนมัติ</span>
+              {autoAssign === null ? (
+                <span className="text-xs bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full">กำลังโหลด...</span>
+              ) : autoAssign ? (
+                <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
+                  <Zap className="w-3 h-3" /> เปิดอยู่
+                </span>
+              ) : (
+                <span className="text-xs bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full font-semibold">⛔ ปิดอยู่</span>
+              )}
+            </div>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {autoAssign
+                ? "เมื่อจองรถวันนี้ → ระบบมอบหมายคนขับให้อัตโนมัติ"
+                : "เมื่อจองรถวันนี้ → แจ้ง Admin มอบหมายคนขับเอง"}
+            </p>
+          </div>
+        </div>
+
+        {/* Toggle Switch */}
+        <button
+          onClick={handleToggleAutoAssign}
+          disabled={togglingAA || autoAssign === null}
+          className="relative flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none"
+          aria-label="toggle auto assign"
+        >
+          <div
+            className={`w-14 h-7 rounded-full transition-colors duration-300 ${
+              autoAssign ? "bg-emerald-500" : "bg-gray-300"
+            }`}
+          >
+            <div
+              className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ${
+                autoAssign ? "translate-x-7" : "translate-x-0.5"
+              } ${togglingAA ? "opacity-70" : ""}`}
+            />
+          </div>
+        </button>
+      </div>
+      {/* ===================================== */}
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4">
         <div>
@@ -300,9 +412,9 @@ export default function DriversPage() {
             <div className="flex justify-between items-start">
               <div className="flex items-center gap-3">
                 {d.line_picture_url ? (
-                  <img 
-                    src={d.line_picture_url} 
-                    alt={d.full_name} 
+                  <img
+                    src={d.line_picture_url}
+                    alt={d.full_name}
                     className="w-10 h-10 rounded-full object-cover border border-gray-100 shrink-0"
                   />
                 ) : (
@@ -397,9 +509,9 @@ export default function DriversPage() {
                   <td className="px-6 py-4 align-top">
                     <div className="flex items-start gap-3">
                       {d.line_picture_url ? (
-                        <img 
-                          src={d.line_picture_url} 
-                          alt={d.full_name} 
+                        <img
+                          src={d.line_picture_url}
+                          alt={d.full_name}
                           className="w-10 h-10 rounded-full object-cover border border-gray-100 shrink-0"
                         />
                       ) : (
