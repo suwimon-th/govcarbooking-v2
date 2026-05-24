@@ -125,21 +125,13 @@ export default function EditBookingModal({
   // ✅ Auto-fill Last Mileage
   useEffect(() => {
     const fetchLastMileage = async () => {
-      // If we already have a value, don't overwrite it automatically (unless user just switched car?)
-      // Use case: User opens modal -> mileage empty -> fetch.
-      // Use case: User switches car -> fetch new car's mileage -> overwrite.
-
       if (!formData.vehicle_id) return;
 
-      // Only fetch if start_mileage is empty/0 OR if we want to support switching vehicles
-      // Let's rely on checking if it matches the current booking's original to decide? 
-      // User request: "Pull latest mileage... editable".
-      // Safe logic: If start_mileage is falsy, fetch. 
-      // If user switches dropdown, they likely want the new car's mileage. 
-      // But standard useEffect runs on mount too.
-      // Let's check if it IS NOT the current booking's stored mileage. 
-      // Actually, simple logic: if !start_mileage, fetch.
-      if (formData.start_mileage) return;
+      const hasVehicleChanged = formData.vehicle_id !== booking.vehicle_id;
+      const isStartMileageEmpty = !formData.start_mileage || formData.start_mileage === "0" || Number(formData.start_mileage) === 0;
+
+      // ดึงข้อมูลเฉพาะตอนที่เลขไมล์เริ่มต้นว่าง/เป็น 0 หรือแอดมินเปลี่ยนรถเท่านั้น
+      if (!isStartMileageEmpty && !hasVehicleChanged) return;
 
       try {
         const { data } = await supabase
@@ -147,13 +139,13 @@ export default function EditBookingModal({
           .select("end_mileage")
           .eq("vehicle_id", formData.vehicle_id)
           .not("end_mileage", "is", null)
-          .neq("id", booking.id) // Exclude current booking (just in case)
-          .order("end_at", { ascending: false }) // Get latest trip
-          .limit(1)
-          .single();
+          .neq("id", booking.id) // ไม่ดึงงานปัจจุบันตัวเอง
+          .lt("start_at", booking.start_at) // ต้องเป็นทริปที่เริ่มก่อนหน้านี้
+          .order("start_at", { ascending: false }) // เรียงตามเวลาเริ่มล่าสุด
+          .limit(1);
 
-        if (data?.end_mileage) {
-          setFormData(prev => ({ ...prev, start_mileage: String(data.end_mileage) }));
+        if (data && data.length > 0 && data[0].end_mileage) {
+          setFormData(prev => ({ ...prev, start_mileage: String(data[0].end_mileage) }));
         }
       } catch (err) {
         console.error("Error fetching mileage:", err);

@@ -83,6 +83,7 @@ export async function POST(req: Request) {
       position = "",
       force_booking = false,
       is_retroactive = false,
+      is_ot,
     } = body;
 
     if (
@@ -257,7 +258,7 @@ export async function POST(req: Request) {
     const startWork = 8 * 60; // 08:00
     const endWork = 16 * 60;  // 16:00
 
-    const isOT = isWeekend || timeVal < startWork || timeVal >= endWork;
+    const isOT = is_ot !== undefined ? is_ot : (isWeekend || timeVal < startWork || timeVal >= endWork);
 
     /* ---------------------------
        INSERT booking

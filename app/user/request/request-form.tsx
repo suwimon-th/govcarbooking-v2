@@ -21,6 +21,7 @@ interface Vehicle {
 interface Driver {
   id: string;
   full_name: string;
+  active: boolean;
 }
 
 interface RequestFormProps {
@@ -63,6 +64,8 @@ export default function RequestForm({
   const [vehicleId, setVehicleId] = useState<string>("");
   const [driverId, setDriverId] = useState<string>("");
   const [purpose, setPurpose] = useState<string>("");
+  const [isOt, setIsOt] = useState<boolean>(false);
+  const [hasManuallyToggledOt, setHasManuallyToggledOt] = useState<boolean>(false);
 
   const router = useRouter();
 
@@ -163,6 +166,18 @@ export default function RequestForm({
     setDate(selectedDate || "");
   }, [selectedDate]);
 
+  // คำนวณค่าเริ่มต้นของ OT อัตโนมัติ (เฉพาะเมื่อผู้ใช้ยังไม่ได้เลือกกดเปลี่ยนด้วยตนเอง)
+  useEffect(() => {
+    const offHours = isOffHours();
+    if (!offHours && !isRetroactive) {
+      setIsOt(false);
+      setHasManuallyToggledOt(false); // รีเซ็ตการจำค่าของ Toggle เมื่อเวลาอยู่ในช่วงเวลาปกติ
+    } else if (!hasManuallyToggledOt) {
+      setIsOt(offHours);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [date, startTime, hasManuallyToggledOt, isRetroactive]);
+
   // Intelligent User Data Loading
   useEffect(() => {
     const fetchUserData = async () => {
@@ -232,15 +247,14 @@ export default function RequestForm({
     const loadDrivers = async () => {
       const { data } = await supabase
         .from("drivers")
-        .select("id, full_name")
-        .eq("active", true)
+        .select("id, full_name, active")
         .order("full_name");
       if (data) {
         const validDrivers = data.filter(d =>
           !d.full_name.toLowerCase().includes("test") &&
           !d.full_name.includes("ทดสอบ")
         );
-        setDrivers(validDrivers);
+        setDrivers(validDrivers as Driver[]);
       } else {
         setDrivers([]);
       }
@@ -350,7 +364,7 @@ export default function RequestForm({
       }
     }
 
-    if (isOffHours() && !driverId) {
+    if (isOt && !driverId) {
       setSubmitState("error");
       Swal.fire({
         icon: 'warning',
@@ -385,21 +399,22 @@ export default function RequestForm({
         end_time: endTime || null,
         purpose,
         // For Retroactive: Always send driver. For OffHours: Send driver.
-        driver_id: (isOffHours() || isRetroactive) ? driverId : null,
+        driver_id: (isOt || isRetroactive) ? driverId : null,
         passenger_count: parseInt(passengerCount) || 1,
         destination: destination,
         position: position,
         passengers: passengers,
         is_retroactive: isRetroactive,
+        is_ot: isOt,
       };
 
-      let res = await fetch("/api/user/create-booking", {
+      const res = await fetch("/api/user/create-booking", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
-      let json = await res.json().catch(() => ({}));
+      const json = await res.json().catch(() => ({}));
 
       // ❌ รถถูกจองแล้ว — แสดง error ทันที ไม่ถามยืนยัน
       if (res.status === 409) {
@@ -707,42 +722,73 @@ export default function RequestForm({
             {/* OT / Retroactive Driver Selection */}
             {(isOffHours() || isRetroactive) && (
               <div className={`${isRetroactive ? 'bg-purple-50 border-purple-200' : 'bg-amber-50 border-amber-200'} border rounded-xl p-5 animate-in fade-in slide-in-from-top-2 shadow-sm`}>
-                <div className="flex items-start gap-3 mb-3">
-                  <div className={`${isRetroactive ? 'bg-purple-100 text-purple-600' : 'bg-amber-100 text-amber-600'} p-1.5 rounded-lg`}>
-                    {isRetroactive ? <Clock className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <div className="flex items-start gap-3">
+                    <div className={`${isRetroactive ? 'bg-purple-100 text-purple-600' : 'bg-amber-100 text-amber-600'} p-1.5 rounded-lg shrink-0`}>
+                      {isRetroactive ? <Clock className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
+                    </div>
+                    <div>
+                      <h4 className={`font-bold ${isRetroactive ? 'text-purple-900' : 'text-amber-900'} text-sm`}>
+                        {isRetroactive ? "ระบุคนขับรถ (ย้อนหลัง)" : "นอกเวลาราชการ (OT)"}
+                      </h4>
+                      <p className={`text-xs ${isRetroactive ? 'text-purple-700' : 'text-amber-700'} mt-1`}>
+                        {isRetroactive ? "กรุณาระบุคนขับที่ปฏิบัติงานจริง" : "กรุณาระบุคนขับรถเพื่อแจ้งเตือนผ่าน LINE"}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className={`font-bold ${isRetroactive ? 'text-purple-900' : 'text-amber-900'} text-sm`}>
-                      {isRetroactive ? "ระบุคนขับรถ (ย้อนหลัง)" : "นอกเวลาราชการ (OT)"}
-                    </h4>
-                    <p className={`text-xs ${isRetroactive ? 'text-purple-700' : 'text-amber-700'} mt-1`}>
-                      {isRetroactive ? "กรุณาระบุคนขับที่ปฏิบัติงานจริง" : "กรุณาระบุคนขับรถเพื่อแจ้งเตือนผ่าน LINE"}
-                    </p>
-                  </div>
+
+                  {/* Toggle Switch for OT (only if not retroactive) */}
+                  {!isRetroactive && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsOt(!isOt);
+                        setHasManuallyToggledOt(true);
+                      }}
+                      className="relative focus:outline-none flex-shrink-0 cursor-pointer"
+                      aria-label="toggle ot"
+                    >
+                      <div
+                        className={`w-14 h-7 rounded-full transition-colors duration-300 ${
+                          isOt ? "bg-amber-500" : "bg-gray-300"
+                        }`}
+                      >
+                        <div
+                          className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ${
+                            isOt ? "translate-x-7" : "translate-x-0.5"
+                          }`}
+                        />
+                      </div>
+                    </button>
+                  )}
                 </div>
 
-                <div className="relative">
-                  <User className="absolute left-3.5 top-3.5 w-5 h-5 text-amber-500" />
-                  <select
-                    id="driverId"
-                    name="driverId"
-                    aria-label="Select Driver"
-                    value={driverId}
-                    onChange={(e) => setDriverId(e.target.value)}
-                    className={`${selectInputClasses} border-amber-300 focus:border-amber-500 focus:ring-amber-200 bg-white`}
-                    required={isOffHours()}
-                  >
-                    <option value="">-- เลือกคนขับรถ --</option>
-                    {drivers.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.full_name}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="absolute right-4 top-4 pointer-events-none">
-                    <ChevronRight className="w-4 h-4 text-amber-400 rotate-90" />
+                {(isRetroactive || isOt) && (
+                  <div className="relative mt-4 animate-in fade-in duration-200">
+                    <User className="absolute left-3.5 top-3.5 w-5 h-5 text-amber-500" />
+                    <select
+                      id="driverId"
+                      name="driverId"
+                      aria-label="Select Driver"
+                      value={driverId}
+                      onChange={(e) => setDriverId(e.target.value)}
+                      className={`${selectInputClasses} border-amber-300 focus:border-amber-500 focus:ring-amber-200 bg-white`}
+                      required={isOt || isRetroactive}
+                    >
+                      <option value="">-- เลือกคนขับรถ --</option>
+                      {drivers
+                        .filter((d) => isOt || d.active) // Show inactive drivers too when isOt is true
+                        .map((d) => (
+                          <option key={d.id} value={d.id}>
+                            {d.full_name}
+                          </option>
+                        ))}
+                    </select>
+                    <div className="absolute right-4 top-4 pointer-events-none">
+                      <ChevronRight className="w-4 h-4 text-amber-400 rotate-90" />
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
           </div>
