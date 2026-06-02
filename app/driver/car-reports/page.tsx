@@ -188,7 +188,8 @@ function CarReportsContent() {
     setLoading(true);
     setLoaded(false);
     try {
-      const url = `/api/driver/car-reports?vehicle_id=${selectedVehicle}&month=${selectedMonth}&year=${selectedYear}`;
+      const driverParam = activeDriverId ? `&driver_id=${activeDriverId}` : "";
+      const url = `/api/driver/car-reports?vehicle_id=${selectedVehicle}&month=${selectedMonth}&year=${selectedYear}${driverParam}`;
       const res = await fetch(url);
       const data = await res.json();
 

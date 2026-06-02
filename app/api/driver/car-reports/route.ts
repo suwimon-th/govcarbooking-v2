@@ -7,6 +7,7 @@ export async function GET(req: Request) {
     const vehicleId = searchParams.get("vehicle_id");
     const monthStr = searchParams.get("month");
     const yearStr = searchParams.get("year");
+    const driverId = searchParams.get("driver_id"); // optional — filter by specific driver
 
     if (!vehicleId || !monthStr || !yearStr) {
       return NextResponse.json({ error: "กรุณาระบุข้อมูลตัวกรองให้ครบถ้วน" }, { status: 400 });
@@ -27,7 +28,7 @@ export async function GET(req: Request) {
 
     // Query bookings for the specified vehicle and time range
     // We pull only COMPLETED status or where mileage is already recorded
-    const { data: bookings, error } = await supabase
+    let query = supabase
       .from("bookings")
       .select(`
         id,
@@ -47,8 +48,15 @@ export async function GET(req: Request) {
       .eq("vehicle_id", vehicleId)
       .eq("status", "COMPLETED")
       .gte("start_at", startDate.toISOString())
-      .lte("start_at", endDate.toISOString())
-      .order("start_at", { ascending: true });
+      .lte("start_at", endDate.toISOString());
+
+    // Filter by specific driver if driver_id is provided
+    if (driverId) {
+      query = query.eq("driver_id", driverId);
+    }
+
+    const { data: bookings, error } = await query.order("start_at", { ascending: true });
+
 
     if (error) {
       console.error("DB Query error in car-reports:", error);
