@@ -1,19 +1,14 @@
- 
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-console.log("🔥 ENV CHECK:", {
-  URL: process.env.SUPABASE_URL,
-  ROLE: process.env.SUPABASE_SERVICE_ROLE_KEY ? "OK" : "MISSING"
-});
-
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 export async function POST(req: Request) {
+  // สร้าง client ใน handler เพื่อป้องกัน module-level error ตอน build
+  const supabase = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
   const { fullName, phone, uid } = await req.json();
-console.log("REGISTER BODY:", { fullName, phone, uid });
 
   if (!fullName || !phone || !uid) {
     return NextResponse.json({ error: "ข้อมูลไม่ครบ" }, { status: 400 });
@@ -27,22 +22,19 @@ console.log("REGISTER BODY:", { fullName, phone, uid });
 
   // เพิ่มพนักงานใหม่
   const { data, error } = await supabase
-  .from("drivers")
-  .insert({
-    full_name: fullName,
-    phone: phone,
-    line_user_id: uid,
-  })
-  .select()
-  .single();
+    .from("drivers")
+    .insert({
+      full_name: fullName,
+      phone: phone,
+      line_user_id: uid,
+    })
+    .select()
+    .single();
 
-if (error) {
-  console.error("❌ SUPABASE INSERT ERROR:", error);
-  return NextResponse.json({ error: error.message }, { status: 400 });
-}
-
-console.log("✅ INSERT SUCCESS:", data);
-
+  if (error) {
+    console.error("❌ SUPABASE INSERT ERROR:", error);
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
 
   return NextResponse.json({ success: true });
 }
