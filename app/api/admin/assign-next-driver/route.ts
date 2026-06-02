@@ -84,7 +84,8 @@ export async function POST(req: Request) {
         const notifyPromises = [];
 
         // --- 4.1) LINE Notify ---
-        if (driver.line_user_id) {
+        const isSkipLine = Array.isArray(bookingFull.passengers) && bookingFull.passengers.some((p: any) => p.type === "config" && p.name === "SKIP_LINE");
+        if (driver.line_user_id && bookingFull.request_code !== "จองล่วงหน้า" && !isSkipLine) {
           const linePromise = (async () => {
             try {
               const msg = flexAssignDriver(bookingFull, vehicleObj, driver);

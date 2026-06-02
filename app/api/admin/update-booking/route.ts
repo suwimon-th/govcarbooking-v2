@@ -86,7 +86,8 @@ export async function POST(req: Request) {
                         full_name: manual_driver_name, 
                         status: 'AVAILABLE', 
                         active: false,
-                        remark: 'เพิ่มชื่อจากระบบแอดมิน (คนนอก)' 
+                        is_active: false,
+                        remark: 'คนนอก (ยืมรถ)' 
                     }])
                     .select()
                     .single();
@@ -232,7 +233,8 @@ export async function POST(req: Request) {
                         finalDriver = d;
                     }
 
-                    if (finalDriver) {
+                    const isSkipLine = Array.isArray(bookingFull.passengers) && bookingFull.passengers.some((p: any) => p.type === "config" && p.name === "SKIP_LINE");
+                    if (finalDriver && bookingFull.request_code !== "จองล่วงหน้า" && !isSkipLine) {
                         const notifyPromises = [];
                         const errors: string[] = [];
 

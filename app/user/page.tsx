@@ -53,6 +53,7 @@ type CalendarEvent = {
         vehicle?: string;
         driver?: string;
         isOffHours?: boolean;
+        request_code?: string;
     };
     backgroundColor?: string;
     borderColor?: string;
@@ -264,7 +265,8 @@ export default function UserPage() {
                     location: item.purpose, // Now purpose should be in item
                     vehicle: `รถ ${item.vehicle_plate || '-'}`,
                     isOffHours: item.is_off_hours,
-                    driver: item.driver_name
+                    driver: item.driver_name,
+                    request_code: item.request_code
                 }
             };
         });
@@ -728,8 +730,8 @@ export default function UserPage() {
                                                     คนขับ: {evt.extendedProps.driver}
                                                 </span>
                                             )}
-                                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${getStatusColor(evt.extendedProps?.status || 'REQUESTED')}`}>
-                                                {getStatusLabel(evt.extendedProps?.status || 'REQUESTED')}
+                                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${getStatusColor(evt.extendedProps?.status || 'REQUESTED', evt.extendedProps?.request_code)}`}>
+                                                {getStatusLabel(evt.extendedProps?.status || 'REQUESTED', evt.extendedProps?.request_code)}
                                             </span>
                                         </div>
                                     </div>

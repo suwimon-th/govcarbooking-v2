@@ -32,6 +32,7 @@ interface RequestFormProps {
   isRetroactive?: boolean;
   canSelectRequester?: boolean;
   onSuccess?: () => void;
+  initialNoRequestCode?: boolean; // Added
 }
 
 interface Passenger {
@@ -57,6 +58,7 @@ export default function RequestForm({
   isRetroactive = false,
   canSelectRequester = false,
   onSuccess,
+  initialNoRequestCode = false, // Added
 }: RequestFormProps) {
   const [date, setDate] = useState<string>(selectedDate || "");
   const [startTime, setStartTime] = useState<string>("");
@@ -66,6 +68,8 @@ export default function RequestForm({
   const [purpose, setPurpose] = useState<string>("");
   const [isOt, setIsOt] = useState<boolean>(false);
   const [hasManuallyToggledOt, setHasManuallyToggledOt] = useState<boolean>(false);
+  const [noRequestCode, setNoRequestCode] = useState<boolean>(initialNoRequestCode);
+  const [skipLineNotification, setSkipLineNotification] = useState<boolean>(initialNoRequestCode);
 
   const router = useRouter();
 
@@ -91,11 +95,11 @@ export default function RequestForm({
 
   // -- Authentication Check --
   useEffect(() => {
-    if (!requesterId) {
+    if (!requesterId && !canSelectRequester) {
       const currentPath = window.location.pathname + window.location.search;
       router.push(`/login?redirect=${encodeURIComponent(currentPath)}`);
     }
-  }, [requesterId, router]);
+  }, [requesterId, router, canSelectRequester]);
 
   const [showVehicleSelector, setShowVehicleSelector] = useState(false);
   const [drivers, setDrivers] = useState<Driver[]>([]);
@@ -185,10 +189,17 @@ export default function RequestForm({
 
       // 1. Auto-detect ID if missing (User Mode)
       if (!activeId && !canSelectRequester) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          activeId = user.id;
-          setReqId(user.id);
+        try {
+          const res = await fetch('/api/user/me');
+          if (res.ok) {
+            const profile = await res.json();
+            activeId = profile.id;
+            setReqId(profile.id);
+            if (profile.full_name) setReqName(profile.full_name);
+            if (profile.position) setPosition(profile.position);
+          }
+        } catch (err) {
+          console.error("Error auto-detecting user profile:", err);
         }
       }
 
@@ -248,6 +259,8 @@ export default function RequestForm({
       const { data } = await supabase
         .from("drivers")
         .select("id, full_name, active")
+        .eq("active", true)
+        .eq("is_active", true)
         .order("full_name");
       if (data) {
         const validDrivers = data.filter(d =>
@@ -304,17 +317,18 @@ export default function RequestForm({
 
     if (!finalRequesterId) {
       console.log("⚠️ Requester ID Missing, fetching from session...");
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        finalRequesterId = user.id;
-        // Try to find name if possible
-        if (!finalRequesterName) {
-          const { data: profile } = await supabase.from('profiles').select('full_name, department_id').eq('id', user.id).single();
-          if (profile) {
+      try {
+        const res = await fetch('/api/user/me');
+        if (res.ok) {
+          const profile = await res.json();
+          finalRequesterId = profile.id;
+          if (!finalRequesterName) {
             finalRequesterName = profile.full_name;
             finalRequesterDeptId = profile.department_id;
           }
         }
+      } catch (err) {
+        console.error("Error fetching user profile on submit:", err);
       }
     }
 
@@ -398,14 +412,16 @@ export default function RequestForm({
         start_time: startTime,
         end_time: endTime || null,
         purpose,
-        // For Retroactive: Always send driver. For OffHours: Send driver.
-        driver_id: (isOt || isRetroactive) ? driverId : null,
+        // For Retroactive: Always send driver. For OffHours: Send driver. Also support admin selection.
+        driver_id: (isOt || isRetroactive || canSelectRequester) ? driverId : null,
         passenger_count: parseInt(passengerCount) || 1,
         destination: destination,
         position: position,
         passengers: passengers,
         is_retroactive: isRetroactive,
         is_ot: isOt,
+        no_request_code: noRequestCode,
+        skip_line_notification: skipLineNotification,
       };
 
       const res = await fetch("/api/user/create-booking", {
@@ -552,6 +568,58 @@ export default function RequestForm({
       {/* Message Modal Overlay REMOVED - Using SweetAlert2 instead */}
 
       <form onSubmit={handleSubmit} className="space-y-8 relative z-10">
+
+        {/* Advanced Booking Option (Admins only) */}
+        {canSelectRequester && !isRetroactive && !initialNoRequestCode && (
+          <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="noRequestCode"
+              className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+              checked={noRequestCode}
+              onChange={(e) => setNoRequestCode(e.target.checked)}
+            />
+            <label htmlFor="noRequestCode" className="text-sm font-semibold text-blue-800 cursor-pointer select-none">
+              จองล่วงหน้า (ยังไม่ต้องออกเลขลำดับคำขอการจอง)
+            </label>
+          </div>
+        )}
+
+        {/* Advanced Booking options (Only inside 'จองล่วงหน้า' tab) */}
+        {initialNoRequestCode && (
+          <div className="bg-blue-50/70 border border-blue-100 rounded-3xl p-5 space-y-3">
+            <h4 className="text-sm font-bold text-blue-900 flex items-center gap-2 mb-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+              ตัวเลือกการจองล่วงหน้า
+            </h4>
+            <div className="flex flex-col sm:flex-row gap-6">
+              <div className="flex items-center gap-2.5">
+                <input
+                  type="checkbox"
+                  id="noRequestCode"
+                  className="w-5 h-5 rounded-lg border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  checked={noRequestCode}
+                  onChange={(e) => setNoRequestCode(e.target.checked)}
+                />
+                <label htmlFor="noRequestCode" className="text-sm font-semibold text-blue-850 cursor-pointer select-none">
+                  ไม่ส่งเลขคำขอ (จองคิวชั่วคราว)
+                </label>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <input
+                  type="checkbox"
+                  id="skipLineNotification"
+                  className="w-5 h-5 rounded-lg border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  checked={skipLineNotification}
+                  onChange={(e) => setSkipLineNotification(e.target.checked)}
+                />
+                <label htmlFor="skipLineNotification" className="text-sm font-semibold text-blue-850 cursor-pointer select-none">
+                  ไม่ส่งไลน์ (ข้ามแจ้งเตือนคนขับ)
+                </label>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Section: Who */}
         <div className="space-y-4">
@@ -719,26 +787,64 @@ export default function RequestForm({
               </button>
             </div>
 
-            {/* OT / Retroactive Driver Selection */}
-            {(isOffHours() || isRetroactive) && (
-              <div className={`${isRetroactive ? 'bg-purple-50 border-purple-200' : 'bg-amber-50 border-amber-200'} border rounded-xl p-5 animate-in fade-in slide-in-from-top-2 shadow-sm`}>
+            {/* OT / Retroactive / Admin Driver Selection */}
+            {(isOffHours() || isRetroactive || canSelectRequester) && (
+              <div className={`${
+                isRetroactive
+                  ? 'bg-purple-50 border-purple-200'
+                  : (isOffHours() || isOt)
+                    ? 'bg-amber-50 border-amber-200'
+                    : 'bg-blue-50/50 border-blue-200'
+              } border rounded-xl p-5 animate-in fade-in slide-in-from-top-2 shadow-sm`}>
                 <div className="flex items-center justify-between gap-3 mb-3">
                   <div className="flex items-start gap-3">
-                    <div className={`${isRetroactive ? 'bg-purple-100 text-purple-600' : 'bg-amber-100 text-amber-600'} p-1.5 rounded-lg shrink-0`}>
-                      {isRetroactive ? <Clock className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
+                    <div className={`${
+                      isRetroactive
+                        ? 'bg-purple-100 text-purple-600'
+                        : (isOffHours() || isOt)
+                          ? 'bg-amber-100 text-amber-600'
+                          : 'bg-blue-100 text-blue-600'
+                    } p-1.5 rounded-lg shrink-0`}>
+                      {isRetroactive ? (
+                        <Clock className="w-5 h-5" />
+                      ) : (isOffHours() || isOt) ? (
+                        <AlertTriangle className="w-5 h-5" />
+                      ) : (
+                        <User className="w-5 h-5" />
+                      )}
                     </div>
                     <div>
-                      <h4 className={`font-bold ${isRetroactive ? 'text-purple-900' : 'text-amber-900'} text-sm`}>
-                        {isRetroactive ? "ระบุคนขับรถ (ย้อนหลัง)" : "นอกเวลาราชการ (OT)"}
+                      <h4 className={`font-bold ${
+                        isRetroactive
+                          ? 'text-purple-900'
+                          : (isOffHours() || isOt)
+                            ? 'text-amber-900'
+                            : 'text-blue-900'
+                      } text-sm`}>
+                        {isRetroactive
+                          ? "ระบุคนขับรถ (ย้อนหลัง)"
+                          : (isOffHours() || isOt)
+                            ? "นอกเวลาราชการ (OT)"
+                            : "มอบหมายพนักงานขับรถ (แอดมิน)"}
                       </h4>
-                      <p className={`text-xs ${isRetroactive ? 'text-purple-700' : 'text-amber-700'} mt-1`}>
-                        {isRetroactive ? "กรุณาระบุคนขับที่ปฏิบัติงานจริง" : "กรุณาระบุคนขับรถเพื่อแจ้งเตือนผ่าน LINE"}
+                      <p className={`text-xs ${
+                        isRetroactive
+                          ? 'text-purple-700'
+                          : (isOffHours() || isOt)
+                            ? 'text-amber-700'
+                            : 'text-blue-700'
+                      } mt-1`}>
+                        {isRetroactive
+                          ? "กรุณาระบุคนขับที่ปฏิบัติงานจริง"
+                          : (isOffHours() || isOt)
+                            ? "กรุณาระบุคนขับรถเพื่อแจ้งเตือนผ่าน LINE"
+                            : "เลือกคนขับเพื่อจัดสรรรถคิวนี้ทันที (ไม่บังคับเลือก)"}
                       </p>
                     </div>
                   </div>
 
-                  {/* Toggle Switch for OT (only if not retroactive) */}
-                  {!isRetroactive && (
+                  {/* Toggle Switch for OT (only if not retroactive and it's off-hours) */}
+                  {!isRetroactive && isOffHours() && (
                     <button
                       type="button"
                       onClick={() => {
@@ -763,21 +869,21 @@ export default function RequestForm({
                   )}
                 </div>
 
-                {(isRetroactive || isOt) && (
+                {(isRetroactive || isOt || canSelectRequester) && (
                   <div className="relative mt-4 animate-in fade-in duration-200">
-                    <User className="absolute left-3.5 top-3.5 w-5 h-5 text-amber-500" />
+                    <User className={`absolute left-3.5 top-3.5 w-5 h-5 ${isRetroactive || isOt ? 'text-amber-500' : 'text-blue-500'}`} />
                     <select
                       id="driverId"
                       name="driverId"
                       aria-label="Select Driver"
                       value={driverId}
                       onChange={(e) => setDriverId(e.target.value)}
-                      className={`${selectInputClasses} border-amber-300 focus:border-amber-500 focus:ring-amber-200 bg-white`}
+                      className={`${selectInputClasses} ${isRetroactive || isOt ? 'border-amber-300 focus:border-amber-500 focus:ring-amber-200' : 'border-blue-300 focus:border-blue-500 focus:ring-blue-200'} bg-white`}
                       required={isOt || isRetroactive}
                     >
                       <option value="">-- เลือกคนขับรถ --</option>
                       {drivers
-                        .filter((d) => isOt || d.active) // Show inactive drivers too when isOt is true
+                        .filter((d) => isOt || isRetroactive || d.active)
                         .map((d) => (
                           <option key={d.id} value={d.id}>
                             {d.full_name}
@@ -785,7 +891,7 @@ export default function RequestForm({
                         ))}
                     </select>
                     <div className="absolute right-4 top-4 pointer-events-none">
-                      <ChevronRight className="w-4 h-4 text-amber-400 rotate-90" />
+                      <ChevronRight className={`w-4 h-4 ${isRetroactive || isOt ? 'text-amber-400' : 'text-blue-400'} rotate-90`} />
                     </div>
                   </div>
                 )}

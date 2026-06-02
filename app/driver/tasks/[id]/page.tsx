@@ -6,6 +6,7 @@ import {
     Car, MapPin, User, FileText, CheckCircle2, AlertCircle, Gauge, ArrowRight, BookOpen, Clock
 } from "lucide-react";
 import Swal from "sweetalert2";
+import { getStatusLabel } from "@/lib/statusHelper";
 
 type Booking = {
     id: string;
@@ -244,7 +245,7 @@ export default function DriverTaskPage() {
                                 booking.status === 'ACCEPTED' ? 'bg-blue-100 text-blue-700' :
                                     'bg-yellow-100 text-yellow-700'
                                 }`}>
-                                {booking.status}
+                                {getStatusLabel(booking.status, booking.request_code)}
                             </div>
                         </div>
 

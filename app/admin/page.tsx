@@ -16,6 +16,7 @@ import {
   Calendar,
   Fuel
 } from "lucide-react";
+import { getStatusLabel, getStatusColor } from "@/lib/statusHelper";
 
 // =======================
 // TYPES
@@ -35,6 +36,7 @@ interface RecentBooking {
   id: string;
   purpose: string;
   start_at: string;
+  request_code: string;
   requester: { full_name: string | null } | null;
   status: string;
 }
@@ -406,11 +408,8 @@ export default function AdminDashboardPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className={`text-xs font-bold ${item.status === 'REQUESTED' ? 'text-orange-500' :
-                      item.status === 'APPROVED' ? 'text-green-600' :
-                        'text-gray-500'
-                      }`}>
-                      {item.status}
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${getStatusColor(item.status, item.request_code)}`}>
+                      {getStatusLabel(item.status, item.request_code)}
                     </span>
                     <p className="text-[10px] text-gray-400 mt-0.5">
                       {new Date(item.start_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}

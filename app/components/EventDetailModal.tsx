@@ -125,14 +125,33 @@ export default function EventDetailModal({ open, detail, onClose }: Props) {
               {/* --- STATUS --- */}
               <div className="flex flex-col gap-2">
                 <span className="text-xs font-bold text-gray-400 uppercase tracking-wider pl-1">สถานะปัจจุบัน</span>
-                <div className={`p-3 rounded-xl border flex items-center justify-between ${detail.status === 'COMPLETED' ? 'bg-green-50 border-green-100' :
-                  detail.status === 'APPROVED' || detail.status === 'ASSIGNED' ? 'bg-blue-50 border-blue-100' :
-                    'bg-gray-50 border-gray-100'
-                  }`}>
+                <div className={`p-3 rounded-xl border flex items-center justify-between ${
+                  detail.status === 'COMPLETED'
+                    ? 'bg-green-50 border-green-100'
+                    : (detail.request_code === 'จองล่วงหน้า' && detail.status === 'REQUESTED')
+                      ? 'bg-sky-50 border-sky-100'
+                      : detail.status === 'APPROVED' || detail.status === 'ASSIGNED'
+                        ? 'bg-blue-50 border-blue-100'
+                        : 'bg-gray-50 border-gray-100'
+                }`}>
                   <div className="flex items-center gap-3">
-                    <div className={`w-2.5 h-2.5 rounded-full ${detail.status === 'COMPLETED' ? 'bg-green-500' : detail.status === 'CANCELLED' ? 'bg-red-500' : 'bg-blue-500'}`}></div>
-                    <span className={`font-bold ${detail.status === 'COMPLETED' ? 'text-green-700' : 'text-gray-700'}`}>
-                      {getStatusLabel(detail.status)}
+                    <div className={`w-2.5 h-2.5 rounded-full ${
+                      detail.status === 'COMPLETED'
+                        ? 'bg-green-500'
+                        : (detail.request_code === 'จองล่วงหน้า' && detail.status === 'REQUESTED')
+                          ? 'bg-sky-500'
+                          : detail.status === 'CANCELLED'
+                            ? 'bg-red-500'
+                            : 'bg-blue-500'
+                    }`}></div>
+                    <span className={`font-bold ${
+                      detail.status === 'COMPLETED'
+                        ? 'text-green-700'
+                        : (detail.request_code === 'จองล่วงหน้า' && detail.status === 'REQUESTED')
+                          ? 'text-sky-700'
+                          : 'text-gray-700'
+                    }`}>
+                      {getStatusLabel(detail.status, detail.request_code)}
                     </span>
                   </div>
                 </div>

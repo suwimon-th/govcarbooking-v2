@@ -74,6 +74,7 @@ type CalendarEvent = {
         driver_name?: string;
         driver_phone?: string;
         driver?: string;
+        request_code?: string;
     };
     backgroundColor?: string;
     borderColor?: string;
@@ -281,6 +282,7 @@ export default function PublicCalendarPage() {
                     driver_phone: item.driver_phone,
                     driver: item.driver_name,
                     created_at: item.created_at,
+                    request_code: item.request_code,
                 }
             };
         });
@@ -782,8 +784,8 @@ export default function PublicCalendarPage() {
 
                                                     {/* STATUS */}
                                                     <td className="px-6 py-4 align-top text-center">
-                                                        <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-bold border ${getStatusColor(evt.extendedProps?.status || 'REQUESTED')}`}>
-                                                            {getStatusLabel(evt.extendedProps?.status || 'REQUESTED')}
+                                                        <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-bold border ${getStatusColor(evt.extendedProps?.status || 'REQUESTED', evt.extendedProps?.request_code)}`}>
+                                                            {getStatusLabel(evt.extendedProps?.status || 'REQUESTED', evt.extendedProps?.request_code)}
                                                         </span>
                                                     </td>
                                                 </tr>
@@ -869,8 +871,8 @@ export default function PublicCalendarPage() {
                                             )}
                                         </div>
                                         <div>
-                                            <span className={`text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider border shadow-sm ${getStatusColor(evt.extendedProps?.status || 'REQUESTED')}`}>
-                                                {getStatusLabel(evt.extendedProps?.status || 'REQUESTED')}
+                                            <span className={`text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider border shadow-sm ${getStatusColor(evt.extendedProps?.status || 'REQUESTED', evt.extendedProps?.request_code)}`}>
+                                                {getStatusLabel(evt.extendedProps?.status || 'REQUESTED', evt.extendedProps?.request_code)}
                                             </span>
                                         </div>
                                     </div>

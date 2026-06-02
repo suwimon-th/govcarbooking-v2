@@ -109,7 +109,9 @@ export default function EditBookingModal({
 
     const { data: driversData } = await supabase
       .from("drivers")
-      .select("id, full_name");
+      .select("id, full_name")
+      .eq("active", true)
+      .eq("is_active", true);
     if (driversData) setDrivers(driversData);
 
     const { data: vehiclesData } = await supabase
@@ -383,9 +385,9 @@ export default function EditBookingModal({
                   <Users className="w-3.5 h-3.5 text-gray-400" /> รายชื่อผู้โดยสาร
                 </label>
                 <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm text-gray-600 max-h-[150px] overflow-y-auto">
-                  {booking.passengers && booking.passengers.length > 0 ? (
+                  {booking.passengers && (booking.passengers || []).filter((p: any) => p.type !== "config").length > 0 ? (
                     <ul className="list-disc list-inside space-y-1">
-                      {booking.passengers.map((p, idx) => (
+                      {(booking.passengers || []).filter((p: any) => p.type !== "config").map((p, idx) => (
                         <li key={idx} className="truncate">
                           <span className="font-medium text-gray-800">{p.name}</span>
                           {p.position && <span className="text-gray-500"> - {p.position}</span>}
@@ -580,7 +582,7 @@ export default function EditBookingModal({
                     onChange={(e) => setFormData((p) => ({ ...p, status: e.target.value }))}
                   >
                     {Object.keys(bookingStatusMap)
-                      .filter(key => !['APPROVED', 'IN_PROGRESS', 'REJECTED'].includes(key))
+                      .filter(key => !['PENDING_RETRO'].includes(key))
                       .map((key) => (
                         <option key={key} value={key} className="bg-white text-gray-800 font-normal">
                           {getStatusLabel(key)}

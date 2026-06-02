@@ -40,6 +40,7 @@ export default function DriverQueueModal({ bookingIds, onClose, onSuccess }: Pro
             .from("drivers")
             .select("*")
             .eq("is_active", true)
+            .eq("active", true)
             .eq("status", "AVAILABLE")
             .order("queue_order", { ascending: true });
 

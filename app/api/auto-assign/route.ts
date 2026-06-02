@@ -111,7 +111,8 @@ export async function POST(req: Request) {
     const notifyPromises = [];
 
     // LINE
-    if (driver.line_user_id) {
+    const isSkipLine = Array.isArray(booking.passengers) && booking.passengers.some((p: any) => p.type === "config" && p.name === "SKIP_LINE");
+    if (driver.line_user_id && booking.request_code !== "จองล่วงหน้า" && !isSkipLine) {
       notifyPromises.push(sendLinePush(driver.line_user_id, [messages]).then(() => {
         console.log("✅ [AUTO] LINE sent");
         return supabase.from("bookings").update({ is_line_notified: true }).eq("id", bookingId);

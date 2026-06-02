@@ -160,10 +160,14 @@ function AdminRequestsContent() {
   // Fetch Admin Profile
   useEffect(() => {
     const fetchAdmin = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
-        setAdminProfile({ id: user.id, name: profile?.full_name || "Admin" });
+      try {
+        const res = await fetch('/api/user/me');
+        if (res.ok) {
+          const profile = await res.json();
+          setAdminProfile({ id: profile.id, name: profile.full_name || "Admin" });
+        }
+      } catch (err) {
+        console.error("Error fetching admin profile:", err);
       }
     };
     fetchAdmin();
@@ -181,7 +185,14 @@ function AdminRequestsContent() {
     const matchSearch = requestCode.includes(s) || requesterName.includes(s) || vehiclePlate.includes(s);
 
     // Status Filter
-    const matchStatus = filterStatus === "ทั้งหมด" ? true : r.status === filterStatus;
+    const matchStatus =
+      filterStatus === "ทั้งหมด"
+        ? true
+        : filterStatus === "จองล่วงหน้า"
+        ? r.request_code === "จองล่วงหน้า" && r.status === "REQUESTED"
+        : filterStatus === "REQUESTED"
+        ? r.status === "REQUESTED" && r.request_code !== "จองล่วงหน้า"
+        : r.status === filterStatus;
 
     // Driver filter
     const matchDriver = filterDriver === "" ? true : driverName.includes(filterDriver.toLowerCase());
@@ -567,11 +578,15 @@ function AdminRequestsContent() {
             >
               <option value="ทั้งหมด">สถานะ: ทั้งหมด</option>
               <option value="REQUESTED">รออนุมัติ</option>
+              <option value="จองล่วงหน้า">จองล่วงหน้า</option>
               <option value="PENDING_RETRO">รออนุมัติ (ย้อนหลัง)</option>
-              <option value="ASSIGNED">มอบหมายแล้ว</option>
+              <option value="APPROVED">อนุมัติแล้ว</option>
+              <option value="ASSIGNED">จัดรถเรียบร้อย (มอบหมายคนขับ)</option>
               <option value="ACCEPTED">รับงานแล้ว</option>
-              <option value="COMPLETED">เสร็จสิ้น</option>
-              <option value="CANCELLED">ยกเลิก</option>
+              <option value="IN_PROGRESS">กำลังปฏิบัติภารกิจ</option>
+              <option value="COMPLETED">เสร็จสิ้นภารกิจ</option>
+              <option value="CANCELLED">ยกเลิกแล้ว</option>
+              <option value="REJECTED">ปฏิเสธ / ไม่อนุมัติ</option>
             </select>
             <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
@@ -685,8 +700,8 @@ function AdminRequestsContent() {
                     <span className="text-blue-900 font-bold text-base leading-tight">
                       {b.request_code}
                     </span>
-                    <span className={`mt-1 inline-flex px-2.5 py-0.5 rounded-md text-[10px] font-bold border ${getStatusColor(b.status)}`}>
-                      {getStatusLabel(b.status)}
+                    <span className={`mt-1 inline-flex px-2.5 py-0.5 rounded-md text-[10px] font-bold border ${getStatusColor(b.status, b.request_code)}`}>
+                      {getStatusLabel(b.status, b.request_code)}
                     </span>
                   </div>
                 </div>
@@ -944,10 +959,11 @@ function AdminRequestsContent() {
                         <td className="px-6 py-4 align-top text-center">
                           <span
                             className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap border border-opacity-10 shadow-sm ${getStatusColor(
-                              b.status
+                              b.status,
+                              b.request_code
                             )}`}
                           >
-                            {getStatusLabel(b.status)}
+                            {getStatusLabel(b.status, b.request_code)}
                           </span>
                         </td>
 

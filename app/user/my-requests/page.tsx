@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { generateBookingDocument } from "@/lib/documentGenerator";
-import EditPurposeModal from "./EditPurposeModal";
+import EditBookingModal from "./EditBookingModal";
 
 /* =========================
    TYPES
@@ -177,7 +177,14 @@ export default function MyRequestsPage() {
     const matchSearch = code.includes(term) || purpose.includes(term) || plate.includes(term);
 
     // Check Status
-    const matchStatus = filterStatus === "ทั้งหมด" ? true : it.status === filterStatus;
+    const matchStatus =
+      filterStatus === "ทั้งหมด"
+        ? true
+        : filterStatus === "จองล่วงหน้า"
+        ? it.request_code === "จองล่วงหน้า" && it.status === "REQUESTED"
+        : filterStatus === "REQUESTED"
+        ? it.status === "REQUESTED" && it.request_code !== "จองล่วงหน้า"
+        : it.status === filterStatus;
 
     return matchSearch && matchStatus;
   });
@@ -233,13 +240,15 @@ export default function MyRequestsPage() {
                 >
                   <option value="ทั้งหมด">สถานะ: ทั้งหมด</option>
                   <option value="REQUESTED">รออนุมัติ</option>
+                  <option value="จองล่วงหน้า">จองล่วงหน้า</option>
+                  <option value="PENDING_RETRO">รออนุมัติ (ย้อนหลัง)</option>
                   <option value="APPROVED">อนุมัติแล้ว</option>
-                  <option value="ASSIGNED">มอบหมายแล้ว</option>
+                  <option value="ASSIGNED">จัดรถเรียบร้อย (มอบหมายคนขับ)</option>
                   <option value="ACCEPTED">รับงานแล้ว</option>
-                  <option value="IN_PROGRESS">กำลังเดินทาง</option>
-                  <option value="COMPLETED">เสร็จสิ้น</option>
-                  <option value="CANCELLED">ยกเลิก</option>
-                  <option value="REJECTED">ปฏิเสธ</option>
+                  <option value="IN_PROGRESS">กำลังปฏิบัติภารกิจ</option>
+                  <option value="COMPLETED">เสร็จสิ้นภารกิจ</option>
+                  <option value="CANCELLED">ยกเลิกแล้ว</option>
+                  <option value="REJECTED">ปฏิเสธ / ไม่อนุมัติ</option>
                 </select>
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
                   <ChevronRight className="w-4 h-4 rotate-90" />
@@ -392,8 +401,8 @@ export default function MyRequestsPage() {
                       )}
                     </td>
                     <td className="px-8 py-6 text-center">
-                      <span className={`inline-block px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all ${getStatusColor(it.status)}`}>
-                        {getStatusLabel(it.status)}
+                      <span className={`inline-block px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all ${getStatusColor(it.status, it.request_code)}`}>
+                        {getStatusLabel(it.status, it.request_code)}
                       </span>
                     </td>
                     <td className="px-8 py-6 text-center">
@@ -483,8 +492,8 @@ export default function MyRequestsPage() {
                       {it.purpose}
                     </h3>
                   </div>
-                  <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter border shrink-0 whitespace-nowrap ${getStatusColor(it.status)}`}>
-                    {getStatusLabel(it.status)}
+                  <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter border shrink-0 whitespace-nowrap ${getStatusColor(it.status, it.request_code)}`}>
+                    {getStatusLabel(it.status, it.request_code)}
                   </span>
                 </div>
 
@@ -604,8 +613,8 @@ export default function MyRequestsPage() {
       {/* MODAL */}
       {
         editingItem && (
-          <EditPurposeModal
-            booking={editingItem}
+          <EditBookingModal
+            booking={editingItem as any}
             onClose={() => setEditingItem(null)}
             onUpdated={handleUpdateSuccess}
           />

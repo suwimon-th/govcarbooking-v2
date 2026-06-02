@@ -48,7 +48,8 @@ export async function POST(req: Request) {
                     const drv = Array.isArray(booking.driver) ? booking.driver[0] : booking.driver;
                     const veh = Array.isArray(booking.vehicle) ? booking.vehicle[0] : booking.vehicle;
 
-                    if (drv?.line_user_id) {
+                    const isSkipLine = Array.isArray(booking.passengers) && booking.passengers.some((p: any) => p.type === "config" && p.name === "SKIP_LINE");
+                    if (drv?.line_user_id && booking.request_code !== "จองล่วงหน้า" && !isSkipLine) {
                         console.log(`Preparing LINE msg for request ${booking.request_code} to ${drv.full_name}`);
 
                         // Construct Flex Message

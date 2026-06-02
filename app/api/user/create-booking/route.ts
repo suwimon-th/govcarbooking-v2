@@ -84,6 +84,8 @@ export async function POST(req: Request) {
       force_booking = false,
       is_retroactive = false,
       is_ot,
+      no_request_code = false,
+      skip_line_notification = false, // Added
     } = body;
 
     if (
@@ -124,27 +126,19 @@ export async function POST(req: Request) {
           requester_name?.includes("สุวิมล");
 
         if (!isBypassUser) {
-          // Calculate Calendar Week
-          // Logic: Calculate which "Calendar Row" this date falls into.
-          // Week 1 is the row containing the 1st of the month.
-          const bookingDate = new Date(date); // YYYY-MM-DD
-          const dayOfWeek = bookingDate.getDay(); // 0=Sun, 1=Mon, ...
+          // Parse YYYY-MM-DD timezone-safely
+          const [year, month, day] = date.split("-").map(Number);
+          const bookingDate = new Date(year, month - 1, day);
+          const isMonday = bookingDate.getDay() === 1;
 
-          // Check if Monday (1)
-          if (dayOfWeek === 1) {
-            const firstDayOfMonth = new Date(bookingDate.getFullYear(), bookingDate.getMonth(), 1);
-            const offset = firstDayOfMonth.getDay(); // 0=Sun..6=Sat
+          // The 3rd Monday of any month always falls on a date from the 15th to the 21st
+          const isThirdMonday = isMonday && day >= 15 && day <= 21;
 
-            // Formula: Math.ceil( (DayOfMonth + Offset) / 7 )
-            const dayOfMonth = bookingDate.getDate(); // 1..31
-            const weekNumber = Math.ceil((dayOfMonth + offset) / 7);
-
-            if (weekNumber === 3) {
-              return NextResponse.json(
-                { error: "รถตู้ไม่สามารถจองได้\nในวันจันทร์สัปดาห์ที่ 3 ของเดือน\n(รถเวร)" },
-                { status: 400 }
-              );
-            }
+          if (isThirdMonday) {
+            return NextResponse.json(
+              { error: "รถตู้ไม่สามารถจองได้\nในวันจันทร์สัปดาห์ที่ 3 ของเดือน\n(รถเวร)" },
+              { status: 400 }
+            );
           }
         }
       }
@@ -235,7 +229,9 @@ export async function POST(req: Request) {
 
     let request_code: string;
 
-    if (requester?.role === 'TESTER') {
+    if (no_request_code) {
+      request_code = "จองล่วงหน้า";
+    } else if (requester?.role === 'TESTER') {
       // Generate Test Code (e.g. TEST-123456)
       const timestamp = new Date().getTime().toString().slice(-6);
       request_code = `TEST-${timestamp}`;
@@ -350,7 +346,8 @@ export async function POST(req: Request) {
 
     // ✅ 1) ส่ง LINE หาคนขับ (ถ้ามี driver_id)
     // Allow retroactive to send notification too (User Request)
-    if (driver_id) {
+    const isSkipLine = skip_line_notification || (Array.isArray(body.passengers) && body.passengers.some((p: any) => p.type === "config" && p.name === "SKIP_LINE"));
+    if (driver_id && request_code !== "จองล่วงหน้า" && !isSkipLine) {
       notifications.push((async () => {
         try {
           const { data: driver } = await supabase.from("drivers").select("*").eq("id", driver_id).single();

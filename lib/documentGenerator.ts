@@ -332,8 +332,8 @@ const generateFromCode = async (booking: BookingData) => {
                                 new TextRun({ text: "เจ้าหน้าที่ประกอบด้วย", ...fontStyle }),
                             ],
                         }),
-                        ...(booking.passengers && booking.passengers.length > 0
-                            ? booking.passengers.map((p, index) =>
+                        ...(booking.passengers && booking.passengers.filter((p: any) => p.type !== "config").length > 0
+                            ? booking.passengers.filter((p: any) => p.type !== "config").map((p, index) =>
                                 new Paragraph({
                                     indent: { left: 1440 },
                                     tabStops: [

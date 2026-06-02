@@ -5,15 +5,13 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const driverId = searchParams.get("driver_id");
+    const isHistory = searchParams.get("history") === "true";
 
     if (!driverId) {
       return NextResponse.json({ error: "Missing driver_id Parameter" }, { status: 400 });
     }
 
-    // Fetch the active tasks for this driver
-    // Currently, typical statuses for unclosed jobs are: "ASSIGNED", "IN_PROGRESS"
-    // Adjust these if you have other statuses that represent an active task
-    const { data: tasks, error } = await supabase
+    let query = supabase
       .from("bookings")
       .select(`
         id,
@@ -23,25 +21,40 @@ export async function GET(req: Request) {
         status,
         start_at,
         end_at,
+        start_mileage,
+        end_mileage,
+        distance,
+        destination,
         vehicles:vehicle_id(
+          id,
           plate_number,
           brand,
           model
         )
       `)
-      .eq("driver_id", driverId)
-      .in("status", ["ASSIGNED", "IN_PROGRESS"]) // Fetch ONLY incomplete statuses assigned to him
-      .order("start_at", { ascending: true }); // Show earliest upcoming tasks first
+      .eq("driver_id", driverId);
+
+    if (isHistory) {
+      // Fetch all tasks for history, ordered by newest first
+      query = query.order("start_at", { ascending: false });
+    } else {
+      // Fetch ONLY active incomplete statuses assigned to him, ordered by earliest first
+      query = query
+        .in("status", ["ASSIGNED", "IN_PROGRESS"])
+        .order("start_at", { ascending: true });
+    }
+
+    const { data: tasks, error } = await query;
 
     if (error) {
-      console.error("Fetch DB Active tasks error:", error);
+      console.error("Fetch DB Active/History tasks error:", error);
       return NextResponse.json({ error: "ดึงข้อมูลงานไม่สำเร็จ" }, { status: 500 });
     }
 
     return NextResponse.json({ tasks });
 
   } catch (err: any) {
-    console.error("API Error: active tasks:", err);
+    console.error("API Error: active/history tasks:", err);
     return NextResponse.json({ error: "เกิดข้อผิดพลาดในการโหลดงาน" }, { status: 500 });
   }
 }

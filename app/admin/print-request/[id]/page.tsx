@@ -254,10 +254,10 @@ export default function PrintRequestPage() {
                 </div>
 
                 {/* Staff List (Optional if needed, assuming it's part of body or handled below? No, likely missing too if I don't add it) */}
-                {booking.passengers && booking.passengers.length > 0 && (
+                {booking.passengers && (booking.passengers || []).filter((p: any) => p.type !== "config").length > 0 && (
                     <div className="mb-2 pl-[25px]">
                         <div>เจ้าหน้าที่ประกอบด้วย</div>
-                        {booking.passengers.map((p: any, i: number) => (
+                        {(booking.passengers || []).filter((p: any) => p.type !== "config").map((p: any, i: number) => (
                             <div key={i} className="flex mb-1">
                                 <div className="flex-1 pl-[45px]">
                                     {toThaiNum(i + 1)}. <span className="dots min-w-[150px] text-center">{p.name}</span>
