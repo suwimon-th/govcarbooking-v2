@@ -37,13 +37,7 @@ async function generateRequestCode(vehicleId: string): Promise<string> {
   const plateSuffix = digits.slice(-2) || "00";
   const prefix = `ENV-${plateSuffix}/`;
 
-  // --- REUSE CANCELLED CODE LOGIC (REMOVED) ---
-  // ผู้ใช้ไม่ต้องการนำเลขเดิมที่ยกเลิกกลับมาใช้ใหม่ (ต้องการให้ข้ามไปเลย)
-  // ----------------------------------
-
-  // ⚠️ Query ทุก booking ที่มี prefix นี้ (ไม่ว่าจะ vehicle_id ใด)
-  // เพื่อป้องกัน duplicate key เมื่อรถเปลี่ยนมือ
-  // ใช้ ORDER BY request_code DESC (ไม่ใช่ created_at) เพื่อได้เลขสูงสุดจริงๆ
+  // Query the highest existing code for this prefix
   const { data } = await supabase
     .from("bookings")
     .select("request_code")
@@ -60,6 +54,10 @@ async function generateRequestCode(vehicleId: string): Promise<string> {
       if (!isNaN(parsed)) running = parsed + 1;
     }
   }
+
+  // Add random offset (1-5) to reduce collision probability during concurrent inserts
+  const jitter = Math.floor(Math.random() * 5);
+  running += jitter;
 
   return `${prefix}${String(running).padStart(3, "0")}`;
 }
@@ -278,35 +276,68 @@ export async function POST(req: Request) {
       initialStatus = "ACCEPTED";
     }
 
-    const { data, error } = await supabase
-      .from("bookings")
-      .insert([
-        {
-          requester_id,
-          requester_name,
-          department_id: safeDeptId,
-          vehicle_id,
-          start_at,
-          end_at: dbEndAt, // ✅ Use NULL if not specified (display purpose)
-          purpose,
-          request_code,
-          status: initialStatus,
-          driver_id: driver_id || null,
-          assigned_at: driver_id ? new Date().toISOString() : null,
-          passenger_count,
-          destination,
-          requester_position: position, // Store the snapshot of position
-          passengers: body.passengers || [],
-          is_ot: isOT,
-        },
-      ])
-      .select()
-      .single();
+    /* ---------------------------
+       INSERT booking — retry on duplicate request_code (race condition guard)
+    ---------------------------- */
+    let data: any = null;
+    let insertError: any = null;
+    const MAX_RETRIES = 5;
 
-    if (error) {
-      console.error("BOOKING INSERT ERROR:", error);
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      // Re-generate code on every retry (gets fresh highest value from DB)
+      if (attempt > 0 && !no_request_code && requester?.role !== "TESTER") {
+        console.warn(`⚠️ [REQUEST_CODE] Duplicate detected, retrying... (attempt ${attempt + 1})`);
+        request_code = await generateRequestCode(vehicle_id);
+      }
+
+      const { data: inserted, error: err } = await supabase
+        .from("bookings")
+        .insert([
+          {
+            requester_id,
+            requester_name,
+            department_id: safeDeptId,
+            vehicle_id,
+            start_at,
+            end_at: dbEndAt,
+            purpose,
+            request_code,
+            status: initialStatus,
+            driver_id: driver_id || null,
+            assigned_at: driver_id ? new Date().toISOString() : null,
+            passenger_count,
+            destination,
+            requester_position: position,
+            passengers: body.passengers || [],
+            is_ot: isOT,
+          },
+        ])
+        .select()
+        .single();
+
+      if (!err) {
+        data = inserted;
+        insertError = null;
+        break;
+      }
+
+      // Postgres error code 23505 = unique_violation
+      if (err.code === "23505" && err.message?.includes("request_code")) {
+        insertError = err;
+        // Small delay before retry
+        await new Promise((r) => setTimeout(r, 50 + Math.random() * 100));
+        continue;
+      }
+
+      // Other error — fail immediately
+      insertError = err;
+      break;
+    }
+
+    if (insertError || !data) {
+      console.error("BOOKING INSERT ERROR:", insertError);
       return NextResponse.json(
-        { error: `ไม่สามารถบันทึกคำขอได้: ${error.message || JSON.stringify(error)}` },
+        { error: `ไม่สามารถบันทึกคำขอได้: ${insertError?.message || JSON.stringify(insertError)}` },
         { status: 500 }
       );
     }
