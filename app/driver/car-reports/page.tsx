@@ -74,10 +74,12 @@ function formatThaiDateTime(iso: string | null) {
   return { date, time };
 }
 
+const LIFF_ID = process.env.NEXT_PUBLIC_LINE_LIFF_ID_DRIVER!;
+
 function CarReportsContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const driverId = searchParams.get("driver_id");
+  const driverIdParam = searchParams.get("driver_id");
 
   // State matching admin/reports format
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
@@ -89,24 +91,66 @@ function CarReportsContent() {
   const [loaded, setLoaded] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [driverName, setDriverName] = useState("");
+  const [driverPicture, setDriverPicture] = useState<string | null>(null);
+  const [liffError, setLiffError] = useState<string | null>(null);
+  const [allDrivers, setAllDrivers] = useState<{ id: string; full_name: string; remark?: string | null; line_picture_url?: string | null }[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const printRef = useRef<HTMLDivElement>(null);
 
   const [activeDriverId, setActiveDriverId] = useState<string | null>(null);
 
-  // Load Vehicles & Driver Info
+  // Load Vehicles & Driver Info — resolve driver_id via LIFF LINE UID first
   useEffect(() => {
     const initData = async () => {
       try {
         setInitialLoading(true);
-        
-        let effectiveDriverId = driverId;
+
+        let effectiveDriverId: string | null = driverIdParam;
+        let resolvedName = "";
+        let resolvedPicture: string | null = null;
+
+        // --- Step 1: Try to resolve from LIFF LINE UID ---
+        if (!effectiveDriverId && LIFF_ID) {
+          try {
+            const liff = (await import("@line/liff")).default;
+            await liff.init({ liffId: LIFF_ID });
+
+            if (liff.isLoggedIn()) {
+              let lineUserId: string | undefined;
+              try {
+                const profile = await liff.getProfile();
+                lineUserId = profile.userId;
+              } catch {
+                lineUserId = liff.getContext()?.userId;
+              }
+
+              if (lineUserId) {
+                const res = await fetch(`/api/driver/resolve-by-line?line_uid=${lineUserId}`);
+                if (res.ok) {
+                  const data = await res.json();
+                  effectiveDriverId = data.driver_id;
+                  resolvedName = data.full_name;
+                  resolvedPicture = data.line_picture_url || null;
+                }
+              }
+            }
+          } catch (liffErr) {
+            console.warn("LIFF not available:", liffErr);
+          }
+        }
+
+        // --- Step 2: Fallback to localStorage ---
         if (!effectiveDriverId && typeof window !== "undefined") {
           effectiveDriverId = localStorage.getItem("driver_id");
         }
+
         setActiveDriverId(effectiveDriverId);
-        
-        // 1. Fetch Vehicles
+
+        if (resolvedName) setDriverName(resolvedName);
+        if (resolvedPicture) setDriverPicture(resolvedPicture);
+
+        // --- Step 3: Fetch Vehicles ---
         const vRes = await fetch("/api/user/get-vehicles");
         const vData = await vRes.json();
         setVehicles(vData || []);
@@ -115,14 +159,16 @@ function CarReportsContent() {
           setSelectedVehicle(vData[0].id);
         }
 
-        // 2. Fetch Driver info if driver_id is available
-        if (effectiveDriverId) {
-          const dRes = await fetch("/api/driver/list");
-          const dData = await dRes.json();
-          if (dRes.ok && dData.drivers) {
+        // --- Step 4: Always fetch driver list (for name lookup and selection screen) ---
+        const dRes = await fetch("/api/driver/list");
+        const dData = await dRes.json();
+        if (dRes.ok && dData.drivers) {
+          setAllDrivers(dData.drivers);
+          if (effectiveDriverId && !resolvedName) {
             const currentDriver = dData.drivers.find((d: any) => d.id === effectiveDriverId);
             if (currentDriver) {
               setDriverName(currentDriver.full_name);
+              setDriverPicture(currentDriver.line_picture_url || null);
             }
           }
         }
@@ -133,7 +179,7 @@ function CarReportsContent() {
       }
     };
     initData();
-  }, [driverId]);
+  }, [driverIdParam]);
 
   // Fetch Report Data
   const handleFetchReport = async () => {
@@ -206,20 +252,109 @@ function CarReportsContent() {
     );
   }
 
+  // --- Driver Selection Screen (when no driver resolved) ---
+  if (!activeDriverId) {
+    const filtered = allDrivers.filter(d =>
+      d.full_name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-gradient-to-br from-blue-700 to-indigo-800 pt-10 pb-20 px-6 rounded-b-[40px] text-white overflow-hidden relative">
+          <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
+          <div className="relative z-10">
+            <div className="flex items-center gap-3 mb-3">
+              <Printer className="w-8 h-8 text-blue-200" />
+              <h1 className="text-2xl font-black">รายงานการใช้รถ</h1>
+            </div>
+            <p className="text-blue-100/90 text-sm">กรุณาเลือกชื่อพนักงานขับรถเพื่อดูรายงาน</p>
+          </div>
+        </div>
+
+        <div className="px-6 -mt-10 relative z-20 space-y-4 max-w-lg mx-auto">
+          {/* Search Box */}
+          <div className="bg-white rounded-2xl shadow-xl overflow-hidden flex items-center px-4 py-1 border border-blue-100 focus-within:border-blue-400 focus-within:ring-4 focus-within:ring-blue-50 transition-all">
+            <Search className="w-5 h-5 text-blue-400 ml-1" />
+            <input
+              type="text"
+              placeholder="ค้นหาชื่อของคุณ..."
+              className="w-full p-4 outline-none text-gray-700 bg-transparent text-lg font-medium placeholder:text-gray-300"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 pb-20">
+            {filtered.length > 0 ? (
+              filtered.map(d => (
+                <button
+                  key={d.id}
+                  onClick={() => {
+                    localStorage.setItem("driver_id", d.id);
+                    setActiveDriverId(d.id);
+                    setDriverName(d.full_name);
+                    setDriverPicture(d.line_picture_url || null);
+                  }}
+                  className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between hover:border-blue-300 hover:bg-blue-50 active:scale-[0.98] transition-all group"
+                >
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
+                    {d.line_picture_url ? (
+                      <img
+                        src={d.line_picture_url}
+                        alt={d.full_name}
+                        className="w-14 h-14 rounded-full object-cover border-2 border-white shadow-md ring-1 ring-blue-100 shrink-0"
+                      />
+                    ) : (
+                      <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 text-blue-600 flex items-center justify-center font-bold text-2xl group-hover:from-blue-600 group-hover:to-indigo-600 group-hover:text-white transition-all shadow-inner shrink-0">
+                        {d.full_name.charAt(0)}
+                      </div>
+                    )}
+                    <div className="flex flex-col min-w-0 text-left">
+                      <span className="text-lg font-bold text-gray-800 truncate group-hover:text-blue-700 transition-colors">
+                        {d.full_name}
+                      </span>
+                      <span className="text-xs text-gray-400 font-medium truncate uppercase tracking-wider">
+                        {d.remark || "พนักงานขับรถ"}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="bg-gray-50 p-2 rounded-full group-hover:bg-blue-100 group-hover:text-blue-600 transition-all shrink-0 ml-2">
+                    <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-blue-500 transform group-hover:translate-x-0.5 transition-all" />
+                  </div>
+                </button>
+              ))
+            ) : (
+              <div className="text-center py-10 bg-white rounded-2xl border border-dashed border-gray-300">
+                <p className="text-gray-400">ไม่พบรายชื่อที่ค้นหา</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 max-w-[1400px] mx-auto min-h-screen bg-slate-50 text-slate-800 font-sans">
       <div className="print:hidden">
         
         {/* Back Link and Header */}
         <div className="flex items-center gap-3 mb-5">
-          {(activeDriverId || driverId) ? (
+          {activeDriverId ? (
             <Link
-              href={activeDriverId ? `/driver/active-tasks?driver_id=${activeDriverId}` : "/driver/active-tasks"}
+              href={`/driver/active-tasks?driver_id=${activeDriverId}`}
               className="bg-white hover:bg-slate-100 p-2.5 rounded-xl border border-slate-200 transition-all text-slate-600 shadow-sm shrink-0"
             >
               <ArrowLeft className="w-5 h-5" />
             </Link>
           ) : null}
+          {/* Driver Profile Picture */}
+          {driverPicture && (
+            <img
+              src={driverPicture}
+              alt={driverName}
+              className="w-12 h-12 rounded-full object-cover border-2 border-blue-200 shadow-md shrink-0"
+            />
+          )}
           <div>
             <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
               <Printer className="w-8 h-8 text-blue-600" />
