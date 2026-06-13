@@ -49,7 +49,7 @@ export default function ManualPage() {
                 {/* Introduction */}
                 <section className="bg-white p-10 rounded-3xl shadow-sm border border-gray-100 text-center relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 via-amber-500 to-rose-500"></div>
-                    <h1 className="text-4xl font-extrabold text-[#1E3A8A] mb-6">ระบบจองรถราชการ</h1>
+                    <h1 className="text-4xl font-extrabold text-[#1E3A8A] mb-6">ระบบขอใช้รถราชการ</h1>
                     <p className="text-gray-500 max-w-2xl mx-auto text-lg mb-10">
                         คู่มือการใช้งานอย่างละเอียดพร้อมภาพประกอบ สำหรับ พนักงานขับรถ, ผู้ขอใช้รถ, และผู้ดูแลระบบ ครอบคลุมทุกขั้นตอนการทำงาน
                     </p>
@@ -66,7 +66,7 @@ export default function ManualPage() {
                                 <User className="w-6 h-6 text-blue-600" />
                             </div>
                             <h3 className="font-bold text-lg text-gray-800">เจ้าหน้าที่ขอใช้รถ</h3>
-                            <p className="text-sm text-gray-500 mt-2">จองรถ, ติดตามงาน, พิมพ์ใบงาน</p>
+                            <p className="text-sm text-gray-500 mt-2">ขอใช้รถ, ติดตามงาน, พิมพ์ใบงาน</p>
                         </div>
                         <div onClick={() => scrollTo('admin')} className="cursor-pointer bg-white hover:bg-rose-50 p-6 rounded-2xl border border-gray-200 hover:border-rose-200 transition-all shadow-sm hover:shadow-md group">
                             <div className="w-12 h-12 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
@@ -208,13 +208,13 @@ export default function ManualPage() {
                     <div className="bg-white p-8 rounded-2xl border border-gray-200 shadow-sm">
                         <div className="grid md:grid-cols-2 gap-10">
                             <div>
-                                <h3 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">ขั้นตอนการจองรถ</h3>
+                                <h3 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">ขั้นตอนการขอใช้รถ</h3>
                                 <div className="space-y-6">
                                     <div className="flex gap-4">
                                         <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold shrink-0">1</div>
                                         <div>
                                             <h4 className="font-bold text-gray-900">เข้าสู่ระบบจอง</h4>
-                                            <p className="text-sm text-gray-500 mt-1">กดที่เมนู <strong>"จองรถราชการ"</strong> จะพบหน้าแบบฟอร์มดังรูป</p>
+                                            <p className="text-sm text-gray-500 mt-1">กดที่เมนู <strong>"ขอใช้รถราชการ"</strong> จะพบหน้าแบบฟอร์มดังรูป</p>
                                         </div>
                                     </div>
                                     <div className="flex gap-4">

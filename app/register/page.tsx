@@ -146,7 +146,7 @@ export default function RegisterPage() {
                             </p>
                             <div className="space-y-4">
                                 {[
-                                    { icon: Car, label: "จองรถราชการออนไลน์", desc: "สะดวก รวดเร็ว ไม่ต้องใช้กระดาษ" },
+                                    { icon: Car, label: "ขอใช้รถราชการออนไลน์", desc: "สะดวก รวดเร็ว ไม่ต้องใช้กระดาษ" },
                                     { icon: Clock, label: "ติดตามสถานะแบบ Real-time", desc: "รู้ทันทีว่าคำขอถึงไหนแล้ว" },
                                     { icon: Shield, label: "ปลอดภัย มั่นใจได้", desc: "ข้อมูลของคุณถูกเก็บรักษาอย่างดี" },
                                 ].map((item) => (
