@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import {
   Star, Download, Search, ChevronDown, Filter,
   ThumbsUp, ThumbsDown, FileText, BarChart3,
-  Car, User, Loader2, RefreshCw, Calendar
+  Car, User, Loader2, RefreshCw, Calendar, History
 } from "lucide-react";
 
 // ─── ประเภทข้อมูล ───────────────────────────────────────────
@@ -20,6 +20,18 @@ interface EvaluationRow {
   evaluation_scores: Record<string, number> | null;
   vehicle: { plate_number: string | null; brand: string | null; model: string | null } | null;
   driver: { full_name: string | null } | null;
+}
+
+interface DriverStat {
+  driver_id: string;
+  driver_name: string;
+  total_jobs: number;
+  satisfied: number;
+  total_score: number;
+  score_count: number;
+  driver_score_sum: number;
+  driver_score_count: number;
+  vehicles: Set<string>;
 }
 
 // ─── หัวข้อประเมิน ───────────────────────────────────────────
@@ -75,6 +87,7 @@ export default function EvaluationListPage() {
   const [filterSatisfied, setFilterSatisfied] = useState<"all" | "yes" | "no">("all");
   const [expanded, setExpanded] = useState<string | null>(null);
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"LIST" | "DRIVERS">("LIST");
 
   const load = async () => {
     setLoading(true);
@@ -137,6 +150,37 @@ export default function EvaluationListPage() {
     setDownloading(null);
   };
 
+  // ─── สถิติรายคนขับ ──────────────────────────────────────────
+  const driverStats = useMemo(() => {
+    const map = new Map<string, DriverStat>();
+    rows.forEach((r) => {
+      const did = r.driver?.full_name || "ไม่ระบุชื่อ";
+      if (!map.has(did)) {
+        map.set(did, {
+          driver_id: did, driver_name: did, total_jobs: 0, satisfied: 0,
+          total_score: 0, score_count: 0, driver_score_sum: 0, driver_score_count: 0,
+          vehicles: new Set(),
+        });
+      }
+      const st = map.get(did)!;
+      st.total_jobs++;
+      if (r.is_satisfied) st.satisfied++;
+      if (r.vehicle?.plate_number) st.vehicles.add(r.vehicle.plate_number);
+
+      if (r.evaluation_scores) {
+        const allVals = Object.values(r.evaluation_scores) as number[];
+        allVals.forEach(v => { st.total_score += v; st.score_count++; });
+        DRIVER_KEYS.forEach(k => {
+          const v = r.evaluation_scores![k];
+          if (typeof v === "number") { st.driver_score_sum += v; st.driver_score_count++; }
+        });
+      }
+    });
+    return Array.from(map.values()).sort((a, b) => b.total_jobs - a.total_jobs);
+  }, [rows]);
+
+  const filteredStats = driverStats.filter(s => search ? s.driver_name.toLowerCase().includes(search.toLowerCase()) : true);
+
   // ─── FORMAT ──────────────────────────────────────────────
   const fmtDate = (s: string) =>
     new Date(s).toLocaleDateString("th-TH", {
@@ -184,7 +228,9 @@ export default function EvaluationListPage() {
         ))}
       </div>
 
-      {/* ── ค้นหา / กรอง ── */}
+      {viewMode === "LIST" ? (
+        <>
+          {/* ── ค้นหา / กรอง ── */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -359,11 +405,77 @@ export default function EvaluationListPage() {
           })}
         </div>
       )}
+      </>
+      ) : (
+        /* ── สถิติรายคนขับ ── */
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredStats.length === 0 && (
+            <div className="col-span-full text-center py-20 text-gray-400">
+              <User className="w-12 h-12 mx-auto mb-3 opacity-30" />
+              <p className="font-semibold">ไม่พบข้อมูลคนขับ</p>
+            </div>
+          )}
+          {filteredStats.map(s => (
+            <div key={s.driver_id} className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-black">
+                      {s.driver_name.charAt(0)}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-gray-800">{s.driver_name}</h4>
+                      <p className="text-[10px] text-gray-500">{Array.from(s.vehicles).join(", ")}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 mb-4">
+                  <div className="bg-gray-50 p-2.5 rounded-xl border border-gray-100">
+                    <p className="text-[10px] text-gray-500 font-bold mb-1">จำนวนงานทั้งหมด</p>
+                    <p className="text-xl font-black text-gray-800">{s.total_jobs}</p>
+                  </div>
+                  <div className="bg-emerald-50 p-2.5 rounded-xl border border-emerald-100">
+                    <p className="text-[10px] text-emerald-600 font-bold mb-1">ความพึงพอใจ</p>
+                    <p className="text-xl font-black text-emerald-700">
+                      {s.total_jobs > 0 ? Math.round((s.satisfied / s.total_jobs) * 100) : 0}%
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-blue-50/50 p-3 rounded-xl border border-blue-100/50">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[10px] font-bold text-blue-800 uppercase tracking-wider">คะแนนเฉลี่ย</span>
+                  <span className="text-sm font-black text-blue-700">
+                    {s.score_count > 0 ? (s.total_score / s.score_count).toFixed(2) : "0.00"}
+                  </span>
+                </div>
+                <div className="w-full bg-blue-100 rounded-full h-1.5 overflow-hidden">
+                  <div className="bg-blue-500 h-1.5 rounded-full transition-all"
+                    style={{ width: `${s.score_count > 0 ? ((s.total_score / s.score_count) / 5) * 100 : 0}%` }}></div>
+                </div>
+
+                <div className="flex items-center justify-between mt-3 mb-1.5">
+                  <span className="text-[10px] font-bold text-violet-800 uppercase tracking-wider">เฉพาะด้านคนขับ</span>
+                  <span className="text-sm font-black text-violet-700">
+                    {s.driver_score_count > 0 ? (s.driver_score_sum / s.driver_score_count).toFixed(2) : "0.00"}
+                  </span>
+                </div>
+                <div className="w-full bg-violet-100 rounded-full h-1.5 overflow-hidden">
+                  <div className="bg-violet-500 h-1.5 rounded-full transition-all"
+                    style={{ width: `${s.driver_score_count > 0 ? ((s.driver_score_sum / s.driver_score_count) / 5) * 100 : 0}%` }}></div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* footer count */}
       {!loading && (
         <p className="text-center text-xs text-gray-400 pb-4">
-          แสดง {filtered.length} จาก {rows.length} รายการ
+          แสดง {viewMode === "LIST" ? filtered.length : filteredStats.length} จาก {viewMode === "LIST" ? rows.length : driverStats.length} รายการ
         </p>
       )}
     </div>
