@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, Calendar, Fuel, AlertTriangle, Printer, CheckCircle2, Clock, MapPin, User, Settings, Info, ChevronRight, Menu, Plus, Edit, Trash2, Search } from "lucide-react";
+import { BookOpen, Calendar, Fuel, AlertTriangle, Printer, CheckCircle2, Clock, MapPin, User, Settings, Info, ChevronRight, Menu, Plus, Edit, Trash2, Search, Star, ClipboardCheck, SprayCan, FileText } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
@@ -172,6 +172,25 @@ export default function ManualPage() {
                                 <p>4. กด <strong>"แจ้งปัญหา"</strong></p>
                             </div>
                         </div>
+
+                        {/* 1.4 Inspection */}
+                        <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                            <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                                <span className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-sm font-bold text-gray-600">1.4</span>
+                                แบบรายงานสภาพรถ (Inspection)
+                            </h3>
+                            <div className="space-y-3 text-sm text-gray-600">
+                                <div className="font-bold flex items-center gap-2 text-gray-900 border-b pb-2 mb-2">
+                                    <ClipboardCheck className="w-4 h-4" /> การตรวจเช็ครถประจำวัน
+                                </div>
+                                <p>พนักงานขับรถจะต้องทำการ <strong>เช็คสภาพรถ</strong> ผ่านเมนู "แบบรายงานสภาพรถ"</p>
+                                <ul className="list-disc pl-5 space-y-1 mt-2">
+                                    <li>ประเมินระดับน้ำมัน, หม้อน้ำ, ยาง, และความสะอาด</li>
+                                    <li>อัปโหลดรูปภาพตัวรถด้านหน้า-หลัง ซ้าย-ขวา</li>
+                                    <li>กดส่งรายงาน เพื่อให้แอดมินนำไปพิมพ์เก็บเป็นประวัติประจำวันได้</li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
                 </section>
 
@@ -234,6 +253,21 @@ export default function ManualPage() {
                             <p className="text-sm text-gray-500 mt-1">
                                 เมื่อสถานะเป็น <span className="text-green-600 font-bold">Approved</span> ให้กดเข้าไปที่รายการจอง จะพบปุ่ม <strong>"พิมพ์ใบขอใช้รถ"</strong> ที่มุมขวาบน
                             </p>
+                        </div>
+                    </div>
+                    
+                    <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex flex-col md:flex-row items-center gap-6 mt-6">
+                        <div className="w-16 h-16 bg-yellow-50 rounded-2xl flex items-center justify-center text-yellow-500 shrink-0">
+                            <Star className="w-8 h-8 fill-yellow-400" />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-bold text-gray-800">การประเมินความพึงพอใจ</h3>
+                            <p className="text-sm text-gray-500 mt-1 mb-2">
+                                เมื่อเดินทางเสร็จสิ้นและสถานะเป็น <span className="text-gray-600 font-bold">Completed</span> จะมีกระดิ่งแจ้งเตือนที่เมนูประวัติ ให้ผู้ใช้เข้าไปทำการประเมิน <strong>คุณภาพของรถ</strong> และ <strong>พนักงานขับรถ</strong> เพื่อนำไปปรับปรุงบริการ
+                            </p>
+                            <Link href="/user/my-requests" className="text-sm font-bold text-yellow-600 hover:text-yellow-700 underline">
+                                ดูประวัติการขอใช้รถเพื่อประเมิน
+                            </Link>
                         </div>
                     </div>
                 </section>
@@ -339,8 +373,57 @@ export default function ManualPage() {
                             <div className="space-y-4 text-sm text-gray-600">
                                 <p>แสดงรายการเบิกน้ำมันทั้งหมด เรียงจากล่าสุดไปเก่าสุด</p>
                                 <ul className="list-disc pl-5 space-y-1">
-                                    <li>ท่านสามารถตรวจสอบดูว่าใครเบิกน้ำมัน ทะเบียนอะไร วันที่เท่าไหร่</li>
-                                    <li>หากต้องการนำข้อมูลไปทำรายงาน สามารถดูได้จากตารางนี้</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        {/* 3.5 Evaluations */}
+                        <div className="bg-white p-6 md:p-8 rounded-2xl border border-gray-200 shadow-sm">
+                            <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2 border-b pb-4">
+                                3.5 ผลการประเมิน (Evaluations & Quality)
+                            </h3>
+                            <div className="grid md:grid-cols-2 gap-6 text-sm text-gray-600">
+                                <div>
+                                    <div className="font-bold text-yellow-600 flex items-center gap-2 mb-2"><Star className="w-4 h-4" /> ดูสถิติและประวัติ</div>
+                                    <p className="mb-2">เมนูนี้รวบรวมผลโหวตจากผู้ขอใช้รถ โดยแบ่งการดูได้ 2 โหมด:</p>
+                                    <ul className="list-disc pl-5 space-y-1">
+                                        <li><strong>ประวัติการประเมิน:</strong> ดูแบบเรียงตามรายการจอง โหวตให้กี่คะแนน มีข้อเสนอแนะอะไรบ้าง</li>
+                                        <li><strong>สถิติรายคนขับ:</strong> สรุปคะแนนเฉลี่ย และ % ความพึงพอใจของพนักงานแต่ละท่าน</li>
+                                    </ul>
+                                </div>
+                                <div className="bg-gray-50 rounded-xl p-4 flex flex-col justify-center items-center text-center border border-gray-100">
+                                    <FileText className="w-8 h-8 text-blue-400 mb-2" />
+                                    <p className="font-bold text-gray-800">ส่งออกข้อมูลเป็น Word</p>
+                                    <p className="text-xs mt-1">สามารถกดไอคอนดาวน์โหลดท้ายรายการ เพื่อดึงใบประเมินออกมาปริ้นท์ได้เลย</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 3.6 Inspections */}
+                        <div className="bg-white p-6 md:p-8 rounded-2xl border border-gray-200 shadow-sm">
+                            <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2 border-b pb-4">
+                                3.6 รายงานสภาพรถ (Vehicle Inspections)
+                            </h3>
+                            <div className="space-y-4 text-sm text-gray-600">
+                                <p>ตรวจสอบการเช็ครถประจำวันของพนักงานขับรถได้ที่เมนู <strong>"แบบรายงานสภาพรถ"</strong></p>
+                                <ul className="list-disc pl-5 space-y-1">
+                                    <li>ดูสถานะ ปกติ/ไม่ปกติ ของของเหลว แบตเตอรี่ และยาง</li>
+                                    <li>ดูรูปถ่ายรถที่พนักงานส่งมา</li>
+                                    <li>กดไอคอน Word เพื่อนำออก <strong>ใบรายงานสรุปสภาพรถ</strong> (สามารถตั้งค่ารายชื่อผู้รับผิดชอบท้ายใบงานได้ที่ปุ่มรูปฟันเฟือง มุมขวาบนของหน้าจอ)</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        {/* 3.7 Fogging */}
+                        <div className="bg-white p-6 md:p-8 rounded-2xl border border-gray-200 shadow-sm">
+                            <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2 border-b pb-4">
+                                3.7 เครื่องพ่นหมอกควัน (Fogging Machines)
+                            </h3>
+                            <div className="space-y-4 text-sm text-gray-600">
+                                <p>เมนูพิเศษสำหรับการจัดการเครื่องพ่นหมอกควัน (CRUD) แบบเดียวกับการจัดการรถยนต์</p>
+                                <ul className="list-disc pl-5 space-y-1">
+                                    <li>เพิ่ม/แก้ไข รหัสเครื่องพ่นหมอกควัน</li>
+                                    <li>พนักงานสามารถทำเรื่องเบิกน้ำมันให้กับเครื่องเหล่านี้ได้ในเมนู "เบิกน้ำมัน" โดยเลือกรถชื่อ "เครื่องพ่นหมอกควัน" จากนั้นให้กรอกเลขเครื่อง</li>
                                 </ul>
                             </div>
                         </div>
