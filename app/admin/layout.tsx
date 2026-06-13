@@ -21,7 +21,8 @@ import {
   MessageCircle,
   ChevronDown,
   SprayCan,
-  ClipboardCheck
+  ClipboardCheck,
+  Star
 } from "lucide-react";
 import ReportIssueModal from "@/app/components/ReportIssueModal";
 
@@ -51,28 +52,31 @@ export default function AdminLayout({
   const currentTitle = breadcrumbTitles[pathname] ?? "";
 
   const [pendingCount, setPendingCount] = useState(0);
+  const [pendingFuelCount, setPendingFuelCount] = useState(0);
 
   // Fetch Pending Count
   useEffect(() => {
     const fetchPending = async () => {
-      const { count } = await supabase
+      const { count: bookingCount } = await supabase
         .from("bookings")
         .select("*", { count: "exact", head: true })
         .eq("status", "REQUESTED");
+      setPendingCount(bookingCount || 0);
 
-      setPendingCount(count || 0);
+      const { count: fuelCount } = await supabase
+        .from("fuel_requests")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "PENDING");
+      setPendingFuelCount(fuelCount || 0);
     };
 
     fetchPending();
 
-    // Realtime subscription
+    // Realtime subscriptions
     const channel = supabase
       .channel("admin_badge")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "bookings" },
-        () => fetchPending()
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "bookings" }, () => fetchPending())
+      .on("postgres_changes", { event: "*", schema: "public", table: "fuel_requests" }, () => fetchPending())
       .subscribe();
 
     return () => {
@@ -121,27 +125,27 @@ export default function AdminLayout({
   return (
     <div className="min-h-screen bg-gray-50">
 
-      {/* === HEADER (Modern) === */}
-      <header className="w-full bg-white/90 backdrop-blur-md shadow-sm border-b fixed top-0 left-0 z-40 transition-all duration-300">
-        <div className="max-w-[1400px] mx-auto px-4 md:px-6 h-16 flex items-center justify-between gap-4">
+      {/* === HEADER (Modern Premium) === */}
+      <header className="w-full bg-white/95 backdrop-blur-xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] border-b border-gray-100 fixed top-0 left-0 z-40 transition-all duration-300">
+        <div className="max-w-[1400px] mx-auto px-4 md:px-6 h-[72px] flex items-center justify-between gap-4">
 
           {/* Left: Back / Home */}
           <div className="shrink-0">
             <button
               onClick={() => router.push("/admin")}
-              className="flex items-center gap-2 text-gray-500 hover:text-blue-600 transition-colors p-2 rounded-lg hover:bg-blue-50"
+              className="flex items-center gap-2 text-gray-500 hover:text-blue-600 transition-all p-2 rounded-xl hover:bg-blue-50 hover:-translate-y-0.5 active:scale-95"
             >
               <div className="bg-gray-100 p-1.5 rounded-full text-gray-600 group-hover:bg-blue-100 group-hover:text-blue-600 md:hidden">
                 <ChevronLeft className="w-5 h-5" />
               </div>
-              <span className="hidden md:flex items-center gap-2 font-medium">
+              <span className="hidden md:flex items-center gap-2 font-bold tracking-wide">
                 <ChevronLeft className="w-4 h-4" /> กลับหน้าแรก
               </span>
             </button>
           </div>
 
           {/* Center: Title */}
-          <h1 className="text-base md:text-xl font-bold text-gray-800 text-center truncate flex-1 leading-tight">
+          <h1 className="text-base md:text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-gray-800 to-blue-800 text-center truncate flex-1 leading-tight tracking-wide">
             ระบบบริหารการใช้รถราชการ
           </h1>
 
@@ -159,42 +163,46 @@ export default function AdminLayout({
             </button>
 
             {/* Desktop Menu */}
-            <div className="hidden md:flex items-center gap-1 text-sm font-medium text-gray-600">
+            <div className="hidden md:flex items-center gap-1.5 text-sm font-bold text-gray-600">
 
               {/* 1. Main */}
-              <Link href="/admin/requests" className="hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-lg flex items-center gap-2 transition-colors relative">
+              <Link href="/admin/requests" className="hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-xl flex items-center gap-2 transition-all hover:-translate-y-0.5 active:scale-95 relative">
                 <FileText className="w-4 h-4" /> คำขอใช้รถ
                 {pendingCount > 0 && (
-                  <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center shadow-sm">
+                  <span className="bg-gradient-to-r from-red-500 to-rose-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full min-w-[20px] text-center shadow-md animate-bounce absolute -top-1.5 -right-2 border border-white">
                     {pendingCount}
                   </span>
                 )}
               </Link>
-              <Link href="/calendar" className="hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-lg flex items-center gap-2 transition-colors" target="_blank">
+              <Link href="/calendar" className="hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-xl flex items-center gap-2 transition-all hover:-translate-y-0.5 active:scale-95" target="_blank">
                 <Calendar className="w-4 h-4" /> ปฏิทิน
               </Link>
 
               {/* 2. Management Dropdown */}
               <div className="relative group">
-                <button className="flex items-center gap-1 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-lg transition-colors">
+                <button className="flex items-center gap-1 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-xl transition-all hover:-translate-y-0.5 active:scale-95">
                   <span>จัดการข้อมูล</span>
-                  <ChevronDown className="w-4 h-4" />
+                  <ChevronDown className="w-4 h-4 group-hover:rotate-180 transition-transform duration-300" />
                 </button>
                 {/* Dropdown Content with safe hover area */}
-                <div className="absolute top-full right-0 pt-2 w-48 hidden group-hover:block z-50">
-                  <div className="bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                    <div className="p-1">
-                      <Link href="/admin/vehicles" className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 rounded-lg text-gray-700">
-                        <Car className="w-4 h-4 text-blue-500" /> ข้อมูลรถ
+                <div className="absolute top-full right-0 pt-3 w-52 hidden group-hover:block z-50">
+                  <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="p-1.5 flex flex-col gap-0.5">
+                      <Link href="/admin/vehicles" className="group/item flex items-center gap-3 px-3 py-2.5 hover:bg-blue-50 rounded-xl text-gray-700 transition-colors">
+                        <div className="bg-blue-100 p-1.5 rounded-lg group-hover/item:scale-110 transition-transform"><Car className="w-3.5 h-3.5 text-blue-600" /></div>
+                        <span className="group-hover/item:text-blue-700 font-bold">ข้อมูลรถ</span>
                       </Link>
-                      <Link href="/admin/drivers" className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 rounded-lg text-gray-700">
-                        <Users className="w-4 h-4 text-green-500" /> คนขับรถ
+                      <Link href="/admin/drivers" className="group/item flex items-center gap-3 px-3 py-2.5 hover:bg-green-50 rounded-xl text-gray-700 transition-colors">
+                        <div className="bg-green-100 p-1.5 rounded-lg group-hover/item:scale-110 transition-transform"><Users className="w-3.5 h-3.5 text-green-600" /></div>
+                        <span className="group-hover/item:text-green-700 font-bold">คนขับรถ</span>
                       </Link>
-                      <Link href="/admin/users" className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 rounded-lg text-gray-700">
-                        <Users className="w-4 h-4 text-purple-500" /> ผู้ใช้งาน
+                      <Link href="/admin/users" className="group/item flex items-center gap-3 px-3 py-2.5 hover:bg-purple-50 rounded-xl text-gray-700 transition-colors">
+                        <div className="bg-purple-100 p-1.5 rounded-lg group-hover/item:scale-110 transition-transform"><Users className="w-3.5 h-3.5 text-purple-600" /></div>
+                        <span className="group-hover/item:text-purple-700 font-bold">ผู้ใช้งาน</span>
                       </Link>
-                      <Link href="/admin/fogging" className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 rounded-lg text-gray-700">
-                        <SprayCan className="w-4 h-4 text-orange-500" /> เครื่องพ่นหมอกควัน
+                      <Link href="/admin/fogging" className="group/item flex items-center gap-3 px-3 py-2.5 hover:bg-orange-50 rounded-xl text-gray-700 transition-colors">
+                        <div className="bg-orange-100 p-1.5 rounded-lg group-hover/item:scale-110 transition-transform"><SprayCan className="w-3.5 h-3.5 text-orange-600" /></div>
+                        <span className="group-hover/item:text-orange-700 font-bold text-xs">เครื่องพ่นหมอกควัน</span>
                       </Link>
                     </div>
                   </div>
@@ -203,25 +211,45 @@ export default function AdminLayout({
 
               {/* 3. Operations Dropdown */}
               <div className="relative group">
-                <button className="flex items-center gap-1 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-lg transition-colors">
+                <button className="flex items-center gap-1 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-xl transition-all hover:-translate-y-0.5 active:scale-95 relative">
                   <span>ระบบงาน</span>
-                  <ChevronDown className="w-4 h-4" />
+                  <ChevronDown className="w-4 h-4 group-hover:rotate-180 transition-transform duration-300" />
+                  {pendingFuelCount > 0 && (
+                    <span className="absolute top-2 right-1 w-2 h-2 bg-rose-500 rounded-full animate-ping"></span>
+                  )}
+                  {pendingFuelCount > 0 && (
+                    <span className="absolute top-2 right-1 w-2 h-2 bg-rose-500 rounded-full"></span>
+                  )}
                 </button>
-                {/* Dropdown Content with safe hover area */}
-                <div className="absolute top-full right-0 pt-2 w-64 hidden group-hover:block z-50">
-                  <div className="bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                    <div className="p-1">
-                      <Link href="/admin/maintenance" className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 rounded-lg text-gray-700 whitespace-nowrap">
-                        <Wrench className="w-4 h-4 text-amber-500 shrink-0" /> แจ้งปัญหา/ซ่อมบำรุง
+                <div className="absolute top-full right-0 pt-3 w-64 hidden group-hover:block z-50">
+                  <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="p-1.5 flex flex-col gap-0.5">
+                      <Link href="/admin/maintenance" className="group/item flex items-center gap-3 px-3 py-2.5 hover:bg-amber-50 rounded-xl text-gray-700 transition-colors">
+                        <div className="bg-amber-100 p-1.5 rounded-lg group-hover/item:scale-110 transition-transform"><Wrench className="w-3.5 h-3.5 text-amber-600" /></div>
+                        <span className="group-hover/item:text-amber-700 font-bold">แจ้งปัญหา/ซ่อมบำรุง</span>
                       </Link>
-                      <Link href="/admin/fuel" className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 rounded-lg text-gray-700">
-                        <Fuel className="w-4 h-4 text-rose-500" /> เบิกน้ำมัน
+                      <Link href="/admin/fuel" className="group/item flex items-center gap-3 px-3 py-2.5 hover:bg-rose-50 rounded-xl text-gray-700 transition-colors justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="bg-rose-100 p-1.5 rounded-lg group-hover/item:scale-110 transition-transform"><Fuel className="w-3.5 h-3.5 text-rose-600" /></div>
+                          <span className="group-hover/item:text-rose-700 font-bold">เบิกน้ำมัน</span>
+                        </div>
+                        {pendingFuelCount > 0 && (
+                          <span className="bg-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm">
+                            {pendingFuelCount}
+                          </span>
+                        )}
                       </Link>
-                      <Link href="/admin/inspections" className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 rounded-lg text-gray-700">
-                        <ClipboardCheck className="w-4 h-4 text-blue-500" /> แบบรายงานสภาพรถ
+                      <Link href="/admin/inspections" className="group/item flex items-center gap-3 px-3 py-2.5 hover:bg-blue-50 rounded-xl text-gray-700 transition-colors">
+                        <div className="bg-blue-100 p-1.5 rounded-lg group-hover/item:scale-110 transition-transform"><ClipboardCheck className="w-3.5 h-3.5 text-blue-600" /></div>
+                        <span className="group-hover/item:text-blue-700 font-bold">แบบรายงานสภาพรถ</span>
                       </Link>
-                      <Link href="/admin/reports" className="flex items-center gap-2 px-4 py-2 hover:bg-orange-50 rounded-lg text-gray-700 transition-colors">
-                        <FileText className="w-4 h-4 text-orange-500" /> รายงาน
+                      <Link href="/admin/evaluations" className="group/item flex items-center gap-3 px-3 py-2.5 hover:bg-yellow-50 rounded-xl text-gray-700 transition-colors">
+                        <div className="bg-yellow-100 p-1.5 rounded-lg group-hover/item:scale-110 transition-transform"><Star className="w-3.5 h-3.5 text-yellow-600" /></div>
+                        <span className="group-hover/item:text-yellow-700 font-bold">ผลการประเมิน</span>
+                      </Link>
+                      <Link href="/admin/reports" className="group/item flex items-center gap-3 px-3 py-2.5 hover:bg-emerald-50 rounded-xl text-gray-700 transition-colors">
+                        <div className="bg-emerald-100 p-1.5 rounded-lg group-hover/item:scale-110 transition-transform"><FileText className="w-3.5 h-3.5 text-emerald-600" /></div>
+                        <span className="group-hover/item:text-emerald-700 font-bold">รายงานสถิติ</span>
                       </Link>
                     </div>
                   </div>
@@ -230,40 +258,40 @@ export default function AdminLayout({
 
               {/* 4. Help Dropdown */}
               <div className="relative group">
-                <button className="flex items-center gap-1 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-lg transition-colors">
+                <button className="flex items-center gap-1 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-xl transition-all hover:-translate-y-0.5 active:scale-95">
                   <span>ช่วยเหลือ</span>
-                  <ChevronDown className="w-4 h-4" />
+                  <ChevronDown className="w-4 h-4 group-hover:rotate-180 transition-transform duration-300" />
                 </button>
-                {/* Dropdown Content with safe hover area */}
-                <div className="absolute top-full right-0 pt-2 w-56 hidden group-hover:block z-50">
-                  <div className="bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                    <div className="p-1">
-
+                <div className="absolute top-full right-0 pt-3 w-56 hidden group-hover:block z-50">
+                  <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="p-1.5 flex flex-col gap-0.5">
                       <button
                         onClick={() => setReportModalOpen(true)}
-                        className="w-full text-left flex items-center gap-2 px-4 py-2 hover:bg-gray-50 rounded-lg text-gray-700"
+                        className="group/item w-full text-left flex items-center gap-3 px-3 py-2.5 hover:bg-amber-50 rounded-xl text-gray-700 transition-colors"
                       >
-                        <AlertTriangle className="w-4 h-4 text-amber-500" /> แจ้งปัญหาการใช้รถ
+                        <div className="bg-amber-100 p-1.5 rounded-lg group-hover/item:scale-110 transition-transform"><AlertTriangle className="w-3.5 h-3.5 text-amber-600" /></div>
+                        <span className="group-hover/item:text-amber-700 font-bold">แจ้งปัญหาการใช้รถ</span>
                       </button>
                       <a
                         href="https://line.me/R/ti/p/@420uicrg"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 rounded-lg text-gray-700"
+                        className="group/item flex items-center gap-3 px-3 py-2.5 hover:bg-green-50 rounded-xl text-gray-700 transition-colors"
                       >
-                        <MessageCircle className="w-4 h-4 text-green-500" /> ติดต่อเรา
+                        <div className="bg-green-100 p-1.5 rounded-lg group-hover/item:scale-110 transition-transform"><MessageCircle className="w-3.5 h-3.5 text-green-600" /></div>
+                        <span className="group-hover/item:text-green-700 font-bold">ติดต่อเราผ่าน LINE</span>
                       </a>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="h-6 w-px bg-gray-200 mx-2"></div>
+              <div className="h-8 w-px bg-gray-200 mx-2"></div>
 
               {/* User Profile Section PC */}
               {userProfile && (
-                <div className="flex items-center gap-3 px-3 py-1.5 bg-gray-50 rounded-xl border border-gray-100 mr-2 shadow-sm">
-                  <div className="w-8 h-8 rounded-full overflow-hidden border border-gray-200 bg-white shadow-inner flex items-center justify-center">
+                <div className="flex items-center gap-3 px-3 py-2 bg-gray-50/80 rounded-2xl border border-gray-100 mr-2 shadow-sm hover:shadow-md hover:border-blue-100 hover:-translate-y-0.5 transition-all cursor-default">
+                  <div className="w-8 h-8 rounded-xl overflow-hidden border border-gray-200 bg-white shadow-inner flex items-center justify-center">
                     {userProfile.line_picture_url ? (
                       <img src={userProfile.line_picture_url} alt="Profile" className="w-full h-full object-cover" />
                     ) : (
@@ -271,10 +299,10 @@ export default function AdminLayout({
                     )}
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-xs font-bold text-gray-800 leading-tight truncate max-w-[120px]">
+                    <span className="text-xs font-black text-gray-800 leading-tight truncate max-w-[120px]">
                       {userProfile.full_name}
                     </span>
-                    <span className="text-[10px] text-gray-400 font-medium">แอดมิน</span>
+                    <span className="text-[9px] text-gray-400 font-black uppercase tracking-widest">ผู้ดูแลระบบ</span>
                   </div>
                 </div>
               )}
@@ -282,10 +310,10 @@ export default function AdminLayout({
               <button
                 onClick={handleLogout}
                 disabled={loggingOut}
-                className="flex items-center gap-2 text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors border border-red-100"
+                className="flex items-center gap-2 text-red-600 bg-white hover:bg-red-500 hover:text-white px-5 py-2 rounded-xl transition-all border border-red-100 hover:border-red-500 shadow-sm hover:shadow-md hover:shadow-red-500/20 hover:-translate-y-0.5 active:scale-95 font-bold tracking-wide"
               >
                 <LogOut className="w-4 h-4" />
-                {loggingOut ? "..." : "ออกจากระบบ"}
+                {loggingOut ? "กำลังออก..." : "ออกจากระบบ"}
               </button>
             </div>
           </div>
@@ -383,10 +411,24 @@ export default function AdminLayout({
                     <Wrench className="w-4 h-4" /> แจ้งปัญหา/ซ่อมบำรุง
                   </Link>
                   <Link href="/admin/fuel" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 text-gray-600 rounded-lg">
-                    <Fuel className="w-4 h-4" /> เบิกน้ำมัน
+                    <div className="relative">
+                      <Fuel className="w-4 h-4" />
+                      {pendingFuelCount > 0 && (
+                        <span className="absolute -top-1 -right-1 w-2 h-2 bg-rose-500 rounded-full border border-white"></span>
+                      )}
+                    </div>
+                    เบิกน้ำมัน
+                    {pendingFuelCount > 0 && (
+                      <span className="bg-rose-500 text-white text-xs font-bold px-2 py-0.5 rounded-full ml-auto">
+                        {pendingFuelCount}
+                      </span>
+                    )}
                   </Link>
                   <Link href="/admin/inspections" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 text-gray-600 rounded-lg">
                     <ClipboardCheck className="w-4 h-4" /> แบบรายงานสภาพรถ
+                  </Link>
+                  <Link href="/admin/evaluations" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2 hover:bg-yellow-50 text-gray-600 rounded-lg">
+                    <Star className="w-4 h-4 text-yellow-500" /> ผลการประเมิน
                   </Link>
                   <Link href="/admin/reports" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2 hover:bg-orange-50 text-gray-600 rounded-lg transition-colors">
                     <FileText className="w-4 h-4 text-orange-500" /> รายงาน

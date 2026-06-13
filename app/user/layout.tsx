@@ -13,7 +13,8 @@ import {
   LogOut,
   ChevronRight,
   UserCircle,
-  BookOpen
+  BookOpen,
+  Bell
 } from "lucide-react";
 
 export default function UserLayout({
@@ -25,6 +26,7 @@ export default function UserLayout({
   const [loggingOut, setLoggingOut] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<{ full_name: string; role: string; line_picture_url?: string } | null>(null);
+  const [pendingEvals, setPendingEvals] = useState(0);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -58,7 +60,30 @@ export default function UserLayout({
         console.error("Error fetching user profile:", err);
       }
     };
+
+    const fetchPendingEvals = async () => {
+      try {
+        const res = await fetch("/api/user/my-requests");
+        if (res.ok) {
+          const data = await res.json();
+          const now = new Date();
+          const curMonth = now.getMonth();
+          const curYear = now.getFullYear();
+          const count = data.filter((b: any) => {
+            if (b.status !== "COMPLETED" || b.is_satisfied !== null || b.evaluation_comment === "__SKIP__") return false;
+            if (!b.start_at) return false;
+            const bDate = new Date(b.start_at);
+            return bDate.getMonth() === curMonth && bDate.getFullYear() === curYear;
+          }).length;
+          setPendingEvals(count);
+        }
+      } catch (e) {
+        console.error("Error fetching pending evals:", e);
+      }
+    };
+
     fetchProfile();
+    fetchPendingEvals();
   }, []);
 
   const handleLogout = async () => {
@@ -111,17 +136,22 @@ export default function UserLayout({
             <nav className="hidden md:flex items-center gap-2">
               {[
                 { href: "/user", label: "ขอใช้รถ", icon: Car },
-                { href: "/user/my-requests", label: "ประวัติ", icon: FileText },
+                { href: "/user/my-requests", label: "ประวัติ", icon: FileText, showBadge: pendingEvals > 0 },
                 { href: "/user/profile", label: "ข้อมูลส่วนตัว", icon: UserCircle },
                 { href: "/user/change-password", label: "รหัสผ่าน", icon: Key },
               ].map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black text-blue-50 hover:text-white hover:bg-white/10 transition-all uppercase tracking-wider"
+                  className="relative flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black text-blue-50 hover:text-white hover:bg-white/10 transition-all uppercase tracking-wider"
                 >
                   <item.icon className="w-4 h-4 opacity-80" />
                   {item.label}
+                  {item.showBadge && (
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-amber-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg animate-bounce">
+                      <Bell className="w-3 h-3 text-white fill-white" />
+                    </span>
+                  )}
                 </Link>
               ))}
 
@@ -218,8 +248,13 @@ export default function UserLayout({
           <Link
             href="/user/my-requests"
             onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center justify-between p-3.5 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all group"
+            className="flex items-center justify-between p-3.5 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all group relative"
           >
+            {pendingEvals > 0 && (
+              <div className="absolute -top-2 -right-2 w-7 h-7 bg-gradient-to-r from-amber-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg shadow-orange-200 animate-bounce">
+                <Bell className="w-4 h-4 text-white fill-white" />
+              </div>
+            )}
             <div className="flex items-center gap-3.5">
               <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300 shadow-sm">
                 <FileText className="w-5 h-5" />

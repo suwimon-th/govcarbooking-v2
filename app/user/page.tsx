@@ -24,7 +24,8 @@ import {
     Menu,
     Car,
     LogOut,
-    LogIn
+    LogIn,
+    Star
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -384,7 +385,7 @@ export default function UserPage() {
                     {[
                         { href: "/fuel", icon: Fuel, color: "rose", label: "เบิกน้ำมัน" },
                         { onClick: () => setReportModalOpen(true), icon: AlertTriangle, color: "amber", label: "แจ้งปัญหา" },
-                        { href: "/vehicle-inspection", icon: ClipboardCheck, color: "blue", label: "ตรวจสภาพรถ" },
+                        { href: "/quality", icon: Star, color: "yellow", label: "ประเมิน/ตรวจสภาพ" },
                         { href: "/vehicle-info", icon: Car, color: "indigo", label: "ข้อมูลรถ" },
                         { href: "https://line.me/R/ti/p/@420uicrg", icon: MessageCircle, color: "emerald", label: "ติดต่อเรา", external: true }
                     ].map((item, idx) => {

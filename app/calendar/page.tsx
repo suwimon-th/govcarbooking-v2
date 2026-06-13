@@ -48,7 +48,8 @@ import {
     Home,
     Settings,
     History,
-    Lock
+    Lock,
+    Star
 } from 'lucide-react';
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
@@ -462,10 +463,10 @@ export default function PublicCalendarPage() {
                     {[
                         { href: "/fuel", icon: Fuel, color: "rose", label: "เบิกน้ำมัน" },
                         { onClick: () => setReportModalOpen(true), icon: AlertTriangle, color: "amber", label: "แจ้งปัญหา" },
-                        { href: "/vehicle-inspection", icon: ClipboardCheck, color: "blue", label: "ตรวจสภาพรถ", authed: true },
+                        { href: "/quality", icon: Star, color: "yellow", label: "ประเมิน/ตรวจสภาพ" },
                         { href: "/vehicle-info", icon: Car, color: "indigo", label: "ข้อมูลรถ" },
                         { href: "https://line.me/R/ti/p/@420uicrg", icon: MessageCircle, color: "emerald", label: "ติดต่อเรา", external: true }
-                    ].filter(item => !item.authed || userProfile).map((item, idx) => {
+                    ].map((item, idx) => {
                         const Comp: any = item.href ? (item.external ? 'a' : Link) : 'button';
                         const props = item.href ? (item.external ? { href: item.href, target: "_blank", rel: "noopener noreferrer" } : { href: item.href }) : { onClick: item.onClick };
                         
@@ -514,6 +515,13 @@ export default function PublicCalendarPage() {
                             <div className="sm:block">
                                 <PublicQueueCard />
                             </div>
+                            {userProfile && (
+                                <Link href="/user/request"
+                                    className="hidden lg:flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-2xl font-black text-sm transition-all shadow-lg shadow-blue-200 hover:-translate-y-0.5 active:scale-95">
+                                    <Plus className="w-4 h-4" />
+                                    ขอใช้รถใหม่
+                                </Link>
+                            )}
                         </div>
                     </div>
 

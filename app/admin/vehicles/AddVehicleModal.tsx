@@ -117,7 +117,6 @@ export default function AddVehicleModal({ onClose, onAdded, onError }: Props) {
       engine_size: form.engine_size || null,
       drive_type: form.drive_type || null,
       emission_standard: form.emission_standard || null,
-      photo_url: photo_urls[0] || null,
       photo_urls: photo_urls.length > 0 ? photo_urls : null,
     }]);
 

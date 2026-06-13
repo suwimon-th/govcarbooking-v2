@@ -16,7 +16,8 @@ import {
   Search,
   Star,
   ThumbsUp,
-  ThumbsDown
+  ThumbsDown,
+  Bell
 } from "lucide-react";
 import Link from "next/link";
 import { generateBookingDocument } from "@/lib/documentGenerator";
@@ -193,6 +194,13 @@ export default function MyRequestsPage() {
     total: items.length,
     pending: items.filter(i => i.status === 'REQUESTED').length,
     completed: items.filter(i => i.status === 'COMPLETED').length
+  };
+
+  const isCurrentMonth = (dateStr: string | null) => {
+    if (!dateStr) return false;
+    const d = new Date(dateStr);
+    const now = new Date();
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   };
 
   return (
@@ -407,14 +415,14 @@ export default function MyRequestsPage() {
                     </td>
                     <td className="px-8 py-6 text-center">
                       <div className="flex items-center justify-center gap-1">
-                        {it.status === "COMPLETED" && it.is_satisfied === null && it.evaluation_comment !== "__SKIP__" && (
+                        {it.status === "COMPLETED" && it.is_satisfied === null && it.evaluation_comment !== "__SKIP__" && isCurrentMonth(it.start_at) && (
                           <div className="flex flex-col gap-1.5">
                             <Link 
                               href={`/user/evaluate/${it.id}`} 
-                              className="flex items-center gap-2 px-3 py-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-xl transition-all border border-emerald-100 font-bold text-xs"
+                              className="relative flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-amber-400 to-orange-500 text-white hover:from-amber-500 hover:to-orange-600 rounded-xl transition-all shadow-md shadow-orange-200 font-bold text-xs"
                               title="ประเมินการบริการ"
                             >
-                              <Star className="w-3.5 h-3.5 fill-emerald-600" />
+                              <Bell className="w-4 h-4 fill-white animate-bounce" />
                               <span>ประเมิน</span>
                             </Link>
                             <button
@@ -538,13 +546,13 @@ export default function MyRequestsPage() {
                   </div>                </div>
 
                 <div className="flex flex-wrap gap-2">
-                  {it.status === "COMPLETED" && it.is_satisfied === null && it.evaluation_comment !== "__SKIP__" && (
+                  {it.status === "COMPLETED" && it.is_satisfied === null && it.evaluation_comment !== "__SKIP__" && isCurrentMonth(it.start_at) && (
                     <div className="flex flex-col gap-2 mb-2">
                       <Link
                         href={`/user/evaluate/${it.id}`}
-                        className="w-full py-3 bg-green-50 border border-green-200 rounded-xl text-xs font-bold text-green-700 flex items-center justify-center gap-2 shadow-sm"
+                        className="w-full py-3 bg-gradient-to-r from-amber-400 to-orange-500 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-2 shadow-md shadow-orange-200"
                       >
-                        <Star className="w-4 h-4 text-green-600" /> ประเมินความพึงพอใจการใช้รถ
+                        <Bell className="w-4 h-4 fill-white animate-bounce" /> ประเมินความพึงพอใจการใช้รถ
                       </Link>
                       <button
                         onClick={async () => {
