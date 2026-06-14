@@ -66,6 +66,7 @@ export async function POST(req: Request) {
             start_mileage,
             end_mileage, // New
             manual_driver_name,
+            other_vehicle_plate, // อื่นๆ: ทะเบียนรถยืม
         } = body;
 
         let finalDriverId = driver_id;
@@ -142,6 +143,8 @@ export async function POST(req: Request) {
         if (vehicle_id !== undefined) updateData.vehicle_id = vehicle_id || null;
         if (start_at) updateData.start_at = start_at;
         if (end_at) updateData.end_at = end_at;
+        // อื่นๆ: อัปเดตทะเบียนยืมถ้าส่งมา
+        if (other_vehicle_plate !== undefined) updateData.other_vehicle_plate = other_vehicle_plate || null;
 
         const { error } = await supabase
             .from("bookings")

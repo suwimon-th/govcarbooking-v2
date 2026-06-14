@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { X, Save, Pencil, MapPin, Clock, Calendar, Users, Building, AlertTriangle, Plus, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { X, Save, Pencil, MapPin, Clock, Calendar, Users, Building, AlertTriangle, Plus, Trash2, MessageSquare, Send, User } from "lucide-react";
 import TimePicker24 from "@/app/components/TimePicker24";
 import { supabase } from "@/lib/supabaseClient";
 import Swal from "sweetalert2";
@@ -462,6 +462,7 @@ export default function EditBookingModal({ booking, onClose, onUpdated }: Props)
                                     className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-850 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
                                 />
                             </div>
+
                         </>
                     )}
                 </div>

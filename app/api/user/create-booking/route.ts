@@ -84,13 +84,15 @@ export async function POST(req: Request) {
       is_ot,
       no_request_code = false,
       skip_line_notification = false, // Added
+      other_vehicle_plate = null,  // อื่นๆ: เลขทะเบียนรถที่ยืมมา
+      other_driver_name = null,    // อื่นๆ: ชื่อคนขับภายนอก
     } = body;
 
     if (
       !requester_id ||
       !requester_name ||
       !department_id ||
-      !vehicle_id ||
+      (!vehicle_id && !other_vehicle_plate) ||
       !date ||
       !start_time ||
       !purpose
@@ -233,8 +235,29 @@ export async function POST(req: Request) {
       // Generate Test Code (e.g. TEST-123456)
       const timestamp = new Date().getTime().toString().slice(-6);
       request_code = `TEST-${timestamp}`;
-    } else {
+    } else if (vehicle_id) {
       request_code = await generateRequestCode(vehicle_id);
+    } else {
+      // Other vehicle (อื่นๆ): generate code from plate digits
+      const digits = (other_vehicle_plate || "").replace(/\D/g, "");
+      const plateSuffix = digits.slice(-2) || "OT";
+      const prefix = `ENV-${plateSuffix}/`;
+      const { data: existingCodes } = await supabase
+        .from("bookings")
+        .select("request_code")
+        .like("request_code", `${prefix}%`)
+        .order("request_code", { ascending: false })
+        .limit(1);
+      let running = 1;
+      if (existingCodes && existingCodes.length > 0) {
+        const last = existingCodes[0].request_code;
+        const parts = last.split("/");
+        if (parts.length === 2) {
+          const parsed = Number(parts[1]);
+          if (!isNaN(parsed)) running = parsed + 1;
+        }
+      }
+      request_code = `${prefix}${String(running).padStart(3, "0")}`;
     }
 
     // ✅ Calculate is_ot automatically
@@ -297,7 +320,7 @@ export async function POST(req: Request) {
             requester_id,
             requester_name,
             department_id: safeDeptId,
-            vehicle_id,
+            vehicle_id: vehicle_id || null,
             start_at,
             end_at: dbEndAt,
             purpose,
@@ -310,6 +333,8 @@ export async function POST(req: Request) {
             requester_position: position,
             passengers: body.passengers || [],
             is_ot: isOT,
+            other_vehicle_plate: other_vehicle_plate || null,
+            other_driver_name: other_driver_name || null,
           },
         ])
         .select()

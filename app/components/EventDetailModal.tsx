@@ -1,4 +1,5 @@
-import React from "react";
+"use client";
+import React, { useEffect, useRef, useState } from "react";
 import { getStatusLabel, getStatusColor } from "@/lib/statusHelper";
 import {
   X,
@@ -10,7 +11,9 @@ import {
   Phone,
   FileText,
   Activity,
-  Gauge
+  Gauge,
+  MessageSquare,
+  Send
 } from "lucide-react";
 
 export type BookingDetail = {

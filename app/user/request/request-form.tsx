@@ -65,6 +65,11 @@ export default function RequestForm({
   const [endTime, setEndTime] = useState<string>("");
   const [vehicleId, setVehicleId] = useState<string>("");
   const [driverId, setDriverId] = useState<string>("");
+  // "อื่นๆ" vehicle/driver states
+  const [isOtherVehicle, setIsOtherVehicle] = useState<boolean>(false);
+  const [otherVehiclePlate, setOtherVehiclePlate] = useState<string>("");
+  const [isOtherDriver, setIsOtherDriver] = useState<boolean>(false);
+  const [otherDriverName, setOtherDriverName] = useState<string>("");
   const [purpose, setPurpose] = useState<string>("");
   const [isOt, setIsOt] = useState<boolean>(false);
   const [hasManuallyToggledOt, setHasManuallyToggledOt] = useState<boolean>(false);
@@ -348,12 +353,34 @@ export default function RequestForm({
       return;
     }
 
-    if (!date || !startTime || !vehicleId || !purpose.trim()) {
+    if (!date || !startTime || (!vehicleId && !isOtherVehicle) || !purpose.trim()) {
       setSubmitState("error");
       Swal.fire({
         icon: 'warning',
         title: 'ข้อมูลไม่ครบถ้วน',
         text: 'กรุณากรอกข้อมูลให้ครบถ้วน (วันที่, เวลา, รถ, วัตถุประสงค์)',
+        confirmButtonText: 'ตกลง'
+      });
+      return;
+    }
+
+    if (isOtherVehicle && !otherVehiclePlate.trim()) {
+      setSubmitState("error");
+      Swal.fire({
+        icon: 'warning',
+        title: 'กรุณาระบุเลขทะเบียนรถ',
+        text: 'เมื่อเลือก "อื่นๆ" กรุณากรอกเลขทะเบียนรถที่นำมาใช้',
+        confirmButtonText: 'ตกลง'
+      });
+      return;
+    }
+
+    if (isOtherVehicle && isOtherDriver && !otherDriverName.trim()) {
+      setSubmitState("error");
+      Swal.fire({
+        icon: 'warning',
+        title: 'กรุณาระบุชื่อคนขับ',
+        text: 'เมื่อเลือกคนขับ "อื่นๆ" กรุณากรอกชื่อคนขับ',
         confirmButtonText: 'ตกลง'
       });
       return;
@@ -378,7 +405,7 @@ export default function RequestForm({
       }
     }
 
-    if (isOt && !driverId) {
+    if (isOt && !driverId && !(isOtherVehicle && isOtherDriver && otherDriverName.trim())) {
       setSubmitState("error");
       Swal.fire({
         icon: 'warning',
@@ -389,7 +416,7 @@ export default function RequestForm({
       return;
     }
 
-    if (isRetroactive && !driverId) {
+    if (isRetroactive && !driverId && !(isOtherVehicle && isOtherDriver && otherDriverName.trim())) {
       setSubmitState("error");
       Swal.fire({
         icon: 'warning',
@@ -403,11 +430,15 @@ export default function RequestForm({
     try {
       setSubmitState("submitting");
 
+      // Resolve effective plate number and driver name for document printing
+      const effectivePlateNumber = isOtherVehicle ? otherVehiclePlate.trim() : null;
+      const effectiveDriverName = (isOtherVehicle && isOtherDriver) ? otherDriverName.trim() : null;
+
       const payload = {
         requester_id: finalRequesterId,
         requester_name: finalRequesterName || "ไม่ระบุชื่อ",
         department_id: finalRequesterDeptId || 1, // Fix: Use Integer ID (Default 1 for Env & Sanitation)
-        vehicle_id: vehicleId,
+        vehicle_id: isOtherVehicle ? null : vehicleId,
         date,
         start_time: startTime,
         end_time: endTime || null,
@@ -422,6 +453,9 @@ export default function RequestForm({
         is_ot: isOt,
         no_request_code: noRequestCode,
         skip_line_notification: skipLineNotification,
+        // For borrowed vehicles (อื่นๆ): store plate & driver for document only, not creating new vehicle
+        other_vehicle_plate: effectivePlateNumber,
+        other_driver_name: effectiveDriverName,
       };
 
       const res = await fetch("/api/user/create-booking", {
@@ -495,6 +529,10 @@ export default function RequestForm({
       setPassengerCount("");
       setPassengers([]);
       setDestination("");
+      setIsOtherVehicle(false);
+      setOtherVehiclePlate("");
+      setIsOtherDriver(false);
+      setOtherDriverName("");
     } catch (err) {
       console.error(err);
       setSubmitState("error");
@@ -519,11 +557,15 @@ export default function RequestForm({
       purpose: booking.purpose,
       start_at: booking.start_at,
       end_at: booking.end_at,
-      driver_name: booking.driver_id
-        ? drivers.find(d => d.id === booking.driver_id)?.full_name || null
-        : null,
-      plate_number: vehicles.find((v) => v.id === booking.vehicle_id)?.plate_number || null,
-      brand: vehicles.find((v) => v.id === booking.vehicle_id)?.brand || null,
+      driver_name: booking.other_driver_name
+        ? booking.other_driver_name
+        : booking.driver_id
+          ? drivers.find(d => d.id === booking.driver_id)?.full_name || null
+          : null,
+      plate_number: booking.other_vehicle_plate
+        ? booking.other_vehicle_plate
+        : vehicles.find((v) => v.id === booking.vehicle_id)?.plate_number || null,
+      brand: booking.other_vehicle_plate ? null : vehicles.find((v) => v.id === booking.vehicle_id)?.brand || null,
       passenger_count: booking.passenger_count || 1,
       destination: booking.destination || "",
       requester_position: booking.requester_position || position || "",
@@ -762,7 +804,12 @@ export default function RequestForm({
                 onClick={() => setShowVehicleSelector(true)}
                 className={`w-full text-left ${textInputClasses} flex items-center justify-between !py-3 bg-white`}
               >
-                {vehicleId ? (
+                {isOtherVehicle ? (
+                  <span className="font-semibold text-gray-800 flex items-center gap-2">
+                    <span className="text-sm font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-200">อื่นๆ (ระบุเลขทะเบียนรถ)</span>
+                    {otherVehiclePlate && <span className="text-gray-500 text-sm">{otherVehiclePlate}</span>}
+                  </span>
+                ) : vehicleId ? (
                   (() => {
                     const v = vehicles.find((item) => item.id === vehicleId);
                     if (!v) return null;
@@ -785,26 +832,89 @@ export default function RequestForm({
                 )}
                 <ChevronRight className="w-5 h-5 text-gray-400 rotate-90" />
               </button>
+
+              {/* Other Vehicle: Plate input + Driver selector */}
+              {isOtherVehicle && (
+                <div className="mt-3 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                  {/* Plate number input */}
+                  <div className="relative">
+                    <Car className="absolute left-3.5 top-3.5 w-5 h-5 text-orange-400" />
+                    <input
+                      type="text"
+                      placeholder="ระบุเลขทะเบียนรถ เช่น กข 1234 กรุงเทพมหานคร"
+                      value={otherVehiclePlate}
+                      onChange={(e) => setOtherVehiclePlate(e.target.value)}
+                      className={`${textInputClasses} border-orange-200 focus:border-orange-400 focus:ring-orange-100 bg-orange-50/30`}
+                    />
+                  </div>
+
+                  {/* Driver selector for other vehicle */}
+                  <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <User className="w-4 h-4 text-orange-500" />
+                      <h4 className="text-sm font-bold text-orange-800">คนขับรถ (สำหรับรถที่นำมาใช้)</h4>
+                    </div>
+                    <div className="relative">
+                      <User className="absolute left-3.5 top-3.5 w-5 h-5 text-orange-400" />
+                      <select
+                        value={isOtherDriver ? "__other__" : driverId}
+                        onChange={(e) => {
+                          if (e.target.value === "__other__") {
+                            setIsOtherDriver(true);
+                            setDriverId("");
+                          } else {
+                            setIsOtherDriver(false);
+                            setOtherDriverName("");
+                            setDriverId(e.target.value);
+                          }
+                        }}
+                        className={`${selectInputClasses} border-orange-200 focus:border-orange-400 focus:ring-orange-100 bg-white`}
+                      >
+                        <option value="">-- เลือกคนขับ (ถ้ามี) --</option>
+                        {drivers.map((d) => (
+                          <option key={d.id} value={d.id}>{d.full_name}</option>
+                        ))}
+                        <option value="__other__">อื่นๆ (ระบุชื่อ)</option>
+                      </select>
+                      <div className="absolute right-4 top-4 pointer-events-none">
+                        <ChevronRight className="w-4 h-4 text-orange-400 rotate-90" />
+                      </div>
+                    </div>
+
+                    {/* Other driver name input */}
+                    {isOtherDriver && (
+                      <div className="relative animate-in fade-in slide-in-from-top-1 duration-200">
+                        <User className="absolute left-3.5 top-3.5 w-5 h-5 text-orange-400" />
+                        <input
+                          type="text"
+                          placeholder="ระบุชื่อคนขับรถ"
+                          value={otherDriverName}
+                          onChange={(e) => setOtherDriverName(e.target.value)}
+                          className={`${textInputClasses} border-orange-200 focus:border-orange-400 focus:ring-orange-100 bg-orange-50/30`}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* OT / Retroactive / Admin Driver Selection */}
             {(isOffHours() || isRetroactive || canSelectRequester) && (
-              <div className={`${
-                isRetroactive
-                  ? 'bg-purple-50 border-purple-200'
-                  : (isOffHours() || isOt)
-                    ? 'bg-amber-50 border-amber-200'
-                    : 'bg-blue-50/50 border-blue-200'
-              } border rounded-xl p-5 animate-in fade-in slide-in-from-top-2 shadow-sm`}>
+              <div className={`${isRetroactive
+                ? 'bg-purple-50 border-purple-200'
+                : (isOffHours() || isOt)
+                  ? 'bg-amber-50 border-amber-200'
+                  : 'bg-blue-50/50 border-blue-200'
+                } border rounded-xl p-5 animate-in fade-in slide-in-from-top-2 shadow-sm`}>
                 <div className="flex items-center justify-between gap-3 mb-3">
                   <div className="flex items-start gap-3">
-                    <div className={`${
-                      isRetroactive
-                        ? 'bg-purple-100 text-purple-600'
-                        : (isOffHours() || isOt)
-                          ? 'bg-amber-100 text-amber-600'
-                          : 'bg-blue-100 text-blue-600'
-                    } p-1.5 rounded-lg shrink-0`}>
+                    <div className={`${isRetroactive
+                      ? 'bg-purple-100 text-purple-600'
+                      : (isOffHours() || isOt)
+                        ? 'bg-amber-100 text-amber-600'
+                        : 'bg-blue-100 text-blue-600'
+                      } p-1.5 rounded-lg shrink-0`}>
                       {isRetroactive ? (
                         <Clock className="w-5 h-5" />
                       ) : (isOffHours() || isOt) ? (
@@ -814,26 +924,24 @@ export default function RequestForm({
                       )}
                     </div>
                     <div>
-                      <h4 className={`font-bold ${
-                        isRetroactive
-                          ? 'text-purple-900'
-                          : (isOffHours() || isOt)
-                            ? 'text-amber-900'
-                            : 'text-blue-900'
-                      } text-sm`}>
+                      <h4 className={`font-bold ${isRetroactive
+                        ? 'text-purple-900'
+                        : (isOffHours() || isOt)
+                          ? 'text-amber-900'
+                          : 'text-blue-900'
+                        } text-sm`}>
                         {isRetroactive
                           ? "ระบุคนขับรถ (ย้อนหลัง)"
                           : (isOffHours() || isOt)
                             ? "นอกเวลาราชการ (OT)"
                             : "มอบหมายพนักงานขับรถ (แอดมิน)"}
                       </h4>
-                      <p className={`text-xs ${
-                        isRetroactive
-                          ? 'text-purple-700'
-                          : (isOffHours() || isOt)
-                            ? 'text-amber-700'
-                            : 'text-blue-700'
-                      } mt-1`}>
+                      <p className={`text-xs ${isRetroactive
+                        ? 'text-purple-700'
+                        : (isOffHours() || isOt)
+                          ? 'text-amber-700'
+                          : 'text-blue-700'
+                        } mt-1`}>
                         {isRetroactive
                           ? "กรุณาระบุคนขับที่ปฏิบัติงานจริง"
                           : (isOffHours() || isOt)
@@ -855,14 +963,12 @@ export default function RequestForm({
                       aria-label="toggle ot"
                     >
                       <div
-                        className={`w-14 h-7 rounded-full transition-colors duration-300 ${
-                          isOt ? "bg-amber-500" : "bg-gray-300"
-                        }`}
+                        className={`w-14 h-7 rounded-full transition-colors duration-300 ${isOt ? "bg-amber-500" : "bg-gray-300"
+                          }`}
                       >
                         <div
-                          className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ${
-                            isOt ? "translate-x-7" : "translate-x-0.5"
-                          }`}
+                          className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ${isOt ? "translate-x-7" : "translate-x-0.5"
+                            }`}
                         />
                       </div>
                     </button>
@@ -1085,40 +1191,80 @@ export default function RequestForm({
                     <p className="text-sm">กำลังโหลด...</p>
                   </div>
                 ) : (
-                  vehicles.map((v) => {
-                    const isSelected = vehicleId === v.id;
-                    const searchKey = `${v.plate_number} ${v.brand} ${v.model} ${v.type || ''}`.toLowerCase();
-                    return (
-                      <button
-                        key={v.id}
-                        type="button"
-                        data-vehicle-item={searchKey}
-                        onClick={() => { setVehicleId(v.id); setShowVehicleSelector(false); }}
-                        className={`w-full px-4 py-3 rounded-xl border-2 flex items-center gap-3 transition-all active:scale-[0.98] text-left
-                          ${isSelected
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-gray-100 bg-white hover:border-blue-200 hover:bg-blue-50/30'}`}
-                      >
-                        <div className={`w-14 h-14 rounded-xl flex items-center justify-center shrink-0 overflow-hidden ${isSelected ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                          {v.photo_urls && v.photo_urls.length > 0 ? (
-                            <img src={v.photo_urls[0]} alt={v.plate_number || ""} className="w-full h-full object-cover" />
-                          ) : (
-                            <Car className="w-6 h-6" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-gray-900 text-sm">{v.plate_number}</span>
-                            {v.type && (
-                              <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full">{v.type}</span>
+                  <>
+                    {vehicles.map((v) => {
+                      const isSelected = !isOtherVehicle && vehicleId === v.id;
+                      const searchKey = `${v.plate_number} ${v.brand} ${v.model} ${v.type || ''}`.toLowerCase();
+                      return (
+                        <button
+                          key={v.id}
+                          type="button"
+                          data-vehicle-item={searchKey}
+                          onClick={() => {
+                            setVehicleId(v.id);
+                            setIsOtherVehicle(false);
+                            setOtherVehiclePlate("");
+                            setIsOtherDriver(false);
+                            setOtherDriverName("");
+                            setShowVehicleSelector(false);
+                          }}
+                          className={`w-full px-4 py-3 rounded-xl border-2 flex items-center gap-3 transition-all active:scale-[0.98] text-left
+                            ${isSelected
+                              ? 'border-blue-500 bg-blue-50'
+                              : 'border-gray-100 bg-white hover:border-blue-200 hover:bg-blue-50/30'}`}
+                        >
+                          <div className={`w-14 h-14 rounded-xl flex items-center justify-center shrink-0 overflow-hidden ${isSelected ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                            {v.photo_urls && v.photo_urls.length > 0 ? (
+                              <img src={v.photo_urls[0]} alt={v.plate_number || ""} className="w-full h-full object-cover" />
+                            ) : (
+                              <Car className="w-6 h-6" />
                             )}
                           </div>
-                          <div className="text-xs text-gray-400 truncate">{v.brand} {v.model}</div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-gray-900 text-sm">{v.plate_number}</span>
+                              {v.type && (
+                                <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full">{v.type}</span>
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-400 truncate">{v.brand} {v.model}</div>
+                          </div>
+                          {isSelected && <CheckCircle2 className="w-5 h-5 text-blue-600 shrink-0" />}
+                        </button>
+                      );
+                    })}
+
+                    {/* Divider */}
+                    <div className="pt-1 pb-0.5">
+                      <div className="border-t border-dashed border-gray-200" />
+                    </div>
+
+                    {/* อื่นๆ option */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsOtherVehicle(true);
+                        setVehicleId("");
+                        setShowVehicleSelector(false);
+                      }}
+                      className={`w-full px-4 py-3 rounded-xl border-2 flex items-center gap-3 transition-all active:scale-[0.98] text-left
+                        ${isOtherVehicle
+                          ? 'border-orange-400 bg-orange-50'
+                          : 'border-gray-100 bg-white hover:border-orange-300 hover:bg-orange-50/30'}`}
+                    >
+                      <div className={`w-14 h-14 rounded-xl flex items-center justify-center shrink-0 ${isOtherVehicle ? 'bg-orange-500 text-white' : 'bg-orange-50 text-orange-400'}`}>
+                        <Car className="w-6 h-6" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-gray-900 text-sm">อื่นๆ</span>
+                          <span className="text-[10px] font-semibold text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded-full">ระบุทะเบียนรถ</span>
                         </div>
-                        {isSelected && <CheckCircle2 className="w-5 h-5 text-blue-600 shrink-0" />}
-                      </button>
-                    );
-                  })
+                        <div className="text-xs text-gray-400">ระบุเลขทะเบียนเอง (ไม่สร้างข้อมูลรถใหม่)</div>
+                      </div>
+                      {isOtherVehicle && <CheckCircle2 className="w-5 h-5 text-orange-500 shrink-0" />}
+                    </button>
+                  </>
                 )}
               </div>
             </div>

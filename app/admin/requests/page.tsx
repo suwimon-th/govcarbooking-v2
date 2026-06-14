@@ -71,9 +71,13 @@ export interface BookingRow {
   end_mileage: number | null;
   distance: number | null;
 
-  is_line_notified?: boolean; // Added
+  is_line_notified?: boolean;
   is_satisfied?: boolean | null;
   evaluation_comment?: string | null;
+
+  // อื่นๆ (ยืมรถจากฝ่ายอื่น)
+  other_vehicle_plate?: string | null;
+  other_driver_name?: string | null;
 
   requester: RequesterInfo | null;
   driver: DriverInfo | null;
@@ -249,6 +253,9 @@ function AdminRequestsContent() {
         is_satisfied,
         evaluation_comment,
 
+        other_vehicle_plate,
+        other_driver_name,
+
         requester:requester_id(full_name, position),
         driver:driver_id(full_name),
         vehicle:vehicle_id(plate_number, brand, model, photo_urls)
@@ -349,9 +356,13 @@ function AdminRequestsContent() {
       purpose: booking.purpose || "-",
       start_at: booking.start_at || "",
       end_at: booking.end_at,
-      driver_name: booking.driver?.full_name || null,
-      plate_number: booking.vehicle?.plate_number || null,
-      brand: booking.vehicle?.brand || null,
+      driver_name: booking.other_driver_name
+        ? booking.other_driver_name
+        : booking.driver?.full_name || null,
+      plate_number: booking.other_vehicle_plate
+        ? booking.other_vehicle_plate
+        : booking.vehicle?.plate_number || null,
+      brand: booking.other_vehicle_plate ? null : booking.vehicle?.brand || null,
       destination: booking.destination || "",
       passenger_count: booking.passenger_count || 1,
       requester_position: booking.requester?.position || null,
