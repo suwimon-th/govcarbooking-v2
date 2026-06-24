@@ -19,7 +19,8 @@ import {
   Shield,
   ShieldCheck,
   RefreshCcw,
-  Image
+  Image,
+  Lock
 } from "lucide-react";
 
 // =========================
@@ -30,6 +31,7 @@ interface UserRow {
   id: string;
   full_name: string | null;
   username: string | null;
+  password: string | null;
   role: string;
   position: string | null;
   line_picture_url: string | null;
@@ -62,8 +64,9 @@ export default function UsersPage() {
   const loadData = async () => {
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, full_name, username, role, position, line_picture_url")
-      .neq("username", "system_config")
+      .select("id, full_name, username, password, role, position, line_picture_url")
+      // ดึงทุกคน ยกเว้น system_config (username=null จะถูกรวมด้วย)
+      .or("username.neq.system_config,username.is.null")
       .order("created_at", { ascending: false });
 
     if (!error && data) {
@@ -325,7 +328,7 @@ export default function UsersPage() {
 
             <tbody className="divide-y divide-gray-100">
               {filteredRows.map((u) => (
-                <tr key={u.id} className="hover:bg-blue-50/30 transition-colors">
+                <tr key={u.id} className={`hover:bg-blue-50/30 transition-colors ${!u.password ? 'bg-green-50/30' : ''}`}>
                   <td className="px-6 py-4 align-top">
                     <div className="flex items-center gap-3">
                       {u.line_picture_url ? (
@@ -343,7 +346,7 @@ export default function UsersPage() {
                     </div>
                   </td>
                   <td className="px-6 py-4 align-top text-gray-600 font-mono">
-                    {u.username}
+                    {u.username || "-"}
                   </td>
                   <td className="px-6 py-4 align-top text-gray-700">
                     {u.position || "-"}

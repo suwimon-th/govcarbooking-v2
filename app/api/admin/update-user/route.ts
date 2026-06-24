@@ -10,40 +10,43 @@ export async function POST(req: Request) {
   try {
     const { id, full_name, username, role, position } = await req.json();
 
-    if (!id || !full_name || !username || !role) {
+    if (!id || !full_name || !role) {
       return NextResponse.json(
         { error: "ข้อมูลไม่ครบ" },
         { status: 400 }
       );
     }
 
-    // ป้องกัน username ซ้ำ
-    const { data: existed, error: checkError } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("username", username)
-      .neq("id", id)
-      .maybeSingle();
+    // ป้องกัน username ซ้ำ (เฉพาะกรณีที่กรอก username มา)
+    if (username) {
+      const { data: existed, error: checkError } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("username", username)
+        .neq("id", id)
+        .maybeSingle();
 
-    if (checkError) {
-      return NextResponse.json(
-        { error: checkError.message },
-        { status: 400 }
-      );
-    }
+      if (checkError) {
+        return NextResponse.json(
+          { error: checkError.message },
+          { status: 400 }
+        );
+      }
 
-    if (existed) {
-      return NextResponse.json(
-        { error: "Username นี้ถูกใช้งานแล้ว" },
-        { status: 400 }
-      );
+      if (existed) {
+        return NextResponse.json(
+          { error: "Username นี้ถูกใช้งานแล้ว" },
+          { status: 400 }
+        );
+      }
     }
 
     const { error } = await supabase
       .from("profiles")
       .update({
         full_name,
-        username,
+        // ถ้า username ว่าง ให้บันทึกเป็น null
+        username: username || null,
         role,
         position: position || null,
       })

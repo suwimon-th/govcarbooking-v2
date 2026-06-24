@@ -7,11 +7,12 @@ import { X, Pencil, User, Shield, CreditCard } from "lucide-react";
 export default function EditUserModal({ user, onClose, onUpdated }: any) {
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
-    full_name: user.full_name,
-    username: user.username,
+    full_name: user.full_name || "",
+    username: user.username || "",
     role: user.role,
-    position: user.position,
+    position: user.position || "",
   });
+  const isLineOnly = !user.password;
 
   const update = (key: string, value: string) =>
     setForm({ ...form, [key]: value });
@@ -84,8 +85,14 @@ export default function EditUserModal({ user, onClose, onUpdated }: any) {
             <input
               value={form.username}
               onChange={(e) => update("username", e.target.value)}
+              placeholder={isLineOnly ? "(บัญชี LINE — ยังไม่มี username)" : "username"}
               className="w-full border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none border transition-all font-mono"
             />
+            {isLineOnly && (
+              <p className="text-xs text-green-700 mt-1.5 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                &#x1F7E2; บัญชีนี้เข้าสู่ระบบผ่าน LINE เท่านั้น — ยังไม่มีรหัสผ่านในระบบ
+              </p>
+            )}
           </div>
 
           <div>
