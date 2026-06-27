@@ -21,9 +21,36 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const BASE_URL =
+  process.env.PUBLIC_DOMAIN ||
+  "https://govcarbooking-v2-suwimon-ths-projects.vercel.app";
+
 export const metadata: Metadata = {
-  title: "GovCarBooking",
+  title: "GovCarBooking — ระบบบริหารการใช้รถราชการ",
   description: "ระบบบริหารการใช้รถราชการ สำนักงานเขตจอมทอง",
+  metadataBase: new URL(BASE_URL),
+  openGraph: {
+    title: "GovCarBooking — ระบบบริหารการใช้รถราชการ",
+    description: "ระบบบริหารการใช้รถราชการ สำนักงานเขตจอมทอง",
+    url: BASE_URL,
+    siteName: "GovCarBooking",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "GovCarBooking — ระบบบริหารการใช้รถราชการ สำนักงานเขตจอมทอง",
+      },
+    ],
+    locale: "th_TH",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "GovCarBooking — ระบบบริหารการใช้รถราชการ",
+    description: "ระบบบริหารการใช้รถราชการ สำนักงานเขตจอมทอง",
+    images: ["/og-image.png"],
+  },
 };
 
 export default function RootLayout({
