@@ -23,7 +23,7 @@ const geistMono = Geist_Mono({
 
 const BASE_URL =
   process.env.PUBLIC_DOMAIN ||
-  "https://govcarbooking-v2-suwimon-ths-projects.vercel.app";
+  "https://govcarbooking-v2.vercel.app";
 
 export const metadata: Metadata = {
   title: "GovCarBooking — ระบบบริหารการใช้รถราชการ",
