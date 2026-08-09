@@ -37,6 +37,7 @@ import ReportIssueModal from "@/app/components/ReportIssueModal";
 import PublicQueueCard from "@/app/components/PublicQueueCard";
 import MonthlyBookingList from "@/app/components/MonthlyBookingList";
 import DailyBookingList from "@/app/components/DailyBookingList";
+import { THAI_HOLIDAYS } from "@/lib/thai-holidays";
 
 /* ----------------------------------------------------
    TYPES
@@ -53,7 +54,12 @@ type CalendarEvent = {
         location?: string;
         vehicle?: string;
         driver?: string;
+        driver_name?: string;
+        driver_phone?: string;
         isOffHours?: boolean;
+        isDuty?: boolean;
+        isHoliday?: boolean;
+        holidayName?: string;
         request_code?: string;
     };
     backgroundColor?: string;
@@ -256,14 +262,14 @@ export default function UserPage() {
 
             return {
                 id: item.id,
-                title: item.requester_name || "ใช้งานรถ",
+                title: item.purpose || "ใช้งานรถ",
                 start: item.start,
                 end: item.end ?? undefined,
                 color: eventColor,
                 extendedProps: {
                     requester: item.requester_name || "ไม่ระบุ",
                     status: item.status,
-                    location: item.purpose, // Now purpose should be in item
+                    location: item.purpose,
                     vehicle: `รถ ${item.vehicle_plate || '-'}`,
                     isOffHours: item.is_off_hours,
                     driver: item.driver_name,
@@ -272,8 +278,110 @@ export default function UserPage() {
             };
         });
 
-        console.log("CALENDAR DATA LOADED:", formatted);
-        setEvents(formatted);
+        // Fetch dynamic duty settings from API
+        let dutyState = { global_enabled: true, default_title: "เวรรถยนต์โดยสารส่วนกลาง (รถตู้)", monthly_duties: {} as Record<string, any> };
+        try {
+            const dutyRes = await fetch("/api/duty-settings");
+            if (dutyRes.ok) {
+                const dutyJson = await dutyRes.json();
+                if (dutyJson) {
+                    dutyState = {
+                        global_enabled: typeof dutyJson.global_enabled === "boolean" ? dutyJson.global_enabled : (typeof dutyJson.enabled === "boolean" ? dutyJson.enabled : true),
+                        default_title: dutyJson.default_title || dutyJson.title || "เวรรถยนต์โดยสารส่วนกลาง (รถตู้)",
+                        monthly_duties: dutyJson.monthly_duties || {},
+                    };
+                }
+            }
+        } catch (e) {
+            console.error("Error loading duty settings:", e);
+        }
+
+        // Generate monthly duty badges if global_enabled is true
+        const dutyEvents: CalendarEvent[] = [];
+        if (dutyState.global_enabled) {
+            const currentYear = new Date().getFullYear();
+            for (let y = currentYear - 1; y <= currentYear + 5; y++) {
+                for (let m = 0; m < 12; m++) {
+                    const mKey = `${y}-${String(m + 1).padStart(2, '0')}`;
+                    const customConfig = dutyState.monthly_duties[mKey];
+
+                    if (customConfig) {
+                        if (customConfig.enabled) {
+                            const dateStr = customConfig.duty_date;
+                            const titleText = customConfig.title || dutyState.default_title;
+                            dutyEvents.push({
+                                id: `duty-van-3rd-mon-${dateStr}`,
+                                title: titleText,
+                                start: `${dateStr}T${customConfig.start_time || '08:30'}:00`,
+                                end: `${dateStr}T${customConfig.end_time || '16:30'}:00`,
+                                color: "#D97706",
+                                extendedProps: {
+                                    requester: titleText,
+                                    status: "เวรประจำเดือน",
+                                    location: customConfig.note || `${titleText} (เวลา ${customConfig.start_time || '08:30'} - ${customConfig.end_time || '16:30'} น.)`,
+                                    vehicle: "รถตู้ส่วนกลาง",
+                                    driver: customConfig.driver_name || "เวรรถตู้ส่วนกลาง",
+                                    driver_name: customConfig.driver_name || "เวรรถตู้ส่วนกลาง",
+                                    driver_phone: customConfig.driver_phone || "-",
+                                    isDuty: true,
+                                }
+                            });
+                        }
+                    } else {
+                        // Calculate default 3rd Monday for this month
+                        for (let d = 15; d <= 21; d++) {
+                            const testDate = new Date(y, m, d);
+                            if (testDate.getDay() === 1) { // 1 = Monday
+                                const monthStr = String(m + 1).padStart(2, '0');
+                                const dayStr = String(d).padStart(2, '0');
+                                const dateStr = `${y}-${monthStr}-${dayStr}`;
+                                dutyEvents.push({
+                                    id: `duty-van-3rd-mon-${dateStr}`,
+                                    title: dutyState.default_title,
+                                    start: dateStr,
+                                    end: dateStr,
+                                    color: "#D97706",
+                                    extendedProps: {
+                                        requester: dutyState.default_title,
+                                        status: "เวรประจำเดือน",
+                                        location: `${dutyState.default_title} - ทุกวันจันทร์สัปดาห์ที่ 3 ของเดือน`,
+                                        vehicle: "รถตู้ส่วนกลาง",
+                                        driver: "เวรรถตู้ส่วนกลาง",
+                                        driver_name: "เวรรถตู้ส่วนกลาง",
+                                        driver_phone: "-",
+                                        isDuty: true,
+                                    }
+                                });
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Generate Thai Public Holiday events
+        const curYear = new Date().getFullYear();
+        const holidayEvents: CalendarEvent[] = THAI_HOLIDAYS
+            .filter(h => {
+                const y = parseInt(h.date.substring(0, 4));
+                return y >= curYear - 1 && y <= curYear + 5;
+            })
+            .map(h => ({
+                id: `holiday-${h.date}`,
+                title: h.name,
+                start: h.date,
+                color: "transparent",
+                extendedProps: {
+                    isHoliday: true,
+                    holidayName: h.name,
+                    status: h.type === 'special' ? 'วันหยุดพิเศษ' : 'วันหยุดราชการ',
+                },
+                backgroundColor: "transparent",
+                borderColor: "transparent",
+            }));
+
+        setEvents([...formatted, ...dutyEvents, ...holidayEvents]);
     }, []);
 
     useEffect(() => {
@@ -317,9 +425,14 @@ export default function UserPage() {
     /* คลิกวันที่ เลือกวัน */
     const onDateClick = (info: { dateStr: string; jsEvent: MouseEvent }) => {
         setSelectedDate(info.dateStr);
-
-        // Desktop: Click date -> Create Request for that date immediately
-        if (!isMobile) {
+        if (typeof window !== "undefined" && window.innerWidth < 768) {
+            setTimeout(() => {
+                const el = document.getElementById("user-mobile-daily-list");
+                if (el) {
+                    el.scrollIntoView({ behavior: "smooth", block: "start" });
+                }
+            }, 100);
+        } else if (!isMobile) {
             router.push(`/user/request?date=${info.dateStr}`);
         }
     };
@@ -328,11 +441,17 @@ export default function UserPage() {
     const onEventClick = async (info: EventClickArg) => {
         info.jsEvent.preventDefault();
 
-        if (isMobile) {
-            // Mobile dot click: Just select the date
-            setSelectedDate(normalizeDate(info.event.start!));
+        if (typeof window !== "undefined" && window.innerWidth < 768) {
+            if (info.event.start) {
+                setSelectedDate(normalizeDate(info.event.start));
+            }
+            setTimeout(() => {
+                const el = document.getElementById("user-mobile-daily-list");
+                if (el) {
+                    el.scrollIntoView({ behavior: "smooth", block: "start" });
+                }
+            }, 100);
         } else {
-            // Desktop block click: Open modal
             openDetail(info.event.id);
         }
     };
@@ -340,6 +459,38 @@ export default function UserPage() {
     const openDetail = async (id: string) => {
         setModalOpen(true);
         setSelected(null);
+
+        if (id.startsWith("duty-van-")) {
+            const dutyEvt = events.find(e => e.id === id);
+            const titleText = dutyEvt?.title || "เวรรถยนต์โดยสารส่วนกลาง (รถตู้)";
+            const descText = (dutyEvt?.extendedProps?.location) || "เวรรถยนต์โดยสารส่วนกลาง (รถตู้) - ทุกวันจันทร์สัปดาห์ที่ 3 ของเดือน (งดเลือกรถตู้ในวันดังกล่าว)";
+            const driverNameText = dutyEvt?.extendedProps?.driver_name || "เวรรถตู้ส่วนกลาง";
+            const driverPhoneText = dutyEvt?.extendedProps?.driver_phone || "-";
+            const startTimeText = dutyEvt?.start ? dutyEvt.start : new Date().toISOString();
+            const endTimeText = dutyEvt?.end ? dutyEvt.end : new Date().toISOString();
+
+            setSelected({
+                id,
+                request_code: "DUTY-VAN",
+                status: "เวรประจำเดือน",
+                created_at: new Date().toISOString(),
+                requester_name: titleText,
+                department_name: "สำนักงานเขตจอมทอง",
+                purpose: descText,
+                destination: titleText,
+                passengers_count: 0,
+                start_at: startTimeText,
+                end_at: endTimeText,
+                vehicle_plate: "รถตู้ส่วนกลาง",
+                vehicle_model: "เวรรถยนต์โดยสารส่วนกลาง",
+                vehicle_color: "#D97706",
+                driver_name: driverNameText,
+                driver_phone: driverPhoneText,
+                approver_name: "สำนักงานเขตจอมทอง",
+            } as any);
+            return;
+        }
+
         try {
             const res = await fetch(`/api/get-booking-detail?id=${id}`);
             const detail: BookingDetail = await res.json();
@@ -484,8 +635,8 @@ export default function UserPage() {
             </div>
 
             {/* CALENDAR SECTION */}
-            <div className="bg-white shadow-sm md:shadow-none border-b md:border-none z-20 pb-2 md:pb-0 flex-1">
-                <div className="max-w-md md:max-w-[1200px] mx-auto md:px-8">
+            <div className="bg-white shadow-sm md:shadow-none border-b md:border-none z-20 pb-2 md:pb-0 flex-1 w-full max-w-full box-border">
+                <div className="w-full md:px-6 box-border">
                     <style jsx global>{`
                 /* General Reset */
                 .fc-toolbar { margin-bottom: 0.5rem !important; }
@@ -494,7 +645,7 @@ export default function UserPage() {
                 .fc-button:hover { background: #F3F4F6 !important; color: #1F2937 !important; }
                 .fc-button-active { background: #EBF5FF !important; color: #1E40AF !important; border-color: #BFDBFE !important; }
                 
-                /* Mobile Specifics */
+                /* Mobile Specifics (ตรงตามรูปตัวอย่าง) */
                 @media (max-width: 767px) {
                    .fc-toolbar-title { font-size: 1rem !important; text-transform: uppercase; }
                    .fc-button { border: none !important; }
@@ -519,6 +670,9 @@ export default function UserPage() {
                     .fc-daygrid-day-number { padding: 8px; font-size: 1rem; color: #374151; }
                     .fc-event { cursor: pointer; border-radius: 4px; font-size: 0.85rem; padding: 2px 4px; margin-top: 2px; }
                 }
+
+                /* Holiday day highlight */
+                .fc-daygrid-day.holiday-day .fc-daygrid-day-number { color: #DC2626 !important; font-weight: 800 !important; }
              `}</style>
 
                     <FullCalendar
@@ -537,23 +691,144 @@ export default function UserPage() {
                         eventDisplay="block"
                         dayMaxEvents={isMobile ? false : 3}
 
-                        eventContent={(arg) => {
-                            const isOff = arg.event.extendedProps.isOffHours;
-                            if (isMobile) {
+                        dayCellContent={(arg) => {
+                            const y = arg.date.getFullYear();
+                            const m = String(arg.date.getMonth() + 1).padStart(2, '0');
+                            const d = String(arg.date.getDate()).padStart(2, '0');
+                            const dateStr = `${y}-${m}-${d}`;
+                            const isHolidayDay = THAI_HOLIDAYS.some(h => h.date === dateStr);
+                            const isSelected = dateStr === selectedDate;
+
+                            if (isSelected) {
                                 return (
-                                    <div className="flex items-center justify-center w-full h-full py-0.5 rounded-sm">
-                                        <span className="text-[11px] font-bold text-white leading-none flex items-center gap-0.5">
-                                            {isOff && <span className="bg-amber-500 text-[8px] px-0.5 rounded leading-none font-bold">OT</span>}
-                                            {formatTime(arg.event.startStr)}
+                                    <div className={`w-7 h-7 rounded-full flex items-center justify-center font-black text-xs mx-auto shadow-md ${isHolidayDay ? 'bg-red-600 text-white' : 'bg-blue-600 text-white'}`}>
+                                        {arg.dayNumberText}
+                                    </div>
+                                );
+                            }
+
+                            return (
+                                <span className={isHolidayDay ? "text-red-600 font-black text-xs" : "text-gray-700 font-bold text-xs"}>
+                                    {arg.dayNumberText}
+                                </span>
+                            );
+                        }}
+
+                        dayCellClassNames={(arg) => {
+                            const y = arg.date.getFullYear();
+                            const m = String(arg.date.getMonth() + 1).padStart(2, '0');
+                            const d = String(arg.date.getDate()).padStart(2, '0');
+                            const dateStr = `${y}-${m}-${d}`;
+                            const isDutyDay = events.some(e => e.extendedProps?.isDuty && e.start.startsWith(dateStr));
+                            const isHolidayDay = THAI_HOLIDAYS.some(h => h.date === dateStr);
+                            const classes: string[] = [];
+                            if (isHolidayDay) classes.push("!bg-red-50/60");
+                            if (isDutyDay) classes.push("!bg-amber-50/70", "ring-1", "ring-amber-300", "ring-inset");
+                            return classes;
+                        }}
+                        eventContent={(arg) => {
+                            const isHoliday = arg.event.extendedProps.isHoliday;
+                            const isDuty = arg.event.extendedProps.isDuty;
+                            const isOff = arg.event.extendedProps.isOffHours;
+                            const requester = arg.event.extendedProps.requester || '';
+                            const status = arg.event.extendedProps.status || '';
+                            const isCancelled = status === 'CANCELLED';
+                            const isCompleted = status === 'COMPLETED';
+                            const titleText = arg.event.title || 'ขอใช้รถ';
+
+                            // Mobile Detailed Card Badges (ตรงตามรูปตัวอย่าง)
+                            if (isMobile) {
+                                if (isHoliday) {
+                                    return (
+                                        <div className="w-full bg-rose-500 text-white rounded-lg p-1.5 my-1 shadow-sm text-center font-extrabold text-[9.5px] leading-tight overflow-hidden border border-rose-400">
+                                            <div className="line-clamp-2">🎌 {titleText}</div>
+                                        </div>
+                                    );
+                                }
+                                if (isDuty) {
+                                    return (
+                                        <div className="w-full bg-amber-500 text-white rounded-lg p-1.5 my-1 shadow-sm text-center font-extrabold text-[9.5px] leading-tight overflow-hidden border border-amber-400">
+                                            <div className="line-clamp-2">🚐 {titleText}</div>
+                                        </div>
+                                    );
+                                }
+
+                                const timeStr = arg.event.start ? new Date(arg.event.start).toLocaleTimeString("th-TH", { hour: '2-digit', minute: '2-digit' }) : '';
+                                const cardBg = arg.event.backgroundColor || '#2563EB';
+
+                                return (
+                                    <div
+                                        className="w-full rounded-lg p-1.5 my-1 shadow-sm text-white leading-tight overflow-hidden transition-all text-center border border-white/20"
+                                        style={{ backgroundColor: cardBg }}
+                                    >
+                                        {timeStr && (
+                                            <div className="text-[8px] font-mono font-bold opacity-90 mb-0.5">
+                                                {timeStr} {isOff ? '(OT)' : ''}
+                                            </div>
+                                        )}
+                                        <div className="font-extrabold text-[9.5px] line-clamp-2 leading-tight text-white" title={titleText}>
+                                            {titleText}
+                                        </div>
+                                    </div>
+                                );
+                            }
+
+                            // Desktop Full Badges
+                            if (isHoliday) {
+                                return (
+                                    <div className="w-full px-1.5 py-0.5 bg-red-100/90 border border-red-200/80 rounded flex items-center gap-1 overflow-hidden pointer-events-none select-none my-0.5">
+                                        <span className="text-[10px] shrink-0">🎌</span>
+                                        <span className="text-[10px] font-black text-red-600 truncate leading-tight">
+                                            {arg.event.title}
                                         </span>
                                     </div>
                                 );
                             }
+
+                            if (isDuty) {
+                                return (
+                                    <div className="w-full px-2 py-1 bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 text-white rounded-lg shadow-md border border-amber-300/80 flex items-center justify-between gap-1 overflow-hidden transition-all hover:scale-[1.02] cursor-pointer">
+                                        <div className="flex items-center gap-1.5 min-w-0">
+                                            <span className="text-xs shrink-0">🚐</span>
+                                            <span className="font-extrabold text-[11px] md:text-xs truncate text-white drop-shadow-sm">
+                                                {arg.event.title}
+                                            </span>
+                                        </div>
+                                        <span className="hidden md:inline-block bg-amber-950/60 text-amber-100 text-[9px] font-black px-1.5 py-0.5 rounded shrink-0 tracking-tight">
+                                            เวร
+                                        </span>
+                                    </div>
+                                );
+                            }
+
+                            if (isMobile) {
+                                return (
+                                    <div className="flex items-center justify-center w-full h-full py-0.5 rounded-sm">
+                                        <span className="text-[11px] font-bold text-white leading-none truncate px-0.5">
+                                            {isOff && <span className="bg-white/30 text-[8px] px-0.5 rounded leading-none mr-0.5">OT</span>}
+                                            {arg.event.title}
+                                        </span>
+                                    </div>
+                                );
+                            }
+
                             return (
-                                <div className="px-1.5 py-1 overflow-hidden text-white">
-                                    <div className="flex items-center gap-1.5 leading-tight">
-                                        {isOff && <span className="bg-amber-500 text-[10px] px-1 rounded leading-none font-bold">OT</span>}
-                                        <span className="font-bold truncate text-[12px]">{arg.event.title}</span>
+                                <div className="px-2 py-1 overflow-hidden w-full">
+                                    <div className="flex items-start gap-1.5">
+                                        {isOff && <span className="shrink-0 bg-white/30 text-white text-[9px] font-black px-1 py-0.5 rounded mt-0.5">OT</span>}
+                                        <div className="min-w-0 flex-1">
+                                            <div className="font-bold truncate text-[12px] text-white leading-tight">
+                                                {arg.event.title}
+                                            </div>
+                                            {requester && (
+                                                <div className="text-[10px] font-medium text-white/80 truncate leading-tight mt-0.5 flex items-center gap-0.5">
+                                                    <span className="opacity-70">👤</span>
+                                                    <span>{requester}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                        {isCancelled && <span className="shrink-0 text-[9px] bg-black/30 text-white/90 px-1 py-0.5 rounded font-bold">ยกเลิก</span>}
+                                        {isCompleted && <span className="shrink-0 text-[9px] bg-black/20 text-white/90 px-1 py-0.5 rounded font-bold">เสร็จ</span>}
                                     </div>
                                 </div>
                             );
@@ -674,105 +949,13 @@ export default function UserPage() {
             </div>
 
             {/* AGENDA LIST SECTION (MOBILE ONLY) */}
-            <div className={`flex-1 bg-gray-50/50 min-h-[300px] md:hidden ${isMobile ? 'block' : 'hidden'}`}>
-                <div className="max-w-md mx-auto p-4">
-
-                    {/* Date Header */}
-                    <div className="mb-6 flex items-center justify-center">
-                        <div className="bg-blue-50/80 border border-blue-100/50 px-5 py-2 rounded-full shadow-sm">
-                            <span className="text-[#1E40AF] text-sm font-bold tracking-tight">
-                                {toThaiHeading(selectedDate)}
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* List Items */}
-                    <div className="space-y-0 relative">
-
-                        {dailyEvents.length > 0 ? (
-                            dailyEvents.map((evt) => (
-                                <div
-                                    key={evt.id}
-                                    onClick={() => openDetail(evt.id)}
-                                    className="flex group cursor-pointer bg-white mb-3 rounded-lg border border-gray-100 shadow-sm hover:shadow-md transition-all p-3 z-10 relative"
-                                >
-                                    {/* Time Column (Left) */}
-                                    <div className="w-16 pr-3 text-right text-xs font-semibold text-gray-500 shrink-0 flex flex-col justify-center border-r border-gray-100 bg-white">
-                                        <span className="text-gray-800 text-sm flex items-center justify-end gap-0.5">
-                                            {evt.extendedProps?.isOffHours && <span className="text-amber-600 font-bold">OT</span>}
-                                            {formatTime(evt.start)}
-                                        </span>
-                                        {evt.end && <span className="text-[10px] text-gray-400 opacity-80">{formatTime(evt.end)}</span>}
-                                    </div>
-
-                                    {/* Colored Bar Indicator */}
-                                    <div
-                                        className="w-1.5 h-auto rounded-full mx-3"
-                                        style={{ backgroundColor: evt.color }}
-                                    ></div>
-
-                                    {/* Content (Right) */}
-                                    <div className="flex-1 min-w-0 flex flex-col justify-center">
-                                        <h3 className="text-sm font-bold text-gray-800 line-clamp-1 group-hover:text-blue-600 transition-colors">
-                                            {evt.title}
-                                            {evt.extendedProps?.isOffHours && (
-                                                <span className="ml-2 text-[9px] bg-amber-50 text-amber-600 px-1 py-0.5 rounded border border-amber-100">นอกเวลา</span>
-                                            )}
-                                        </h3>
-                                        <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">
-                                            {evt.extendedProps?.location || 'ไม่ระบุสถานที่'}
-                                        </p>
-                                        <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                                            <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
-                                                {evt.extendedProps?.vehicle}
-                                            </span>
-                                            {evt.extendedProps?.driver && (
-                                                <span className="text-[10px] bg-gray-50 text-gray-500 px-2 py-0.5 rounded-full border border-gray-100">
-                                                    คนขับ: {evt.extendedProps.driver}
-                                                </span>
-                                            )}
-                                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${getStatusColor(evt.extendedProps?.status || 'REQUESTED', evt.extendedProps?.request_code)}`}>
-                                                {getStatusLabel(evt.extendedProps?.status || 'REQUESTED', evt.extendedProps?.request_code)}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <ChevronRight className="w-4 h-4 text-gray-300 self-center" />
-                                </div>
-                            ))
-                        ) : (
-                            /* Empty State */
-                            <div className="py-12 text-center text-gray-400 flex flex-col items-center justify-center h-full">
-                                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                                    <Clock className="w-8 h-8 text-gray-300" />
-                                </div>
-                                <p className="text-gray-500 font-medium">ว่างตลอดทั้งวัน</p>
-                                <p className="text-xs text-gray-400 mt-1 mb-6">ยังไม่มีใครขอใช้รถในวันนี้</p>
-
-                                <Link
-                                    href={`/user/request?date=${selectedDate}`}
-                                    className="inline-flex items-center gap-2 bg-[#1E40AF] text-white px-8 py-3.5 rounded-full text-base font-bold shadow-lg hover:bg-blue-800 transition-all active:scale-95"
-                                >
-                                    <Plus className="w-5 h-5" />
-                                    ขอใช้รถตอนนี้
-                                </Link>
-                            </div>
-                        )}
-
-                        {/* Mobile: New Request Button at Bottom of List */}
-                        {isMobile && dailyEvents.length > 0 && (
-                            <div className="pt-2 pb-10">
-                                <Link
-                                    href={`/user/request?date=${selectedDate}`}
-                                    className="w-full bg-[#1E40AF] text-white py-4 rounded-full font-bold shadow-lg flex items-center justify-center gap-2 hover:bg-blue-800 active:scale-95 transition-all text-lg"
-                                >
-                                    <Plus className="w-6 h-6" />
-                                    ขอใช้รถตอนนี้
-                                </Link>
-                            </div>
-                        )}
-                    </div>
-                </div>
+            <div id="user-mobile-daily-list" className="md:hidden mt-2 border-t border-gray-100 pt-2">
+                <DailyBookingList
+                    events={events}
+                    selectedDate={selectedDate}
+                    onItemClick={openDetail}
+                    onDateChange={setSelectedDate}
+                />
             </div>
 
 

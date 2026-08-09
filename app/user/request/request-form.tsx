@@ -3,7 +3,7 @@
 import { useEffect, useState, FormEvent } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
-import { Calendar, Clock, MapPin, User, Building, Car, AlertTriangle, CheckCircle2, ChevronRight, Loader2, X, FileText, List } from "lucide-react";
+import { Calendar, Clock, MapPin, User, Building, Car, AlertTriangle, CheckCircle2, ChevronRight, Loader2, X, FileText, List, XCircle } from "lucide-react";
 import { generateBookingDocument } from "@/lib/documentGenerator";
 import Swal from 'sweetalert2';
 import TimePicker24 from "@/app/components/TimePicker24";
@@ -72,6 +72,7 @@ export default function RequestForm({
   const [otherDriverName, setOtherDriverName] = useState<string>("");
   const [purpose, setPurpose] = useState<string>("");
   const [isOt, setIsOt] = useState<boolean>(false);
+  const [otMode, setOtMode] = useState<"IN_HOURS" | "OT" | "OFF_HOURS_NO_OT">("IN_HOURS");
   const [hasManuallyToggledOt, setHasManuallyToggledOt] = useState<boolean>(false);
   const [noRequestCode, setNoRequestCode] = useState<boolean>(initialNoRequestCode);
   const [skipLineNotification, setSkipLineNotification] = useState<boolean>(initialNoRequestCode);
@@ -81,6 +82,8 @@ export default function RequestForm({
   // Requester State (Internal)
   const [reqId, setReqId] = useState<string>(requesterId);
   const [reqName, setReqName] = useState<string>(requesterName);
+  const [isCustomRequester, setIsCustomRequester] = useState<boolean>(false);
+  const [customRequesterName, setCustomRequesterName] = useState<string>("");
 
   // 1. Sync props to state (Only if provided)
   useEffect(() => {
@@ -175,17 +178,7 @@ export default function RequestForm({
     setDate(selectedDate || "");
   }, [selectedDate]);
 
-  // คำนวณค่าเริ่มต้นของ OT อัตโนมัติ (เฉพาะเมื่อผู้ใช้ยังไม่ได้เลือกกดเปลี่ยนด้วยตนเอง)
-  useEffect(() => {
-    const offHours = isOffHours();
-    if (!offHours && !isRetroactive) {
-      setIsOt(false);
-      setHasManuallyToggledOt(false); // รีเซ็ตการจำค่าของ Toggle เมื่อเวลาอยู่ในช่วงเวลาปกติ
-    } else if (!hasManuallyToggledOt) {
-      setIsOt(offHours);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [date, startTime, hasManuallyToggledOt, isRetroactive]);
+  // (ยกเลิกการตรวจจับเวลาราชการอัตโนมัติ ให้สวิตช์ขึ้นแสดงตลอดเวลา ให้ผู้ใช้/เจ้าหน้าที่เลือกเอง)
 
   // Intelligent User Data Loading
   useEffect(() => {
@@ -280,6 +273,98 @@ export default function RequestForm({
     loadDrivers();
   }, []);
 
+  const [dutyState, setDutyState] = useState<{
+    global_enabled: boolean;
+    default_title: string;
+    monthly_duties: Record<string, any>;
+  }>({
+    global_enabled: true,
+    default_title: "เวรรถยนต์โดยสารส่วนกลาง (รถตู้)",
+    monthly_duties: {}
+  });
+
+  useEffect(() => {
+    const fetchDutySettings = async () => {
+      try {
+        const res = await fetch("/api/duty-settings");
+        if (res.ok) {
+          const json = await res.json();
+          if (json) {
+            setDutyState({
+              global_enabled: typeof json.global_enabled === "boolean" ? json.global_enabled : (typeof json.enabled === "boolean" ? json.enabled : true),
+              default_title: json.default_title || json.title || "เวรรถยนต์โดยสารส่วนกลาง (รถตู้)",
+              monthly_duties: json.monthly_duties || {},
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Error loading duty settings:", err);
+      }
+    };
+    fetchDutySettings();
+  }, []);
+
+  // Helper: Check if selected date is duty date (Month-specific OR 3rd Monday default)
+  const getDutyConfigForDate = (dateStr: string) => {
+    if (!dutyState.global_enabled || !dateStr) return null;
+    const parts = dateStr.split("-");
+    if (parts.length < 3) return null;
+    const [yearStr, monthStr] = parts;
+    const mKey = `${yearStr}-${monthStr}`;
+
+    const customConfig = dutyState.monthly_duties[mKey];
+    if (customConfig) {
+      if (customConfig.enabled && customConfig.duty_date === dateStr) {
+        return customConfig;
+      }
+      return null;
+    }
+
+    // Default 3rd Monday check
+    const [year, month, day] = parts.map(Number);
+    const d = new Date(year, month - 1, day);
+    if (d.getDay() === 1 && day >= 15 && day <= 21) {
+      return {
+        title: dutyState.default_title,
+        driver_name: "เวรรถตู้ส่วนกลาง",
+        driver_phone: "-",
+        start_time: "08:30",
+        end_time: "16:30",
+        note: `${dutyState.default_title} - ทุกวันจันทร์สัปดาห์ที่ 3 ของเดือน`,
+        enabled: true,
+      };
+    }
+    return null;
+  };
+
+  // Helper: Check if vehicle is a Van (รถตู้)
+  const isVanVehicle = (v?: { type?: string | null; brand?: string | null; model?: string | null } | null) => {
+    if (!v) return false;
+    const typeStr = (v.type || "").toLowerCase();
+    const brandStr = (v.brand || "").toLowerCase();
+    const modelStr = (v.model || "").toLowerCase();
+    return typeStr.includes("ตู้") || typeStr.includes("van") || brandStr.includes("van") || modelStr.includes("van");
+  };
+
+  // Effect: Clear van selection if date is duty date
+  useEffect(() => {
+    const dutyCfg = getDutyConfigForDate(date);
+    if (dutyCfg && vehicleId && !isOtherVehicle) {
+      const selectedV = vehicles.find((v) => v.id === vehicleId);
+      const isBypassUser = reqName?.includes("สุวิมล") || reqId === "160bb347-c2ac-43c9-95d1-1cfcd809fade";
+      if (selectedV && isVanVehicle(selectedV) && !isBypassUser) {
+        setVehicleId("");
+        Swal.fire({
+          icon: 'warning',
+          title: 'ไม่สามารถเลือกรถตู้ได้',
+          text: `วันที่เลือกคือวันเวรรถตู้ประจำเดือน (${dutyCfg.title} - คนขับ: ${dutyCfg.driver_name}) ระบบได้ยกเลิกการเลือกรถตู้โดยอัตโนมัติ`,
+          confirmButtonText: 'ตกลง',
+          confirmButtonColor: '#D97706'
+        });
+      }
+    }
+  }, [date, vehicleId, vehicles, isOtherVehicle, reqName, reqId, dutyState]);
+
   const isOffHours = () => {
     // 1. Check Weekend (Sat/Sun) using Bangkok time
     if (date) {
@@ -305,7 +390,7 @@ export default function RequestForm({
 
     // 1. Resolve Requester ID (Fallback if prop is empty)
     let finalRequesterId = reqId;
-    let finalRequesterName = reqName;
+    let finalRequesterName = (isCustomRequester && customRequesterName.trim()) ? customRequesterName.trim() : reqName;
     let finalRequesterDeptId: number | null = null;
 
     // Fix: If Admin Mode (canSelectRequester) and no ID selected, FORCE ERROR
@@ -364,6 +449,24 @@ export default function RequestForm({
       return;
     }
 
+    // Validate Duty Van restriction before submit
+    const dutyCfgSubmit = getDutyConfigForDate(date);
+    if (dutyCfgSubmit && vehicleId && !isOtherVehicle) {
+      const selectedV = vehicles.find((v) => v.id === vehicleId);
+      const isBypassUser = finalRequesterName?.includes("สุวิมล") || finalRequesterId === "160bb347-c2ac-43c9-95d1-1cfcd809fade";
+      if (selectedV && isVanVehicle(selectedV) && !isBypassUser) {
+        setSubmitState("error");
+        Swal.fire({
+          icon: 'error',
+          title: 'ไม่สามารถเลือกรถตู้ได้',
+          text: `รถตู้ไม่สามารถจองได้ในวันปฏิบัติเวรรถตู้ประจำเดือน (${dutyCfgSubmit.title} - คนขับ: ${dutyCfgSubmit.driver_name})`,
+          confirmButtonText: 'ตกลง',
+          confirmButtonColor: '#DC2626'
+        });
+        return;
+      }
+    }
+
     if (isOtherVehicle && !otherVehiclePlate.trim()) {
       setSubmitState("error");
       Swal.fire({
@@ -410,7 +513,7 @@ export default function RequestForm({
       Swal.fire({
         icon: 'warning',
         title: 'กรุณาเลือกคนขับ',
-        text: 'การจองนอกเวลาราชการ จำเป็นต้องระบุคนขับรถ',
+        text: 'การขอใช้รถนอกเวลาราชการแบบ OT จำเป็นต้องระบุคนขับรถ',
         confirmButtonText: 'ตกลง'
       });
       return;
@@ -665,17 +768,50 @@ export default function RequestForm({
 
         {/* Section: Who */}
         <div className="space-y-4">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-1 h-5 bg-blue-500 rounded-full"></div>
-            <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider">ข้อมูลผู้ขอ</h3>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-5 bg-gradient-to-b from-blue-500 to-indigo-600 rounded-full"></div>
+              <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wider">ข้อมูลผู้ขอใช้รถ</h3>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                const next = !isCustomRequester;
+                setIsCustomRequester(next);
+                if (next && !customRequesterName) {
+                  setCustomRequesterName(reqName);
+                }
+              }}
+              className={`px-3 py-1.5 rounded-full text-xs font-extrabold transition-all duration-200 flex items-center gap-1.5 cursor-pointer shadow-xs border ${
+                isCustomRequester
+                  ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white border-amber-600 ring-2 ring-amber-300"
+                  : "bg-blue-50/80 text-blue-700 border-blue-200 hover:bg-blue-100/80"
+              }`}
+            >
+              <User className="w-3.5 h-3.5" />
+              <span>{isCustomRequester ? "✓ กำลังจองแทนผู้ไม่มีบัญชี" : "+ จองแทนผู้ไม่มีบัญชีในระบบ"}</span>
+            </button>
           </div>
 
           <div className="grid md:grid-cols-2 gap-5">
             <div className="relative">
-              <label htmlFor="requesterName" className={labelClasses}>ชื่อผู้ขอ</label>
+              <label htmlFor="requesterName" className={labelClasses}>
+                {isCustomRequester ? "ระบุชื่อ-นามสกุล ผู้ขอใช้รถตัวจริง" : "ชื่อผู้ขอใช้รถ"}
+              </label>
               <div className="relative">
-                <User className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
-                {canSelectRequester ? (
+                <User className={`absolute left-3.5 top-3.5 w-5 h-5 ${isCustomRequester ? 'text-amber-500' : 'text-gray-400'}`} />
+                {isCustomRequester ? (
+                  <input
+                    id="customRequesterName"
+                    name="customRequesterName"
+                    type="text"
+                    value={customRequesterName}
+                    onChange={(e) => setCustomRequesterName(e.target.value)}
+                    placeholder="พิมพ์ชื่อ-นามสกุล ของผู้ขอใช้รถตัวจริง..."
+                    className={`${textInputClasses} bg-amber-50/30 text-gray-900 border-amber-300 focus:border-amber-500 focus:ring-amber-200 font-bold shadow-xs`}
+                  />
+                ) : canSelectRequester ? (
                   <>
                     <select
                       id="requesterName"
@@ -690,7 +826,7 @@ export default function RequestForm({
                           if (p.position) setPosition(p.position);
                         }
                       }}
-                      className={`${textInputClasses} appearance-none`}
+                      className={`${textInputClasses} appearance-none font-bold`}
                     >
                       <option value="">-- เลือกผู้ขอ --</option>
                       {profiles.map((p) => (
@@ -711,11 +847,17 @@ export default function RequestForm({
                     value={reqName || ""}
                     placeholder="กำลังโหลดข้อมูล..."
                     disabled
-                    className={`${textInputClasses} bg-gray-100 text-gray-500 cursor-not-allowed border-transparent`}
+                    className={`${textInputClasses} bg-gray-100/80 text-gray-600 cursor-not-allowed border-gray-200 font-bold`}
                   />
                 )}
               </div>
+              {isCustomRequester && (
+                <p className="text-[11px] text-amber-700 font-semibold mt-1 flex items-center gap-1">
+                  <span>ℹ️ ชื่อนี้จะถูกใช้บันทึกในใบขอใช้รถและข้อความแจ้งเตือนแทนคุณ</span>
+                </p>
+              )}
             </div>
+
 
             <div className="relative">
               <label htmlFor="position" className={labelClasses}>ตำแหน่ง</label>
@@ -899,110 +1041,169 @@ export default function RequestForm({
               )}
             </div>
 
-            {/* OT / Retroactive / Admin Driver Selection */}
-            {(isOffHours() || isRetroactive || canSelectRequester) && (
-              <div className={`${isRetroactive
-                ? 'bg-purple-50 border-purple-200'
-                : (isOffHours() || isOt)
-                  ? 'bg-amber-50 border-amber-200'
+            {/* OT / Retroactive / Admin Driver Selection Card */}
+            <div className={`${isRetroactive
+              ? 'bg-purple-50 border-purple-200'
+              : otMode === "OT"
+                ? 'bg-amber-50 border-amber-200'
+                : otMode === "OFF_HOURS_NO_OT"
+                  ? 'bg-indigo-50/60 border-indigo-200'
                   : 'bg-blue-50/50 border-blue-200'
-                } border rounded-xl p-5 animate-in fade-in slide-in-from-top-2 shadow-sm`}>
-                <div className="flex items-center justify-between gap-3 mb-3">
-                  <div className="flex items-start gap-3">
-                    <div className={`${isRetroactive
-                      ? 'bg-purple-100 text-purple-600'
-                      : (isOffHours() || isOt)
-                        ? 'bg-amber-100 text-amber-600'
+              } border rounded-xl p-5 animate-in fade-in slide-in-from-top-2 shadow-xs transition-all duration-300`}>
+              
+              <div className="flex items-start gap-3 mb-3">
+                <div className={`${
+                  isRetroactive
+                    ? 'bg-purple-100 text-purple-600'
+                    : otMode === "OT"
+                      ? 'bg-amber-100 text-amber-600'
+                      : otMode === "OFF_HOURS_NO_OT"
+                        ? 'bg-indigo-100 text-indigo-600'
                         : 'bg-blue-100 text-blue-600'
-                      } p-1.5 rounded-lg shrink-0`}>
-                      {isRetroactive ? (
-                        <Clock className="w-5 h-5" />
-                      ) : (isOffHours() || isOt) ? (
-                        <AlertTriangle className="w-5 h-5" />
-                      ) : (
-                        <User className="w-5 h-5" />
-                      )}
-                    </div>
-                    <div>
-                      <h4 className={`font-bold ${isRetroactive
-                        ? 'text-purple-900'
-                        : (isOffHours() || isOt)
-                          ? 'text-amber-900'
+                  } p-2 rounded-xl shrink-0`}>
+                  {isRetroactive ? (
+                    <Clock className="w-5 h-5" />
+                  ) : otMode === "OT" ? (
+                    <AlertTriangle className="w-5 h-5" />
+                  ) : (
+                    <User className="w-5 h-5" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <h4 className={`font-bold ${
+                    isRetroactive
+                      ? 'text-purple-900'
+                      : otMode === "OT"
+                        ? 'text-amber-900'
+                        : otMode === "OFF_HOURS_NO_OT"
+                          ? 'text-indigo-900'
                           : 'text-blue-900'
-                        } text-sm`}>
-                        {isRetroactive
-                          ? "ระบุคนขับรถ (ย้อนหลัง)"
-                          : (isOffHours() || isOt)
-                            ? "นอกเวลาราชการ (OT)"
-                            : "มอบหมายพนักงานขับรถ (แอดมิน)"}
-                      </h4>
-                      <p className={`text-xs ${isRetroactive
-                        ? 'text-purple-700'
-                        : (isOffHours() || isOt)
-                          ? 'text-amber-700'
+                    } text-sm`}>
+                    {isRetroactive
+                      ? "ระบุคนขับรถ (ย้อนหลัง)"
+                      : otMode === "OT"
+                        ? "นอกเวลาราชการ (เบิกค่า OT)"
+                        : otMode === "OFF_HOURS_NO_OT"
+                          ? "นอกเวลาราชการ (ไม่เบิกค่า OT)"
+                          : "ในเวลาราชการ (ปกติ)"}
+                  </h4>
+                  <p className={`text-xs ${
+                    isRetroactive
+                      ? 'text-purple-700'
+                      : otMode === "OT"
+                        ? 'text-amber-700'
+                        : otMode === "OFF_HOURS_NO_OT"
+                          ? 'text-indigo-700'
                           : 'text-blue-700'
-                        } mt-1`}>
-                        {isRetroactive
-                          ? "กรุณาระบุคนขับที่ปฏิบัติงานจริง"
-                          : (isOffHours() || isOt)
-                            ? "กรุณาระบุคนขับรถเพื่อแจ้งเตือนผ่าน LINE"
-                            : "เลือกคนขับเพื่อจัดสรรรถคิวนี้ทันที (ไม่บังคับเลือก)"}
-                      </p>
-                    </div>
-                  </div>
+                    } mt-1`}>
+                    {isRetroactive
+                      ? "กรุณาระบุคนขับที่ปฏิบัติงานจริง"
+                      : otMode === "OT"
+                        ? "ผู้ขอต้องเลือกคนขับรถเพื่อแจ้งเตือนผ่าน LINE และปฏิบัติงาน OT"
+                        : otMode === "OFF_HOURS_NO_OT"
+                          ? "ปฏิบัติงานนอกเวลาแบบไม่เบิก OT ➔ แอดมินหรือระบบจะเป็นผู้จัดสรรคนขับรถให้"
+                          : "ในเวลาราชการปกติ ➔ แอดมินหรือระบบจะเป็นผู้จัดสรรและมอบหมายคนขับรถให้"}
+                  </p>
+                </div>
+              </div>
 
-                  {/* Toggle Switch for OT (only if not retroactive and it's off-hours) */}
-                  {!isRetroactive && isOffHours() && (
+              {/* 3-Way Choice Selector (แสดงตลอดเวลาให้เจ้าหน้าที่เลือกเอง) */}
+              {!isRetroactive && (
+                <div className="mt-3 pt-3 border-t border-gray-200/80">
+                  <label className="block text-xs font-bold text-gray-700 mb-2">
+                    ตัวเลือกช่วงเวลาและการเบิกค่าตอบแทน (คลิกเลือกได้ทันที):
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     <button
                       type="button"
                       onClick={() => {
-                        setIsOt(!isOt);
-                        setHasManuallyToggledOt(true);
+                        setOtMode("IN_HOURS");
+                        setIsOt(false);
+                        setDriverId("");
                       }}
-                      className="relative focus:outline-none flex-shrink-0 cursor-pointer"
-                      aria-label="toggle ot"
+                      className={`px-3 py-2.5 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                        otMode === "IN_HOURS"
+                          ? "bg-blue-600 text-white border-blue-700 shadow-sm ring-2 ring-blue-300"
+                          : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                      }`}
                     >
-                      <div
-                        className={`w-14 h-7 rounded-full transition-colors duration-300 ${isOt ? "bg-amber-500" : "bg-gray-300"
-                          }`}
-                      >
-                        <div
-                          className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ${isOt ? "translate-x-7" : "translate-x-0.5"
-                            }`}
-                        />
-                      </div>
+                      <span>☀️ ในเวลาราชการ</span>
                     </button>
-                  )}
-                </div>
 
-                {(isRetroactive || isOt || canSelectRequester) && (
-                  <div className="relative mt-4 animate-in fade-in duration-200">
-                    <User className={`absolute left-3.5 top-3.5 w-5 h-5 ${isRetroactive || isOt ? 'text-amber-500' : 'text-blue-500'}`} />
-                    <select
-                      id="driverId"
-                      name="driverId"
-                      aria-label="Select Driver"
-                      value={driverId}
-                      onChange={(e) => setDriverId(e.target.value)}
-                      className={`${selectInputClasses} ${isRetroactive || isOt ? 'border-amber-300 focus:border-amber-500 focus:ring-amber-200' : 'border-blue-300 focus:border-blue-500 focus:ring-blue-200'} bg-white`}
-                      required={isOt || isRetroactive}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOtMode("OT");
+                        setIsOt(true);
+                      }}
+                      className={`px-3 py-2.5 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                        otMode === "OT"
+                          ? "bg-amber-500 text-white border-amber-600 shadow-sm ring-2 ring-amber-300"
+                          : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                      }`}
                     >
-                      <option value="">-- เลือกคนขับรถ --</option>
-                      {drivers
-                        .filter((d) => isOt || isRetroactive || d.active)
-                        .map((d) => (
-                          <option key={d.id} value={d.id}>
-                            {d.full_name}
-                          </option>
-                        ))}
-                    </select>
-                    <div className="absolute right-4 top-4 pointer-events-none">
-                      <ChevronRight className={`w-4 h-4 ${isRetroactive || isOt ? 'text-amber-400' : 'text-blue-400'} rotate-90`} />
-                    </div>
+                      <span>🌙 นอกเวลา (เบิก OT)</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOtMode("OFF_HOURS_NO_OT");
+                        setIsOt(true); // ✅ กำหนดเป็น true เพื่อให้เอกสารพิมพ์ใช้รูปแบบนอกเวลาราชการ (OT)
+                        setDriverId("");
+                      }}
+                      className={`px-3 py-2.5 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                        otMode === "OFF_HOURS_NO_OT"
+                          ? "bg-indigo-600 text-white border-indigo-700 shadow-sm ring-2 ring-indigo-300"
+                          : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                      }`}
+                    >
+                      <span>🌙 นอกเวลา (ไม่เบิก OT)</span>
+                    </button>
                   </div>
-                )}
-              </div>
-            )}
+                </div>
+              )}
+
+              {/* Driver Selection: Required if otMode === "OT" OR isRetroactive */}
+              {(isRetroactive || otMode === "OT" || canSelectRequester) && (
+                <div className="relative mt-4 animate-in fade-in duration-200">
+                  <User className={`absolute left-3.5 top-3.5 w-5 h-5 ${isRetroactive || otMode === "OT" ? 'text-amber-500' : 'text-blue-500'}`} />
+                  <select
+                    id="driverId"
+                    name="driverId"
+                    aria-label="Select Driver"
+                    value={driverId}
+                    onChange={(e) => setDriverId(e.target.value)}
+                    className={`${selectInputClasses} ${isRetroactive || otMode === "OT" ? 'border-amber-300 focus:border-amber-500 focus:ring-amber-200' : 'border-blue-300 focus:border-blue-500 focus:ring-blue-200'} bg-white`}
+                    required={otMode === "OT" || isRetroactive}
+                  >
+                    <option value="">-- เลือกคนขับรถ (บังคับเลือกสำหรับงาน OT) --</option>
+                    {drivers
+                      .filter((d) => otMode === "OT" || isRetroactive || d.active)
+                      .map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.full_name}
+                        </option>
+                      ))}
+                  </select>
+                  <div className="absolute right-4 top-4 pointer-events-none">
+                    <ChevronRight className={`w-4 h-4 ${isRetroactive || otMode === "OT" ? 'text-amber-400' : 'text-blue-400'} rotate-90`} />
+                  </div>
+                </div>
+              )}
+
+              {/* Info badge when driver selection is not required */}
+              {!isRetroactive && otMode !== "OT" && (
+                <div className="mt-3 p-3 bg-blue-100/70 rounded-xl border border-blue-200 text-blue-900 text-xs font-bold flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+                  <span>
+                    {otMode === "OFF_HOURS_NO_OT"
+                      ? "คำขอใช้นอกเวลาราชการแบบไม่เบิก OT ➔ เอกสารจะใช้แบบนอกเวลาราชการ (OT) และแอดมินหรือระบบจะเป็นผู้จัดสรรคนขับรถให้"
+                      : "คำขอใช้ในเวลาราชการ ➔ แอดมินหรือระบบจะเป็นผู้จัดสรรและมอบหมายคนขับรถให้"}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Purpose & Destination */}
@@ -1041,9 +1242,9 @@ export default function RequestForm({
           </div>
 
           {/* Dynamic Passenger List */}
-          {passengers.length > 0 && (
+          {parseInt(passengerCount) > 1 && passengers.length > 0 && (
             <div className="space-y-3 bg-gray-50/50 p-4 rounded-xl border border-gray-100 animate-in fade-in slide-in-from-top-2">
-              <h4 className="text-sm font-bold text-gray-700">รายชื่อผู้โดยสาร</h4>
+              <h4 className="text-sm font-bold text-gray-700">รายชื่อผู้เดินทาง ({passengerCount} คน)</h4>
               {passengers.map((p, idx) => (
                 <div key={idx} className="grid md:grid-cols-2 gap-3 p-3 bg-white rounded-lg shadow-sm border border-gray-100">
                   <div className="md:col-span-2 flex items-center gap-2 mb-1">
@@ -1104,6 +1305,13 @@ export default function RequestForm({
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {parseInt(passengerCount) === 1 && (
+            <div className="p-3.5 bg-blue-50 border border-blue-200 rounded-xl text-blue-800 text-xs font-bold flex items-center gap-2 animate-in fade-in">
+              <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+              <span>ผู้เดินทาง 1 คน ➔ ระบบใช้ชื่อผู้ขอใช้รถ ({reqName || requesterName || "ผู้ขอจอง"}) เป็นผู้เดินทางหลักโดยอัตโนมัติ (ไม่ต้องกรอกรายชื่อเพิ่มเติม)</span>
             </div>
           )}
 
@@ -1185,6 +1393,16 @@ export default function RequestForm({
 
               {/* Vehicle List */}
               <div className="overflow-y-auto px-4 pb-6 space-y-2 flex-1 pt-3">
+                {getDutyConfigForDate(date) && (
+                  <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-2.5 text-xs text-amber-900 shadow-sm animate-in fade-in duration-200">
+                    <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-extrabold block text-amber-950 text-sm">{getDutyConfigForDate(date)?.title}</span>
+                      วันที่เลือกเป็นวันปฏิบัติเวรรถตู้ประจำเดือน (คนขับ: {getDutyConfigForDate(date)?.driver_name}, เวลา: {getDutyConfigForDate(date)?.start_time} - {getDutyConfigForDate(date)?.end_time} น.) งดให้จองรถตู้ส่วนกลางในวันดังกล่าว
+                    </div>
+                  </div>
+                )}
+
                 {loadingVehicles ? (
                   <div className="text-center py-10 text-gray-500">
                     <Loader2 className="w-7 h-7 animate-spin mx-auto mb-2 text-blue-500" />
@@ -1195,12 +1413,18 @@ export default function RequestForm({
                     {vehicles.map((v) => {
                       const isSelected = !isOtherVehicle && vehicleId === v.id;
                       const searchKey = `${v.plate_number} ${v.brand} ${v.model} ${v.type || ''}`.toLowerCase();
+                      const isVan = isVanVehicle(v);
+                      const isBypassUser = reqName?.includes("สุวิมล") || reqId === "160bb347-c2ac-43c9-95d1-1cfcd809fade";
+                      const isDisabledFor3rdMon = !!getDutyConfigForDate(date) && isVan && !isBypassUser;
+
                       return (
                         <button
                           key={v.id}
                           type="button"
+                          disabled={isDisabledFor3rdMon}
                           data-vehicle-item={searchKey}
                           onClick={() => {
+                            if (isDisabledFor3rdMon) return;
                             setVehicleId(v.id);
                             setIsOtherVehicle(false);
                             setOtherVehiclePlate("");
@@ -1208,28 +1432,35 @@ export default function RequestForm({
                             setOtherDriverName("");
                             setShowVehicleSelector(false);
                           }}
-                          className={`w-full px-4 py-3 rounded-xl border-2 flex items-center gap-3 transition-all active:scale-[0.98] text-left
-                            ${isSelected
-                              ? 'border-blue-500 bg-blue-50'
-                              : 'border-gray-100 bg-white hover:border-blue-200 hover:bg-blue-50/30'}`}
+                          className={`w-full px-4 py-3 rounded-xl border-2 flex items-center gap-3 transition-all text-left
+                            ${isDisabledFor3rdMon
+                              ? 'opacity-60 bg-gray-50 border-gray-200 cursor-not-allowed'
+                              : isSelected
+                              ? 'border-blue-500 bg-blue-50 active:scale-[0.98]'
+                              : 'border-gray-100 bg-white hover:border-blue-200 hover:bg-blue-50/30 active:scale-[0.98]'}`}
                         >
-                          <div className={`w-14 h-14 rounded-xl flex items-center justify-center shrink-0 overflow-hidden ${isSelected ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                          <div className={`w-14 h-14 rounded-xl flex items-center justify-center shrink-0 overflow-hidden ${isDisabledFor3rdMon ? 'bg-gray-200 text-gray-400' : isSelected ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'}`}>
                             {v.photo_urls && v.photo_urls.length > 0 ? (
-                              <img src={v.photo_urls[0]} alt={v.plate_number || ""} className="w-full h-full object-cover" />
+                              <img src={v.photo_urls[0]} alt={v.plate_number || ""} className={`w-full h-full object-cover ${isDisabledFor3rdMon ? 'grayscale' : ''}`} />
                             ) : (
                               <Car className="w-6 h-6" />
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <span className="font-bold text-gray-900 text-sm">{v.plate_number}</span>
-                              {v.type && (
+                              {isDisabledFor3rdMon ? (
+                                <span className="text-[10px] font-extrabold text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                  <XCircle className="w-3 h-3 text-red-500 shrink-0" />
+                                  เวรรถตู้ (งดจอง)
+                                </span>
+                              ) : v.type ? (
                                 <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full">{v.type}</span>
-                              )}
+                              ) : null}
                             </div>
                             <div className="text-xs text-gray-400 truncate">{v.brand} {v.model}</div>
                           </div>
-                          {isSelected && <CheckCircle2 className="w-5 h-5 text-blue-600 shrink-0" />}
+                          {isSelected && !isDisabledFor3rdMon && <CheckCircle2 className="w-5 h-5 text-blue-600 shrink-0" />}
                         </button>
                       );
                     })}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { getStatusLabel, getStatusColor, isOffHours } from "@/lib/statusHelper";
 import {
   Calendar,
@@ -17,7 +17,10 @@ import {
   Star,
   ThumbsUp,
   ThumbsDown,
-  Bell
+  Bell,
+  ChevronLeft,
+  ChevronsLeft,
+  ChevronsRight
 } from "lucide-react";
 import Link from "next/link";
 import { generateBookingDocument } from "@/lib/documentGenerator";
@@ -35,7 +38,9 @@ type MyRequest = {
   start_at: string;
   end_at: string | null;
   status: string;
+  vehicle_id?: string | null;
   vehicle: {
+    id?: string;
     plate_number: string | null;
     brand: string | null;
     model: string | null;
@@ -91,35 +96,102 @@ const vehicleFullDisplay = (v: MyRequest['vehicle']) => {
 ========================= */
 export default function MyRequestsPage() {
   const [items, setItems] = useState<MyRequest[]>([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const [statusSummary, setStatusSummary] = useState<{ status: string; request_code: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("ทั้งหมด");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(20);
   const [editingItem, setEditingItem] = useState<MyRequest | null>(null);
 
+  // Reset to page 1 on filter or search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterStatus, pageSize]);
+
+  // Fetch paginated data from API
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch("/api/user/my-requests", {
+        setLoading(true);
+        const params = new URLSearchParams({
+          page: currentPage.toString(),
+          limit: pageSize.toString(),
+          status: filterStatus,
+          search: searchTerm,
+        });
+
+        const res = await fetch(`/api/user/my-requests?${params.toString()}`, {
           credentials: "include",
         });
 
         if (!res.ok) {
           setItems([]);
+          setTotalItems(0);
           return;
         }
 
         const json = await res.json();
-        setItems(json);
+        setItems(json.items || []);
+        setTotalItems(json.total || 0);
+        if (json.statusSummary) {
+          setStatusSummary(json.statusSummary);
+        }
       } catch (err) {
-        console.error(err);
         setItems([]);
+        setTotalItems(0);
       } finally {
         setLoading(false);
       }
     };
 
     load();
-  }, []);
+  }, [currentPage, pageSize, filterStatus, searchTerm]);
+
+  // Dynamically compute existing statuses present in user's items
+  const availableStatuses = useMemo(() => {
+    const set = new Set<string>();
+    statusSummary.forEach((r) => {
+      if (r.request_code === "จองล่วงหน้า" && r.status === "REQUESTED") {
+        set.add("จองล่วงหน้า");
+      } else if (r.status) {
+        if (r.status === "REQUESTED" && r.request_code === "จองล่วงหน้า") {
+          set.add("จองล่วงหน้า");
+        } else {
+          set.add(r.status);
+        }
+      }
+    });
+
+    const statusOrderMap: { value: string; label: string }[] = [
+      { value: "REQUESTED", label: "รออนุมัติ" },
+      { value: "จองล่วงหน้า", label: "จองล่วงหน้า" },
+      { value: "PENDING_RETRO", label: "รออนุมัติ (ย้อนหลัง)" },
+      { value: "APPROVED", label: "อนุมัติแล้ว" },
+      { value: "ASSIGNED", label: "จัดรถเรียบร้อย (มอบหมายคนขับ)" },
+      { value: "ACCEPTED", label: "รับงานแล้ว" },
+      { value: "IN_PROGRESS", label: "กำลังปฏิบัติภารกิจ" },
+      { value: "COMPLETED", label: "เสร็จสิ้นภารกิจ" },
+      { value: "CANCELLED", label: "ยกเลิกแล้ว" },
+      { value: "REJECTED", label: "ปฏิเสธ / ไม่อนุมัติ" },
+    ];
+
+    const orderedList: { value: string; label: string; count: number }[] = [];
+
+    statusOrderMap.forEach((item) => {
+      if (set.has(item.value)) {
+        const count = statusSummary.filter((r) => {
+          if (item.value === "จองล่วงหน้า") return r.request_code === "จองล่วงหน้า" && r.status === "REQUESTED";
+          if (item.value === "REQUESTED") return r.status === "REQUESTED" && r.request_code !== "จองล่วงหน้า";
+          return r.status === item.value;
+        }).length;
+        orderedList.push({ ...item, count });
+      }
+    });
+
+    return orderedList;
+  }, [statusSummary]);
 
   const handleEdit = (item: MyRequest) => {
     setEditingItem(item);
@@ -167,33 +239,16 @@ export default function MyRequestsPage() {
     });
   };
 
-  // Logic: Filter Items
-  const filteredItems = items.filter((it) => {
-    const term = searchTerm.toLowerCase();
-    const code = (it.request_code || "").toLowerCase();
-    const purpose = (it.purpose || "").toLowerCase();
-    const plate = (it.vehicle?.plate_number || "").toLowerCase();
-
-    // Check Search
-    const matchSearch = code.includes(term) || purpose.includes(term) || plate.includes(term);
-
-    // Check Status
-    const matchStatus =
-      filterStatus === "ทั้งหมด"
-        ? true
-        : filterStatus === "จองล่วงหน้า"
-        ? it.request_code === "จองล่วงหน้า" && it.status === "REQUESTED"
-        : filterStatus === "REQUESTED"
-        ? it.status === "REQUESTED" && it.request_code !== "จองล่วงหน้า"
-        : it.status === filterStatus;
-
-    return matchSearch && matchStatus;
-  });
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const startIndex = (safeCurrentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalItems);
+  const paginatedItems = items;
 
   const stats = {
-    total: items.length,
-    pending: items.filter(i => i.status === 'REQUESTED').length,
-    completed: items.filter(i => i.status === 'COMPLETED').length
+    total: statusSummary.length,
+    pending: statusSummary.filter(i => i.status === 'REQUESTED').length,
+    completed: statusSummary.filter(i => i.status === 'COMPLETED').length
   };
 
   const isCurrentMonth = (dateStr: string | null) => {
@@ -244,19 +299,14 @@ export default function MyRequestsPage() {
                 <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
-                  className="pl-4 pr-8 py-2.5 bg-white border border-gray-200 rounded-xl text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm appearance-none"
+                  className="pl-4 pr-8 py-2.5 bg-white border border-gray-200 rounded-xl text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm appearance-none font-bold text-gray-700 cursor-pointer"
                 >
-                  <option value="ทั้งหมด">สถานะ: ทั้งหมด</option>
-                  <option value="REQUESTED">รออนุมัติ</option>
-                  <option value="จองล่วงหน้า">จองล่วงหน้า</option>
-                  <option value="PENDING_RETRO">รออนุมัติ (ย้อนหลัง)</option>
-                  <option value="APPROVED">อนุมัติแล้ว</option>
-                  <option value="ASSIGNED">จัดรถเรียบร้อย (มอบหมายคนขับ)</option>
-                  <option value="ACCEPTED">รับงานแล้ว</option>
-                  <option value="IN_PROGRESS">กำลังปฏิบัติภารกิจ</option>
-                  <option value="COMPLETED">เสร็จสิ้นภารกิจ</option>
-                  <option value="CANCELLED">ยกเลิกแล้ว</option>
-                  <option value="REJECTED">ปฏิเสธ / ไม่อนุมัติ</option>
+                  <option value="ทั้งหมด">สถานะ: ทั้งหมด ({items.length})</option>
+                  {availableStatuses.map((st) => (
+                    <option key={st.value} value={st.value}>
+                      {st.label} ({st.count})
+                    </option>
+                  ))}
                 </select>
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
                   <ChevronRight className="w-4 h-4 rotate-90" />
@@ -316,7 +366,7 @@ export default function MyRequestsPage() {
             เริ่มขอใช้รถทันที
           </Link>
         </div>
-      ) : filteredItems.length === 0 ? (
+      ) : items.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 bg-white rounded-3xl border border-dashed border-gray-200">
           <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4 text-gray-300">
             <Search className="w-8 h-8" />
@@ -332,17 +382,17 @@ export default function MyRequestsPage() {
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-50/50 border-b border-gray-100">
-                  <th className="px-8 py-5 text-left text-[11px] font-black text-gray-400 uppercase tracking-[2px]">รายละเอียดการขอใช้รถ</th>
-                  <th className="px-8 py-5 text-left text-[11px] font-black text-gray-400 uppercase tracking-[2px]">วันและเวลาที่ขอใช้รถ</th>
-                  <th className="px-8 py-5 text-left text-[11px] font-black text-gray-400 uppercase tracking-[2px]">รถและผู้ขับ</th>
-                  <th className="px-8 py-5 text-center text-[11px] font-black text-gray-400 uppercase tracking-[2px]">สถานะ</th>
-                  <th className="px-8 py-5 text-center text-[11px] font-black text-gray-400 uppercase tracking-[2px]">จัดการ</th>
+                  <th className="px-4 py-4 text-left text-[11px] font-black text-gray-400 uppercase tracking-[2px]">รายละเอียดการขอใช้รถ</th>
+                  <th className="px-4 py-4 text-left text-[11px] font-black text-gray-400 uppercase tracking-[2px]">วันและเวลาที่ขอใช้รถ</th>
+                  <th className="px-4 py-4 text-left text-[11px] font-black text-gray-400 uppercase tracking-[2px]">รถและผู้ขับ</th>
+                  <th className="px-4 py-4 text-center text-[11px] font-black text-gray-400 uppercase tracking-[2px]">สถานะ</th>
+                  <th className="px-4 py-4 text-center text-[11px] font-black text-gray-400 uppercase tracking-[2px]">จัดการ</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {filteredItems.map((it) => (
+                {paginatedItems.map((it) => (
                   <tr key={it.id} className="group hover:bg-blue-50/30 transition-all duration-300">
-                    <td className="px-8 py-6">
+                    <td className="px-4 py-4">
                       <div className="flex items-start gap-4">
                         <div 
                           className="w-12 h-12 rounded-2xl flex items-center justify-center group-hover:shadow-md transition-all shrink-0 overflow-hidden border"
@@ -365,7 +415,7 @@ export default function MyRequestsPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-8 py-6">
+                    <td className="px-4 py-4">
                       <div className="flex flex-col">
                         <span className="text-sm font-bold text-gray-800 flex items-center gap-1.5 mb-1">
                           <Calendar className="w-4 h-4 text-blue-500" />
@@ -386,7 +436,7 @@ export default function MyRequestsPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-8 py-6">
+                    <td className="px-4 py-4">
                       {it.vehicle ? (
                         <div className="flex flex-col gap-2">
                           <div>
@@ -408,12 +458,12 @@ export default function MyRequestsPage() {
                         </div>
                       )}
                     </td>
-                    <td className="px-8 py-6 text-center">
+                    <td className="px-4 py-4 text-center">
                       <span className={`inline-block px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all ${getStatusColor(it.status, it.request_code)}`}>
                         {getStatusLabel(it.status, it.request_code)}
                       </span>
                     </td>
-                    <td className="px-8 py-6 text-center">
+                    <td className="px-4 py-4 text-center">
                       <div className="flex items-center justify-center gap-1">
                         {it.status === "COMPLETED" && it.is_satisfied === null && it.evaluation_comment !== "__SKIP__" && isCurrentMonth(it.start_at) && (
                           <div className="flex flex-col gap-1.5">
@@ -491,7 +541,7 @@ export default function MyRequestsPage() {
 
           {/* MOBILE LIST */}
           <div className="md:hidden divide-y divide-gray-50">
-            {filteredItems.map((it) => (
+            {paginatedItems.map((it) => (
               <div key={it.id} className="p-5 active:bg-gray-50 transition-all">
                 <div className="flex justify-between items-start gap-3 mb-4">
                   <div className="min-w-0 flex-1">
@@ -613,6 +663,70 @@ export default function MyRequestsPage() {
               </div>
             ))}
           </div>
+
+          {/* ================= PAGINATION BAR ================= */}
+          {totalItems > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 bg-white p-4 rounded-2xl border border-gray-100/80 shadow-sm">
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="text-xs font-bold text-gray-500 whitespace-nowrap">แสดงหน้าละ:</span>
+                <div className="relative">
+                  <select
+                    value={pageSize}
+                    onChange={(e) => setPageSize(Number(e.target.value))}
+                    className="pl-4 pr-10 py-2 bg-gray-50 hover:bg-gray-100/80 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 appearance-none cursor-pointer transition-all shadow-2xs"
+                  >
+                    <option value={20}>20 รายการ</option>
+                    <option value={50}>50 รายการ</option>
+                    <option value={100}>100 รายการ</option>
+                  </select>
+                  <ChevronRight className="w-3.5 h-3.5 rotate-90 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+                <span className="text-xs font-medium text-gray-500 bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-100 whitespace-nowrap">
+                  แสดง <span className="font-bold text-gray-800">{startIndex + 1} - {endIndex}</span> จาก <span className="font-bold text-gray-800">{totalItems}</span> รายการ
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  disabled={safeCurrentPage === 1}
+                  className="p-2 rounded-xl border text-gray-600 bg-white border-gray-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 disabled:opacity-40 disabled:hover:bg-white disabled:hover:text-gray-600 disabled:hover:border-gray-200 disabled:cursor-not-allowed transition-all cursor-pointer shadow-2xs active:scale-95"
+                  title="หน้าแรก"
+                >
+                  <ChevronsLeft className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={safeCurrentPage === 1}
+                  className="px-3 py-2 rounded-xl border text-xs font-bold text-gray-700 bg-white border-gray-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 disabled:opacity-40 disabled:hover:bg-white disabled:hover:text-gray-700 disabled:hover:border-gray-200 disabled:cursor-not-allowed transition-all cursor-pointer shadow-2xs flex items-center gap-1 active:scale-95"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  <span className="hidden sm:inline">ก่อนหน้า</span>
+                </button>
+
+                <div className="px-4 py-1.5 text-xs font-extrabold text-blue-700 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100 shadow-2xs whitespace-nowrap">
+                  หน้า <span className="text-blue-600 font-black">{safeCurrentPage}</span> / {totalPages}
+                </div>
+
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={safeCurrentPage >= totalPages}
+                  className="px-3 py-2 rounded-xl border text-xs font-bold text-gray-700 bg-white border-gray-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 disabled:opacity-40 disabled:hover:bg-white disabled:hover:text-gray-700 disabled:hover:border-gray-200 disabled:cursor-not-allowed transition-all cursor-pointer shadow-2xs flex items-center gap-1 active:scale-95"
+                >
+                  <span className="hidden sm:inline">ถัดไป</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={safeCurrentPage >= totalPages}
+                  className="p-2 rounded-xl border text-gray-600 bg-white border-gray-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 disabled:opacity-40 disabled:hover:bg-white disabled:hover:text-gray-600 disabled:hover:border-gray-200 disabled:cursor-not-allowed transition-all cursor-pointer shadow-2xs active:scale-95"
+                  title="หน้าสุดท้าย"
+                >
+                  <ChevronsRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
 
         </div>
       )

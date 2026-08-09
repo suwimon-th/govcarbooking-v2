@@ -66,16 +66,20 @@ export async function POST(req: Request) {
       full_name: user.full_name,
     });
 
+    const isProd = process.env.NODE_ENV === "production";
+
     const cookieOptions = {
       path: "/",
       httpOnly: true,
       sameSite: "lax" as const,
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: 60 * 60 * 24 * 7, // 7 วัน
+      secure: isProd,
     };
 
     res.cookies.set("user_id", user.id, cookieOptions);
     res.cookies.set("role", user.role, cookieOptions);
     res.cookies.set("full_name", user.full_name ?? "", cookieOptions);
+
 
     return res;
 

@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import EditBookingModal from "./EditBookingModal";
@@ -27,7 +27,12 @@ import {
   Clock,
   Bot,
   BotOff,
-  Zap
+  Zap,
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight
 } from "lucide-react";
 import { generateBookingDocument } from "@/lib/documentGenerator";
 import RetroactiveRequestModal from "@/app/components/RetroactiveRequestModal"; // Added
@@ -112,8 +117,14 @@ function AdminRequestsContent() {
   const openId = searchParams.get("id"); // Get ID from URL
 
   const [rows, setRows] = useState<BookingRow[]>([]);
+  const [totalItems, setTotalItems] = useState<number>(0);
+  const [allStatusSummary, setAllStatusSummary] = useState<{ status: string; request_code: string }[]>([]);
   const [editItem, setEditItem] = useState<BookingRow | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(20);
 
   // Filter State
   const [search, setSearch] = useState("");
@@ -123,6 +134,11 @@ function AdminRequestsContent() {
   const [filterDriver, setFilterDriver] = useState("");
   const [filterRequester, setFilterRequester] = useState("");
   const [filterOpen, setFilterOpen] = useState(false);
+
+  // Reset to page 1 on filter/search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, filterStatus, filterDateFrom, filterDateTo, filterDriver, filterRequester, pageSize]);
 
   const activeFilterCount = [filterDateFrom, filterDateTo, filterDriver, filterRequester].filter(Boolean).length;
 
@@ -153,6 +169,30 @@ function AdminRequestsContent() {
   };
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [resequencing, setResequencing] = useState(false);
+
+  const handleResequence = async () => {
+    if (!confirm("คุณต้องการจัดเรียงเลขคำขอใหม่ตามวันเวลาใช้งานจริง (เรียงจากวันที่เริ่มใช้รถก่อน-หลัง ของรถแต่ละคัน) ใช่หรือไม่?")) {
+      return;
+    }
+    try {
+      setResequencing(true);
+      const res = await fetch("/api/admin/resequence-codes", { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        alert(`จัดเรียงเลขคำขอตามวันเวลาใช้งานเรียบร้อยแล้ว! (ปรับปรุงไป ${data.updatedCount} รายการ)`);
+        await Promise.all([loadData(), loadStatusSummary()]);
+      } else {
+        alert(`เกิดข้อผิดพลาด: ${data.error}`);
+      }
+    } catch (err: any) {
+      alert(`เกิดข้อผิดพลาด: ${err.message}`);
+    } finally {
+      setResequencing(false);
+    }
+  };
+
   const [nextDriver, setNextDriver] = useState<{ name: string, id: string } | null>(null);
   const [noDriverAvailable, setNoDriverAvailable] = useState(false);
   const [isDriverQueueModalOpen, setIsDriverQueueModalOpen] = useState(false);
@@ -177,58 +217,76 @@ function AdminRequestsContent() {
     fetchAdmin();
   }, []);
 
-  // Filter Logic
-  const filteredRows = rows.filter((r) => {
-    const s = search.toLowerCase();
-    const requestCode = (r.request_code || "").toLowerCase();
-    const requesterName = (r.requester?.full_name || "").toLowerCase();
-    const driverName = (r.driver?.full_name || "").toLowerCase();
-    const vehiclePlate = (r.vehicle?.plate_number || "").toLowerCase();
-
-    // Search: รหัสงาน / ชื่อผู้ขอ / ทะเบียน
-    const matchSearch = requestCode.includes(s) || requesterName.includes(s) || vehiclePlate.includes(s);
-
-    // Status Filter
-    const matchStatus =
-      filterStatus === "ทั้งหมด"
-        ? true
-        : filterStatus === "จองล่วงหน้า"
-        ? r.request_code === "จองล่วงหน้า" && r.status === "REQUESTED"
-        : filterStatus === "REQUESTED"
-        ? r.status === "REQUESTED" && r.request_code !== "จองล่วงหน้า"
-        : r.status === filterStatus;
-
-    // Driver filter
-    const matchDriver = filterDriver === "" ? true : driverName.includes(filterDriver.toLowerCase());
-
-    // Requester filter
-    const matchRequester = filterRequester === "" ? true : requesterName.includes(filterRequester.toLowerCase());
-
-    // Date filter — compare against start_at
-    let matchDate = true;
-    if ((filterDateFrom || filterDateTo) && r.start_at) {
-      const d = r.start_at.slice(0, 10); // YYYY-MM-DD
-      if (filterDateFrom && d < filterDateFrom) matchDate = false;
-      if (filterDateTo && d > filterDateTo) matchDate = false;
+  // Fetch status summary once for dropdown badges
+  const loadStatusSummary = async () => {
+    const { data } = await supabase
+      .from("bookings")
+      .select("status, request_code");
+    if (data) {
+      setAllStatusSummary(data);
     }
+  };
 
-    return matchSearch && matchStatus && matchDriver && matchRequester && matchDate;
-  }).sort((a, b) => {
-    // Priority: REQUESTED / PENDING_RETRO ขึ้นก่อน, ที่เหลือตามหลัง
-    const priority = (status: string) =>
-      status === "REQUESTED" || status === "PENDING_RETRO" ? 0 : 1;
-    const pa = priority(a.status);
-    const pb = priority(b.status);
-    if (pa !== pb) return pa - pb;
-    // ถ้า priority เท่ากัน → เรียงตาม start_at ล่าสุดขึ้นก่อน
-    const sa = a.start_at ? new Date(a.start_at).getTime() : 0;
-    const sb = b.start_at ? new Date(b.start_at).getTime() : 0;
-    return sb - sa;
-  });
+  useEffect(() => {
+    loadStatusSummary();
+  }, []);
+
+  // Dynamically compute existing statuses present in all rows
+  const availableStatuses = useMemo(() => {
+    const set = new Set<string>();
+    allStatusSummary.forEach((r) => {
+      if (r.request_code === "จองล่วงหน้า" && r.status === "REQUESTED") {
+        set.add("จองล่วงหน้า");
+      } else if (r.status) {
+        if (r.status === "REQUESTED" && r.request_code === "จองล่วงหน้า") {
+          set.add("จองล่วงหน้า");
+        } else {
+          set.add(r.status);
+        }
+      }
+    });
+
+    const statusOrderMap: { value: string; label: string }[] = [
+      { value: "REQUESTED", label: "รออนุมัติ" },
+      { value: "จองล่วงหน้า", label: "จองล่วงหน้า" },
+      { value: "PENDING_RETRO", label: "รออนุมัติ (ย้อนหลัง)" },
+      { value: "APPROVED", label: "อนุมัติแล้ว" },
+      { value: "ASSIGNED", label: "จัดรถเรียบร้อย (มอบหมายคนขับ)" },
+      { value: "ACCEPTED", label: "รับงานแล้ว" },
+      { value: "IN_PROGRESS", label: "กำลังปฏิบัติภารกิจ" },
+      { value: "COMPLETED", label: "เสร็จสิ้นภารกิจ" },
+      { value: "CANCELLED", label: "ยกเลิกแล้ว" },
+      { value: "REJECTED", label: "ปฏิเสธ / ไม่อนุมัติ" },
+    ];
+
+    const orderedList: { value: string; label: string; count: number }[] = [];
+
+    statusOrderMap.forEach((item) => {
+      if (set.has(item.value)) {
+        const count = allStatusSummary.filter((r) => {
+          if (item.value === "จองล่วงหน้า") return r.request_code === "จองล่วงหน้า" && r.status === "REQUESTED";
+          if (item.value === "REQUESTED") return r.status === "REQUESTED" && r.request_code !== "จองล่วงหน้า";
+          return r.status === item.value;
+        }).length;
+        orderedList.push({ ...item, count });
+      }
+    });
+
+    return orderedList;
+  }, [allStatusSummary]);
+
+  // Pagination calculations
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const startIndex = (safeCurrentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalItems);
+  const paginatedRows = rows;
+  const filteredRows = rows;
 
   const loadData = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+
+    let query = supabase
       .from("bookings")
       .select(`
         id,
@@ -259,16 +317,60 @@ function AdminRequestsContent() {
         requester:requester_id(full_name, position),
         driver:driver_id(full_name),
         vehicle:vehicle_id(plate_number, brand, model, photo_urls)
-      `)
-      .order("created_at", { ascending: false });
+      `, { count: "exact" });
+
+    // Status Filter
+    if (filterStatus && filterStatus !== "ทั้งหมด") {
+      if (filterStatus === "จองล่วงหน้า") {
+        query = query.eq("request_code", "จองล่วงหน้า").eq("status", "REQUESTED");
+      } else if (filterStatus === "REQUESTED") {
+        query = query.eq("status", "REQUESTED").neq("request_code", "จองล่วงหน้า");
+      } else {
+        query = query.eq("status", filterStatus);
+      }
+    }
+
+    // Search: รหัสงาน หรือ วัตถุประสงค์
+    if (search) {
+      query = query.or(`request_code.ilike.%${search}%,purpose.ilike.%${search}%`);
+    }
+
+    // Date filter
+    if (filterDateFrom) {
+      query = query.gte("start_at", `${filterDateFrom}T00:00:00`);
+    }
+    if (filterDateTo) {
+      query = query.lte("start_at", `${filterDateTo}T23:59:59`);
+    }
+
+    // Range calculation
+    const from = (safeCurrentPage - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    // Order calculation: สำหรับสถานะรออนุมัติ/จองล่วงหน้า ให้เรียงจากวันที่ก่อนไปหลัง (start_at ASC)
+    const isPendingStatus = filterStatus === "REQUESTED" || filterStatus === "จองล่วงหน้า" || filterStatus === "PENDING_RETRO";
+    if (isPendingStatus) {
+      query = query.order("start_at", { ascending: true });
+    } else {
+      query = query.order("created_at", { ascending: false });
+    }
+
+    const { data, count, error } = await query.range(from, to);
 
     if (error) {
       console.error(error);
+      setRows([]);
+      setTotalItems(0);
     } else {
-      setRows(data as unknown as BookingRow[]);
+      setRows((data as unknown as BookingRow[]) || []);
+      setTotalItems(count ?? 0);
     }
     setLoading(false);
   };
+
+  useEffect(() => {
+    loadData();
+  }, [currentPage, pageSize, filterStatus, search, filterDateFrom, filterDateTo]);
 
   const loadNextQueue = async () => {
     try {
@@ -327,7 +429,6 @@ function AdminRequestsContent() {
   };
 
   useEffect(() => {
-    loadData();
     loadNextQueue();
     loadAutoAssignSetting();
   }, []);
@@ -419,32 +520,54 @@ function AdminRequestsContent() {
   return (
     <div className="p-4 md:p-8 max-w-[1400px] mx-auto min-h-screen bg-gray-50/50">
 
-      {/* Row 1: Title & Search */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+      {/* Row 1: Title & Top Primary Actions */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
         <div className="shrink-0">
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2 whitespace-nowrap">
+          <h1 className="text-2xl font-black text-gray-800 flex items-center gap-2 tracking-wide">
             จัดการคำขอใช้รถ
           </h1>
-          <p className="text-gray-500 text-sm mt-1 whitespace-nowrap">
+          <p className="text-gray-500 text-sm mt-0.5 font-medium">
             รายการคำขอทั้งหมด {rows.length} รายการ
           </p>
         </div>
 
-        {/* Search Box: Top Right */}
-        <div className="relative w-full md:w-80 lg:w-96">
-          <input
-            type="text"
-            placeholder="ค้นหา: เลขที่งาน / ชื่อผู้ขอ / ทะเบียน..."
-            className="px-4 py-2.5 border border-gray-200 rounded-xl w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-sm hover:border-blue-300 transition-all"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+        <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+          {/* Search Box */}
+          <div className="relative flex-1 sm:w-72 lg:w-80 min-w-[200px]">
+            <input
+              type="text"
+              placeholder="ค้นหา: เลขที่งาน / ชื่อผู้ขอ / ทะเบียน..."
+              className="px-4 py-2.5 border border-gray-200 rounded-xl w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-xs hover:border-blue-300 transition-all font-medium"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+
+          {/* Re-sequence Button */}
+          <button
+            onClick={handleResequence}
+            disabled={resequencing}
+            title="จัดเรียงเลขคำขอใหม่ให้ต่อเนื่องตามวันเวลาใช้รถของแต่ละคัน"
+            className="flex items-center justify-center gap-2 bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 px-3.5 py-2.5 rounded-xl transition-all shadow-xs font-bold text-xs whitespace-nowrap active:scale-95 disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 text-indigo-600 ${resequencing ? "animate-spin" : ""}`} />
+            <span>{resequencing ? "กำลังเรียงเลข..." : "เรียงเลขตามวันเวลา (แยกคัน)"}</span>
+          </button>
+
+          {/* Create Request Button */}
+          <button
+            onClick={() => setCreateModalOpen(true)}
+            className="flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-xl hover:bg-blue-700 transition-all shadow-md font-extrabold text-sm whitespace-nowrap active:scale-95"
+          >
+            <Plus className="w-5 h-5" />
+            <span>สร้างคำขอ</span>
+          </button>
         </div>
       </div>
 
       {/* ===== Auto-Assign Toggle Card ===== */}
       <div
-        className={`mb-6 rounded-2xl border-2 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm transition-all duration-300 ${
+        className={`mb-6 rounded-2xl border-2 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs transition-all duration-300 ${
           autoAssign === null
             ? "bg-gray-50 border-gray-200"
             : autoAssign
@@ -505,25 +628,23 @@ function AdminRequestsContent() {
           </div>
         </button>
       </div>
-      {/* ===================================== */}
 
-      {/* Row 2: Status & Actions */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4 bg-white/50 p-4 rounded-2xl border border-gray-100 shadow-sm">
-        {/* Highlight Next Queue & Special Actions */}
-        <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
+      {/* Row 2: Queue & Status Filters Bar */}
+      <div className="flex flex-col lg:flex-row justify-between items-stretch lg:items-center mb-6 gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-xs">
+        {/* Left: Driver Queue & Status Badges */}
+        <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={handleHeaderQueueClick}
-            className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl shadow-lg shadow-blue-200 flex items-center gap-4 animate-in fade-in zoom-in-95 duration-300 border border-blue-400/30 hover:scale-105 active:scale-95 transition-all text-left"
+            className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-2.5 rounded-xl shadow-md shadow-blue-100 flex items-center gap-3 border border-blue-400/30 hover:scale-[1.02] active:scale-95 transition-all text-left"
           >
-            <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
+            <div className="bg-white/20 p-2 rounded-lg backdrop-blur-xs">
               <User className="w-5 h-5 text-white" />
             </div>
             <div className="flex flex-col">
               <span className="text-[10px] uppercase font-bold text-blue-100 tracking-wider">คิวถัดไป (Next Queue)</span>
-              <span className="text-lg font-bold truncate max-w-[200px] leading-tight">
+              <span className="text-sm font-extrabold truncate max-w-[180px] leading-tight">
                 {nextDriver?.name || "ไม่มีคนขับว่าง"}
               </span>
-              <span className="text-[10px] text-blue-200 mt-0.5 font-normal">คลิกเพื่อเลือกคนขับ...</span>
             </div>
           </button>
 
@@ -541,26 +662,24 @@ function AdminRequestsContent() {
                 console.error(e);
               }
             }}
-            className={`px-4 py-3 rounded-xl shadow-sm flex items-center gap-2 border transition-all active:scale-95 ${
+            className={`px-4 py-2.5 rounded-xl shadow-xs flex items-center gap-2 border transition-all active:scale-95 ${
               noDriverAvailable
-                ? "bg-red-600 text-white border-red-700 hover:bg-red-700 shadow-lg shadow-red-200"
+                ? "bg-red-600 text-white border-red-700 hover:bg-red-700 shadow-md shadow-red-200"
                 : "bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
             }`}
           >
-            <AlertTriangle className="w-5 h-5 shrink-0" />
-            <div className="flex items-center gap-2 leading-none">
+            <AlertTriangle className="w-4 h-4 shrink-0" />
+            <div className="flex items-center gap-1.5 leading-none">
               <span className="text-[10px] uppercase font-bold tracking-wider opacity-80 whitespace-nowrap">สถานะคนขับ:</span>
-              <span className="font-bold text-sm whitespace-nowrap">
+              <span className="font-bold text-xs whitespace-nowrap">
                 {noDriverAvailable ? "✕ ยกเลิกแจ้งเตือน" : "ไม่มีคนขับว่าง"}
               </span>
             </div>
           </button>
         </div>
 
-
-        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto items-center">
-
-
+        {/* Right: Filters */}
+        <div className="flex flex-wrap items-center gap-3">
           {/* Today Filter Button */}
           <button
             onClick={() => {
@@ -571,53 +690,40 @@ function AdminRequestsContent() {
                 applyDatePreset('today');
               }
             }}
-            className={`px-4 py-2.5 rounded-xl border text-sm font-bold transition-all shadow-sm whitespace-nowrap ${
+            className={`px-4 py-2.5 rounded-xl border text-xs font-extrabold transition-all shadow-xs whitespace-nowrap ${
               (filterDateFrom === new Date().toISOString().slice(0, 10)) 
                 ? "bg-blue-600 text-white border-blue-700" 
-                : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"
             }`}
           >
             วันนี้
           </button>
 
           {/* Filter Status */}
-          <div className="relative min-w-[160px]">
+          <div className="relative min-w-[180px]">
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="pl-4 pr-8 py-2.5 border rounded-xl text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-sm appearance-none"
+              className="pl-4 pr-8 py-2.5 border border-gray-200 rounded-xl text-xs font-bold w-full focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-gray-800 shadow-xs appearance-none cursor-pointer hover:bg-gray-100 transition-colors"
             >
-              <option value="ทั้งหมด">สถานะ: ทั้งหมด</option>
-              <option value="REQUESTED">รออนุมัติ</option>
-              <option value="จองล่วงหน้า">จองล่วงหน้า</option>
-              <option value="PENDING_RETRO">รออนุมัติ (ย้อนหลัง)</option>
-              <option value="APPROVED">อนุมัติแล้ว</option>
-              <option value="ASSIGNED">จัดรถเรียบร้อย (มอบหมายคนขับ)</option>
-              <option value="ACCEPTED">รับงานแล้ว</option>
-              <option value="IN_PROGRESS">กำลังปฏิบัติภารกิจ</option>
-              <option value="COMPLETED">เสร็จสิ้นภารกิจ</option>
-              <option value="CANCELLED">ยกเลิกแล้ว</option>
-              <option value="REJECTED">ปฏิเสธ / ไม่อนุมัติ</option>
+              <option value="ทั้งหมด">สถานะ: ทั้งหมด ({rows.length})</option>
+              {availableStatuses.map((st) => (
+                <option key={st.value} value={st.value}>
+                  {st.label} ({st.count})
+                </option>
+              ))}
             </select>
             <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
             </div>
           </div>
-
-          <button
-            onClick={() => setCreateModalOpen(true)}
-            className="flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-xl hover:bg-blue-700 transition-colors shadow-sm font-bold text-sm min-w-[140px]"
-          >
-            <Plus className="w-5 h-5" />
-            สร้างคำขอ
-          </button>
         </div>
       </div>
 
       {/* Filter Row Removed for simplification */}
       <div className="mb-6 flex justify-end">
         <span className="text-xs text-gray-400">
-          แสดง <span className="font-bold text-gray-700">{filteredRows.length}</span> / {rows.length} รายการ
+          แสดง <span className="font-bold text-gray-700">{totalItems > 0 ? startIndex + 1 : 0} - {endIndex}</span> / {totalItems} รายการ (จากทั้งหมด {rows.length} รายการ)
         </span>
       </div>
 
@@ -685,7 +791,7 @@ function AdminRequestsContent() {
               </div>
             </div>
 
-            {filteredRows.map(b => (
+            {paginatedRows.map(b => (
               <div key={b.id} className={`bg-white p-4 rounded-xl shadow-sm border ${selectedIds.has(b.id) ? 'border-blue-500 ring-1 ring-blue-500' : 'border-gray-100'} flex flex-col gap-3 relative overflow-hidden transition-all duration-200`}>
 
                 {/* Selection Overlay for Mobile */}
@@ -820,12 +926,12 @@ function AdminRequestsContent() {
                         className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
                     </th>
-                    <th className="px-6 py-4 text-left font-semibold">รายละเอียดงาน</th>
-                    <th className="px-6 py-4 text-left font-semibold">วันและเวลา</th>
-                    <th className="px-6 py-4 text-left font-semibold">คนขับ / รถ</th>
-                    <th className="px-6 py-4 text-center font-semibold">เลขไมล์</th>
-                    <th className="px-6 py-4 text-center font-semibold">สถานะ</th>
-                    <th className="px-6 py-4 text-center font-semibold">จัดการ</th>
+                    <th className="px-3 py-3.5 text-left font-semibold">รายละเอียดงาน</th>
+                    <th className="px-3 py-3.5 text-left font-semibold">วันและเวลา</th>
+                    <th className="px-3 py-3.5 text-left font-semibold">คนขับ / รถ</th>
+                    <th className="px-2 py-3.5 text-center font-semibold">เลขไมล์</th>
+                    <th className="px-2 py-3.5 text-center font-semibold">สถานะ</th>
+                    <th className="px-2 py-3.5 text-center font-semibold">จัดการ</th>
                   </tr>
                 </thead>
 
@@ -837,7 +943,7 @@ function AdminRequestsContent() {
                       </td>
                     </tr>
                   ) : (
-                    filteredRows.map((b) => (
+                    paginatedRows.map((b) => (
                       <tr
                         key={b.id}
                         className={`transition-colors duration-150 ${selectedIds.has(b.id) ? 'bg-blue-50/50' : 'hover:bg-blue-50/30'}`}
@@ -848,7 +954,7 @@ function AdminRequestsContent() {
                           toggleSelect(b.id);
                         }}
                       >
-                        <td className="px-4 py-4 align-top text-center">
+                        <td className="px-2 py-3.5 align-top text-center">
                           <input
                             type="checkbox"
                             checked={selectedIds.has(b.id)}
@@ -858,7 +964,7 @@ function AdminRequestsContent() {
                         </td>
 
                         {/* งาน (Request Icon + Details) */}
-                        <td className="px-6 py-4 align-top">
+                        <td className="px-3 py-3.5 align-top">
                           <div className="flex items-start gap-3">
                             <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 shrink-0 border border-blue-100 shadow-sm overflow-hidden">
                               {b.vehicle?.photo_urls && b.vehicle.photo_urls.length > 0 ? (
@@ -874,7 +980,7 @@ function AdminRequestsContent() {
                                 {b.requester?.full_name || "-"}
                               </div>
                               {b.purpose && (
-                                <div className="text-gray-400 text-xs mt-0.5 line-clamp-1 max-w-[200px]" title={b.purpose}>
+                                <div className="text-gray-400 text-xs mt-0.5 line-clamp-1 max-w-[160px]" title={b.purpose}>
                                   {b.purpose}
                                 </div>
                               )}
@@ -883,7 +989,7 @@ function AdminRequestsContent() {
                         </td>
 
                         {/* เวลา (Split Date/Time) */}
-                        <td className="px-6 py-4 align-top">
+                        <td className="px-3 py-3.5 align-top">
                           <div className="space-y-1.5">
                             {/* Start Date */}
                             <div className="flex flex-col">
@@ -921,7 +1027,7 @@ function AdminRequestsContent() {
                         </td>
 
                         {/* รถ */}
-                        <td className="px-6 py-4 align-top">
+                        <td className="px-3 py-3.5 align-top">
                           <div className="space-y-1.5">
                             <div className="flex items-center gap-2">
                               <div className={`w-1.5 h-1.5 rounded-full ${b.driver ? 'bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.4)]' : 'bg-gray-300'}`}></div>
@@ -947,10 +1053,10 @@ function AdminRequestsContent() {
                         </td>
 
                         {/* ไมล์ (Improved Layout) */}
-                        <td className="px-6 py-4 align-top text-center">
+                        <td className="px-2 py-3.5 align-top text-center">
                           <div className="flex flex-col items-center gap-1">
                             {b.distance ? (
-                              <span className="inline-flex items-center gap-1 bg-green-50 text-green-700 px-2.5 py-0.5 rounded-md text-xs font-bold border border-green-100">
+                              <span className="inline-flex items-center gap-1 bg-green-50 text-green-700 px-2 py-0.5 rounded-md text-xs font-bold border border-green-100">
                                 <Gauge className="w-3 h-3" />
                                 {b.distance} กม.
                               </span>
@@ -967,9 +1073,9 @@ function AdminRequestsContent() {
                         </td>
 
                         {/* สถานะ */}
-                        <td className="px-6 py-4 align-top text-center">
+                        <td className="px-2 py-3.5 align-top text-center">
                           <span
-                            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap border border-opacity-10 shadow-sm ${getStatusColor(
+                            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap border border-opacity-10 shadow-sm ${getStatusColor(
                               b.status,
                               b.request_code
                             )}`}
@@ -979,11 +1085,11 @@ function AdminRequestsContent() {
                         </td>
 
                         {/* จัดการ */}
-                        <td className="px-6 py-4 align-top text-center">
-                          <div className="flex items-center justify-center gap-2">
+                        <td className="px-2 py-3.5 align-top text-center">
+                          <div className="flex items-center justify-center gap-1">
                             <button
                               onClick={() => handlePrintWord(b)}
-                              className="p-2 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors tooltip tooltip-top"
+                              className="p-1.5 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors tooltip tooltip-top"
                               title="พิมพ์ Word"
                             >
                               <FileDoc className="w-4 h-4" />
@@ -991,14 +1097,14 @@ function AdminRequestsContent() {
 
                             <button
                               onClick={() => setEditItem(b)}
-                              className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors tooltip tooltip-top"
+                              className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors tooltip tooltip-top"
                               title="แก้ไข"
                             >
                               <Pencil className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => deleteBooking(b.id)}
-                              className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                               title="ลบ"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -1012,6 +1118,70 @@ function AdminRequestsContent() {
               </table>
             </div>
           </div>
+
+          {/* ================= PAGINATION BAR ================= */}
+          {totalItems > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 bg-white p-4 rounded-2xl border border-gray-100/80 shadow-sm">
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="text-xs font-bold text-gray-500 whitespace-nowrap">แสดงหน้าละ:</span>
+                <div className="relative">
+                  <select
+                    value={pageSize}
+                    onChange={(e) => setPageSize(Number(e.target.value))}
+                    className="pl-4 pr-10 py-2 bg-gray-50 hover:bg-gray-100/80 border border-gray-200 rounded-xl text-xs font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 appearance-none cursor-pointer transition-all shadow-2xs"
+                  >
+                    <option value={20}>20 รายการ</option>
+                    <option value={50}>50 รายการ</option>
+                    <option value={100}>100 รายการ</option>
+                  </select>
+                  <ChevronRight className="w-3.5 h-3.5 rotate-90 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+                <span className="text-xs font-medium text-gray-500 bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-100 whitespace-nowrap">
+                  แสดง <span className="font-bold text-gray-800">{startIndex + 1} - {endIndex}</span> จาก <span className="font-bold text-gray-800">{totalItems}</span> รายการ
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(1)}
+                  disabled={safeCurrentPage === 1}
+                  className="p-2 rounded-xl border text-gray-600 bg-white border-gray-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 disabled:opacity-40 disabled:hover:bg-white disabled:hover:text-gray-600 disabled:hover:border-gray-200 disabled:cursor-not-allowed transition-all cursor-pointer shadow-2xs active:scale-95"
+                  title="หน้าแรก"
+                >
+                  <ChevronsLeft className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={safeCurrentPage === 1}
+                  className="px-3 py-2 rounded-xl border text-xs font-bold text-gray-700 bg-white border-gray-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 disabled:opacity-40 disabled:hover:bg-white disabled:hover:text-gray-700 disabled:hover:border-gray-200 disabled:cursor-not-allowed transition-all cursor-pointer shadow-2xs flex items-center gap-1 active:scale-95"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  <span className="hidden sm:inline">ก่อนหน้า</span>
+                </button>
+
+                <div className="px-4 py-1.5 text-xs font-extrabold text-blue-700 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100 shadow-2xs whitespace-nowrap">
+                  หน้า <span className="text-blue-600 font-black">{safeCurrentPage}</span> / {totalPages}
+                </div>
+
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={safeCurrentPage >= totalPages}
+                  className="px-3 py-2 rounded-xl border text-xs font-bold text-gray-700 bg-white border-gray-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 disabled:opacity-40 disabled:hover:bg-white disabled:hover:text-gray-700 disabled:hover:border-gray-200 disabled:cursor-not-allowed transition-all cursor-pointer shadow-2xs flex items-center gap-1 active:scale-95"
+                >
+                  <span className="hidden sm:inline">ถัดไป</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={safeCurrentPage >= totalPages}
+                  className="p-2 rounded-xl border text-gray-600 bg-white border-gray-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 disabled:opacity-40 disabled:hover:bg-white disabled:hover:text-gray-600 disabled:hover:border-gray-200 disabled:cursor-not-allowed transition-all cursor-pointer shadow-2xs active:scale-95"
+                  title="หน้าสุดท้าย"
+                >
+                  <ChevronsRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
         </>
       )}
 

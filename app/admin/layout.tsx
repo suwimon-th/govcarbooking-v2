@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import Link from "next/link";
@@ -7,6 +6,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import {
   ChevronLeft,
+  ChevronRight,
   Menu,
   X,
   Home,
@@ -19,10 +19,13 @@ import {
   Fuel,
   AlertTriangle,
   MessageCircle,
-  ChevronDown,
   SprayCan,
   ClipboardCheck,
-  Star
+  Star,
+  Settings,
+  UserCircle,
+  Bell,
+  FolderOpen
 } from "lucide-react";
 import ReportIssueModal from "@/app/components/ReportIssueModal";
 
@@ -37,24 +40,48 @@ export default function AdminLayout({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<{ full_name: string; role: string; line_picture_url?: string } | null>(null);
-
-  // ===== Breadcrumb Titles =====
-  const breadcrumbTitles: Record<string, string> = {
-    "/admin": "หน้าแรก",
-    "/admin/requests": "คำขอใช้รถ",
-    "/admin/vehicles": "รถทั้งหมด",
-    "/admin/drivers": "คนขับรถ",
-    "/admin/users": "ผู้ใช้งาน",
-    "/admin/reports": "รายงาน",
-    "/admin/inspections": "แบบรายงานสภาพรถ",
-  };
-
-  const currentTitle = breadcrumbTitles[pathname] ?? "";
+  const [collapsed, setCollapsed] = useState(false);
 
   const [pendingCount, setPendingCount] = useState(0);
   const [pendingFuelCount, setPendingFuelCount] = useState(0);
 
-  // Fetch Pending Count
+  // Load collapse preference
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("admin_sidebar_collapsed");
+      if (saved !== null) {
+        setCollapsed(saved === "true");
+      }
+    }
+  }, []);
+
+  const toggleSidebar = () => {
+    const newVal = !collapsed;
+    setCollapsed(newVal);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("admin_sidebar_collapsed", String(newVal));
+    }
+  };
+
+  // Breadcrumb Titles
+  const breadcrumbTitles: Record<string, string> = {
+    "/admin": "แผงควบคุม",
+    "/admin/requests": "คำขอใช้รถ",
+    "/admin/vehicles": "ข้อมูลรถทั้งหมด",
+    "/admin/drivers": "ข้อมูลคนขับรถ",
+    "/admin/users": "จัดการผู้ใช้งาน",
+    "/admin/reports": "รายงานสถิติ",
+    "/admin/inspections": "แบบรายงานสภาพรถ",
+    "/admin/fuel": "เบิกน้ำมันเชื้อเพลิง",
+    "/admin/maintenance": "แจ้งปัญหา/ซ่อมบำรุง",
+    "/admin/evaluations": "ผลการประเมิน",
+    "/admin/fogging": "เครื่องพ่นหมอกควัน",
+    "/admin/duty-settings": "ตั้งค่าเวรรถตู้",
+  };
+
+  const currentTitle = breadcrumbTitles[pathname] ?? "";
+
+  // Fetch Pending Counts
   useEffect(() => {
     const fetchPending = async () => {
       const { count: bookingCount } = await supabase
@@ -72,7 +99,6 @@ export default function AdminLayout({
 
     fetchPending();
 
-    // Realtime subscriptions
     const channel = supabase
       .channel("admin_badge")
       .on("postgres_changes", { event: "*", schema: "public", table: "bookings" }, () => fetchPending())
@@ -84,7 +110,7 @@ export default function AdminLayout({
     };
   }, []);
 
-  // Fetch Profile
+  // Fetch Admin Profile
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -102,401 +128,399 @@ export default function AdminLayout({
     fetchProfile();
   }, []);
 
-  // ===== Legacy Logout (keeps compatibility) =====
   const handleLogout = async (): Promise<void> => {
     try {
       setLoggingOut(true);
-      // Clear Supabase session if it exists (though likely unused)
-      await supabase.auth.signOut().catch(() => { });
-
-      // Clear custom Cookies (Manual fetch to delete API) -- Or just redirect to Login which might handle cleanup?
-      // For now, just redirect, assuming the layout isn't protected by middleware
-      // Ideally we would hit a logout API endpoint.
-      document.cookie = "user_id=; path=/; max-age=0";
-      document.cookie = "role=; path=/; max-age=0";
-      document.cookie = "full_name=; path=/; max-age=0";
-
-      router.replace("/calendar");
+      await fetch("/api/logout", { method: "POST" });
+      router.replace("/login");
     } finally {
       setLoggingOut(false);
     }
   };
 
+  // Menu Groups
+  const mainNav = [
+    { href: "/admin", label: "แผงควบคุม", icon: Home },
+    { href: "/admin/requests", label: "คำขอใช้รถ", icon: FileText, badge: pendingCount },
+    { href: "/calendar", label: "ปฏิทินงาน", icon: Calendar },
+  ];
+
+  const manageNav = [
+    { href: "/admin/vehicles", label: "ข้อมูลรถทั้งหมด", icon: Car },
+    { href: "/admin/drivers", label: "ข้อมูลคนขับรถ", icon: Users },
+    { href: "/admin/users", label: "จัดการผู้ใช้งาน", icon: Users },
+    { href: "/admin/fogging", label: "เครื่องพ่นหมอกควัน", icon: SprayCan },
+    { href: "/admin/duty-settings", label: "ตั้งค่าเวรรถตู้", icon: Settings },
+  ];
+
+  const opsNav = [
+    { href: "/admin/fuel", label: "เบิกน้ำมัน", icon: Fuel, badge: pendingFuelCount },
+    { href: "/admin/maintenance", label: "แจ้งปัญหา/ซ่อมบำรุง", icon: Wrench },
+    { href: "/admin/inspections", label: "แบบรายงานสภาพรถ", icon: ClipboardCheck },
+    { href: "/admin/evaluations", label: "ผลการประเมิน", icon: Star },
+    { href: "/admin/reports", label: "รายงานสถิติ", icon: FileText },
+  ];
+
+  const renderLink = (item: { href: string; label: string; icon: any; badge?: number }, idx: number) => {
+    const isActive = pathname === item.href;
+    const IconComponent = item.icon;
+
+    return (
+      <Link
+        key={idx}
+        href={item.href}
+        className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-black transition-all uppercase tracking-wider ${
+          isActive
+            ? "bg-white text-[#1e40af] shadow-md"
+            : "text-blue-100 hover:text-white hover:bg-white/10"
+        } ${collapsed ? "justify-center" : ""}`}
+      >
+        <IconComponent className="w-5 h-5 shrink-0 opacity-90" />
+        {!collapsed && <span className="animate-[fadeIn_0.2s_ease-out] truncate">{item.label}</span>}
+        {item.badge !== undefined && item.badge > 0 && (
+          <span className={`absolute bg-gradient-to-r from-red-500 to-rose-500 text-white rounded-full flex items-center justify-center font-black shadow-lg ${
+            collapsed ? "-top-1 -right-1 w-4 h-4 text-[9px]" : "right-3 px-2 py-0.5 text-[10px]"
+          }`}>
+            {item.badge}
+          </span>
+        )}
+      </Link>
+    );
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row font-sans">
+      
+      {/* ===== DESKTOP SIDEBAR (Royal Blue Theme) ===== */}
+      <aside className={`hidden md:flex flex-col fixed top-0 bottom-0 left-0 bg-[#1e40af] border-r border-blue-800 text-white transition-all duration-300 z-40 ${collapsed ? "w-[80px]" : "w-[260px]"}`}>
+        
+        {/* Floating Toggle Button */}
+        <button
+          onClick={toggleSidebar}
+          title={collapsed ? "ขยายเมนู" : "หุบเมนู"}
+          className="hidden md:flex items-center justify-center w-6 h-6 rounded-full bg-white text-[#1e40af] hover:bg-blue-50 border border-blue-200 shadow-md absolute -right-3 top-[24px] z-50 transition-transform duration-200 hover:scale-110 active:scale-95 cursor-pointer"
+        >
+          {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
+        </button>
 
-      {/* === HEADER (Modern Premium) === */}
-      <header className="w-full bg-white/95 backdrop-blur-xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] border-b border-gray-100 fixed top-0 left-0 z-40 transition-all duration-300">
-        <div className="max-w-[1400px] mx-auto px-4 md:px-6 h-[72px] flex items-center justify-between gap-4">
-
-          {/* Left: Back / Home */}
-          <div className="shrink-0">
-            <button
-              onClick={() => router.push("/admin")}
-              className="flex items-center gap-2 text-gray-500 hover:text-blue-600 transition-all p-2 rounded-xl hover:bg-blue-50 hover:-translate-y-0.5 active:scale-95"
-            >
-              <div className="bg-gray-100 p-1.5 rounded-full text-gray-600 group-hover:bg-blue-100 group-hover:text-blue-600 md:hidden">
-                <ChevronLeft className="w-5 h-5" />
-              </div>
-              <span className="hidden md:flex items-center gap-2 font-bold tracking-wide">
-                <ChevronLeft className="w-4 h-4" /> กลับหน้าแรก
-              </span>
-            </button>
-          </div>
-
-          {/* Center: Title */}
-          <h1 className="text-base md:text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-gray-800 to-blue-800 text-center truncate flex-1 leading-tight tracking-wide">
-            ระบบบริหารการใช้รถราชการ
-          </h1>
-
-          {/* Right: Menu */}
-          <div className="shrink-0 flex items-center">
-            {/* Mobile Menu Toggle */}
-            <button
-              className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-              onClick={() => setMobileMenuOpen(true)}
-            >
-              <Menu className="w-6 h-6" />
-              {pendingCount > 0 && (
-                <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-red-500 border-2 border-white rounded-full"></span>
-              )}
-            </button>
-
-            {/* Desktop Menu */}
-            <div className="hidden md:flex items-center gap-1.5 text-sm font-bold text-gray-600">
-
-              {/* 1. Main */}
-              <Link href="/admin/requests" className="hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-xl flex items-center gap-2 transition-all hover:-translate-y-0.5 active:scale-95 relative">
-                <FileText className="w-4 h-4" /> คำขอใช้รถ
-                {pendingCount > 0 && (
-                  <span className="bg-gradient-to-r from-red-500 to-rose-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full min-w-[20px] text-center shadow-md animate-bounce absolute -top-1.5 -right-2 border border-white">
-                    {pendingCount}
-                  </span>
-                )}
-              </Link>
-              <Link href="/calendar" className="hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-xl flex items-center gap-2 transition-all hover:-translate-y-0.5 active:scale-95" target="_blank">
-                <Calendar className="w-4 h-4" /> ปฏิทิน
-              </Link>
-
-              {/* 2. Management Dropdown */}
-              <div className="relative group">
-                <button className="flex items-center gap-1 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-xl transition-all hover:-translate-y-0.5 active:scale-95">
-                  <span>จัดการข้อมูล</span>
-                  <ChevronDown className="w-4 h-4 group-hover:rotate-180 transition-transform duration-300" />
-                </button>
-                {/* Dropdown Content with safe hover area */}
-                <div className="absolute top-full right-0 pt-3 w-52 hidden group-hover:block z-50">
-                  <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="p-1.5 flex flex-col gap-0.5">
-                      <Link href="/admin/vehicles" className="group/item flex items-center gap-3 px-3 py-2.5 hover:bg-blue-50 rounded-xl text-gray-700 transition-colors">
-                        <div className="bg-blue-100 p-1.5 rounded-lg group-hover/item:scale-110 transition-transform"><Car className="w-3.5 h-3.5 text-blue-600" /></div>
-                        <span className="group-hover/item:text-blue-700 font-bold">ข้อมูลรถ</span>
-                      </Link>
-                      <Link href="/admin/drivers" className="group/item flex items-center gap-3 px-3 py-2.5 hover:bg-green-50 rounded-xl text-gray-700 transition-colors">
-                        <div className="bg-green-100 p-1.5 rounded-lg group-hover/item:scale-110 transition-transform"><Users className="w-3.5 h-3.5 text-green-600" /></div>
-                        <span className="group-hover/item:text-green-700 font-bold">คนขับรถ</span>
-                      </Link>
-                      <Link href="/admin/users" className="group/item flex items-center gap-3 px-3 py-2.5 hover:bg-purple-50 rounded-xl text-gray-700 transition-colors">
-                        <div className="bg-purple-100 p-1.5 rounded-lg group-hover/item:scale-110 transition-transform"><Users className="w-3.5 h-3.5 text-purple-600" /></div>
-                        <span className="group-hover/item:text-purple-700 font-bold">ผู้ใช้งาน</span>
-                      </Link>
-                      <Link href="/admin/fogging" className="group/item flex items-center gap-3 px-3 py-2.5 hover:bg-orange-50 rounded-xl text-gray-700 transition-colors">
-                        <div className="bg-orange-100 p-1.5 rounded-lg group-hover/item:scale-110 transition-transform"><SprayCan className="w-3.5 h-3.5 text-orange-600" /></div>
-                        <span className="group-hover/item:text-orange-700 font-bold text-xs">เครื่องพ่นหมอกควัน</span>
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* 3. Operations Dropdown */}
-              <div className="relative group">
-                <button className="flex items-center gap-1 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-xl transition-all hover:-translate-y-0.5 active:scale-95 relative">
-                  <span>ระบบงาน</span>
-                  <ChevronDown className="w-4 h-4 group-hover:rotate-180 transition-transform duration-300" />
-                  {pendingFuelCount > 0 && (
-                    <span className="absolute top-2 right-1 w-2 h-2 bg-rose-500 rounded-full animate-ping"></span>
-                  )}
-                  {pendingFuelCount > 0 && (
-                    <span className="absolute top-2 right-1 w-2 h-2 bg-rose-500 rounded-full"></span>
-                  )}
-                </button>
-                <div className="absolute top-full right-0 pt-3 w-64 hidden group-hover:block z-50">
-                  <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="p-1.5 flex flex-col gap-0.5">
-                      <Link href="/admin/maintenance" className="group/item flex items-center gap-3 px-3 py-2.5 hover:bg-amber-50 rounded-xl text-gray-700 transition-colors">
-                        <div className="bg-amber-100 p-1.5 rounded-lg group-hover/item:scale-110 transition-transform"><Wrench className="w-3.5 h-3.5 text-amber-600" /></div>
-                        <span className="group-hover/item:text-amber-700 font-bold">แจ้งปัญหา/ซ่อมบำรุง</span>
-                      </Link>
-                      <Link href="/admin/fuel" className="group/item flex items-center gap-3 px-3 py-2.5 hover:bg-rose-50 rounded-xl text-gray-700 transition-colors justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="bg-rose-100 p-1.5 rounded-lg group-hover/item:scale-110 transition-transform"><Fuel className="w-3.5 h-3.5 text-rose-600" /></div>
-                          <span className="group-hover/item:text-rose-700 font-bold">เบิกน้ำมัน</span>
-                        </div>
-                        {pendingFuelCount > 0 && (
-                          <span className="bg-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm">
-                            {pendingFuelCount}
-                          </span>
-                        )}
-                      </Link>
-                      <Link href="/admin/inspections" className="group/item flex items-center gap-3 px-3 py-2.5 hover:bg-blue-50 rounded-xl text-gray-700 transition-colors">
-                        <div className="bg-blue-100 p-1.5 rounded-lg group-hover/item:scale-110 transition-transform"><ClipboardCheck className="w-3.5 h-3.5 text-blue-600" /></div>
-                        <span className="group-hover/item:text-blue-700 font-bold">แบบรายงานสภาพรถ</span>
-                      </Link>
-                      <Link href="/admin/evaluations" className="group/item flex items-center gap-3 px-3 py-2.5 hover:bg-yellow-50 rounded-xl text-gray-700 transition-colors">
-                        <div className="bg-yellow-100 p-1.5 rounded-lg group-hover/item:scale-110 transition-transform"><Star className="w-3.5 h-3.5 text-yellow-600" /></div>
-                        <span className="group-hover/item:text-yellow-700 font-bold">ผลการประเมิน</span>
-                      </Link>
-                      <Link href="/admin/reports" className="group/item flex items-center gap-3 px-3 py-2.5 hover:bg-emerald-50 rounded-xl text-gray-700 transition-colors">
-                        <div className="bg-emerald-100 p-1.5 rounded-lg group-hover/item:scale-110 transition-transform"><FileText className="w-3.5 h-3.5 text-emerald-600" /></div>
-                        <span className="group-hover/item:text-emerald-700 font-bold">รายงานสถิติ</span>
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* 4. Help Dropdown */}
-              <div className="relative group">
-                <button className="flex items-center gap-1 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-xl transition-all hover:-translate-y-0.5 active:scale-95">
-                  <span>ช่วยเหลือ</span>
-                  <ChevronDown className="w-4 h-4 group-hover:rotate-180 transition-transform duration-300" />
-                </button>
-                <div className="absolute top-full right-0 pt-3 w-56 hidden group-hover:block z-50">
-                  <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="p-1.5 flex flex-col gap-0.5">
-                      <button
-                        onClick={() => setReportModalOpen(true)}
-                        className="group/item w-full text-left flex items-center gap-3 px-3 py-2.5 hover:bg-amber-50 rounded-xl text-gray-700 transition-colors"
-                      >
-                        <div className="bg-amber-100 p-1.5 rounded-lg group-hover/item:scale-110 transition-transform"><AlertTriangle className="w-3.5 h-3.5 text-amber-600" /></div>
-                        <span className="group-hover/item:text-amber-700 font-bold">แจ้งปัญหาการใช้รถ</span>
-                      </button>
-                      <a
-                        href="https://line.me/R/ti/p/@420uicrg"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="group/item flex items-center gap-3 px-3 py-2.5 hover:bg-green-50 rounded-xl text-gray-700 transition-colors"
-                      >
-                        <div className="bg-green-100 p-1.5 rounded-lg group-hover/item:scale-110 transition-transform"><MessageCircle className="w-3.5 h-3.5 text-green-600" /></div>
-                        <span className="group-hover/item:text-green-700 font-bold">ติดต่อเราผ่าน LINE</span>
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="h-8 w-px bg-gray-200 mx-2"></div>
-
-              {/* User Profile Section PC */}
-              {userProfile && (
-                <div className="flex items-center gap-3 px-3 py-2 bg-gray-50/80 rounded-2xl border border-gray-100 mr-2 shadow-sm hover:shadow-md hover:border-blue-100 hover:-translate-y-0.5 transition-all cursor-default">
-                  <div className="w-8 h-8 rounded-xl overflow-hidden border border-gray-200 bg-white shadow-inner flex items-center justify-center">
-                    {userProfile.line_picture_url ? (
-                      <img src={userProfile.line_picture_url} alt="Profile" className="w-full h-full object-cover" />
-                    ) : (
-                      <Users className="w-4 h-4 text-gray-400" />
-                    )}
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-xs font-black text-gray-800 leading-tight truncate max-w-[120px]">
-                      {userProfile.full_name}
-                    </span>
-                    <span className="text-[9px] text-gray-400 font-black uppercase tracking-widest">ผู้ดูแลระบบ</span>
-                  </div>
-                </div>
-              )}
-
-              <button
-                onClick={handleLogout}
-                disabled={loggingOut}
-                className="flex items-center gap-2 text-red-600 bg-white hover:bg-red-500 hover:text-white px-5 py-2 rounded-xl transition-all border border-red-100 hover:border-red-500 shadow-sm hover:shadow-md hover:shadow-red-500/20 hover:-translate-y-0.5 active:scale-95 font-bold tracking-wide"
-              >
-                <LogOut className="w-4 h-4" />
-                {loggingOut ? "กำลังออก..." : "ออกจากระบบ"}
-              </button>
+        {/* Brand Header */}
+        <div className={`h-[72px] flex items-center border-b border-blue-800 shrink-0 px-4 ${collapsed ? "justify-center" : "justify-start"}`}>
+          <Link href="/admin" className="flex items-center gap-3 overflow-hidden">
+            <div className="w-10 h-10 rounded-xl bg-white text-[#1e40af] flex items-center justify-center shadow-md border border-white shrink-0">
+              <Car className="w-6 h-6 px-0.5" />
             </div>
-          </div>
-        </div>
-      </header>
-
-      {/* ===== MOBILE DRAWER MENU ===== */}
-      {mobileMenuOpen && (
-        <>
-          {/* overlay */}
-          <div
-            className="fixed inset-0 bg-black/40 z-50"
-            onClick={() => setMobileMenuOpen(false)}
-          ></div>
-
-          {/* drawer */}
-          <div className="fixed right-0 top-0 h-full w-64 bg-white shadow-lg z-50 p-5 overflow-y-auto">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="font-bold text-lg">เมนู</h2>
-              <button onClick={() => setMobileMenuOpen(false)} className="p-1 hover:bg-gray-100 rounded-full">
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-
-            {/* User Profile Section Mobile */}
-            {userProfile && (
-              <div className="mb-6 p-4 bg-gradient-to-br from-gray-50 to-blue-50/30 rounded-2xl border border-gray-100 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-sm flex items-center justify-center bg-white">
-                  {userProfile.line_picture_url ? (
-                    <img src={userProfile.line_picture_url} alt="Profile" className="w-full h-full object-cover" />
-                  ) : (
-                    <Users className="w-6 h-6 text-gray-300" />
-                  )}
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest mb-0.5">Admin Profile</span>
-                  <span className="text-base font-bold text-gray-800 leading-tight truncate max-w-[140px]">
-                    {userProfile.full_name}
-                  </span>
-                </div>
+            {!collapsed && (
+              <div className="flex flex-col animate-[fadeIn_0.2s_ease-out]">
+                <span className="font-black text-white text-sm leading-tight tracking-wide uppercase">GovCarBooking</span>
+                <span className="text-[9px] text-blue-200 font-bold uppercase tracking-wider">ระบบผู้ดูแลระบบ ADMIN</span>
               </div>
             )}
+          </Link>
+        </div>
 
-            <div className="space-y-6">
+        {/* User Profile */}
+        {userProfile && (
+          <div className={`p-4 border-b border-blue-800/60 bg-blue-900/20 flex items-center gap-3 overflow-hidden shrink-0 ${collapsed ? "justify-center" : ""}`}>
+            <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/20 bg-white/20 shadow-inner flex items-center justify-center shrink-0">
+              {userProfile.line_picture_url ? (
+                <img src={userProfile.line_picture_url} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <UserCircle className="w-7 h-7 text-blue-100" />
+              )}
+            </div>
+            {!collapsed && (
+              <div className="flex flex-col animate-[fadeIn_0.2s_ease-out] overflow-hidden">
+                <span className="text-xs font-black text-white truncate max-w-[150px] uppercase tracking-wide">
+                  {userProfile.full_name}
+                </span>
+                <span className="text-[9px] text-amber-300 font-black uppercase tracking-tighter">ผู้ดูแลระบบ</span>
+              </div>
+            )}
+          </div>
+        )}
 
-              {/* Group 1: Main */}
-              <div className="space-y-1">
-                <Link href="/admin/requests" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2 hover:bg-blue-50 text-gray-700 rounded-lg font-medium">
-                  <div className="relative">
-                    <FileText className="w-5 h-5 text-blue-500" />
-                    {pendingCount > 0 && (
-                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border border-white"></span>
-                    )}
+        {/* Navigation Menu */}
+        <nav className="flex-1 py-4 px-3 space-y-4 overflow-y-auto custom-scrollbar">
+          
+          {/* Main */}
+          <div>
+            {!collapsed && <div className="text-[9px] font-extrabold text-blue-300 uppercase tracking-widest px-3 mb-1.5 opacity-80">เมนูหลัก</div>}
+            <div className="space-y-1">
+              {mainNav.map((item, idx) => renderLink(item, idx))}
+            </div>
+          </div>
+
+          {/* Management */}
+          <div>
+            {!collapsed && <div className="text-[9px] font-extrabold text-blue-300 uppercase tracking-widest px-3 mb-1.5 opacity-80">จัดการข้อมูล</div>}
+            <div className="space-y-1">
+              {manageNav.map((item, idx) => renderLink(item, idx))}
+            </div>
+          </div>
+
+          {/* Operations */}
+          <div>
+            {!collapsed && <div className="text-[9px] font-extrabold text-blue-300 uppercase tracking-widest px-3 mb-1.5 opacity-80">ระบบงาน</div>}
+            <div className="space-y-1">
+              {opsNav.map((item, idx) => renderLink(item, idx))}
+            </div>
+          </div>
+
+          {/* Help & Links */}
+          <div>
+            {!collapsed && <div className="text-[9px] font-extrabold text-blue-300 uppercase tracking-widest px-3 mb-1.5 opacity-80">ช่วยเหลือ</div>}
+            <div className="space-y-1">
+              <button
+                onClick={() => setReportModalOpen(true)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-black text-blue-100 hover:text-white hover:bg-white/10 transition-all uppercase tracking-wider ${collapsed ? "justify-center" : ""}`}
+              >
+                <AlertTriangle className="w-5 h-5 shrink-0 opacity-80 text-amber-400" />
+                {!collapsed && <span className="animate-[fadeIn_0.2s_ease-out]">แจ้งปัญหาการใช้รถ</span>}
+              </button>
+
+              <a
+                href="https://line.me/R/ti/p/@420uicrg"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-black text-blue-100 hover:text-white hover:bg-white/10 transition-all uppercase tracking-wider ${collapsed ? "justify-center" : ""}`}
+              >
+                <MessageCircle className="w-5 h-5 shrink-0 opacity-80 text-green-400" />
+                {!collapsed && <span className="animate-[fadeIn_0.2s_ease-out]">ติดต่อผ่าน LINE</span>}
+              </a>
+            </div>
+          </div>
+
+        </nav>
+
+        {/* Footer Logout */}
+        <div className="p-3 border-t border-blue-800/80 bg-blue-950/20 shrink-0">
+          <button
+            onClick={handleLogout}
+            disabled={loggingOut}
+            className={`w-full flex items-center gap-3 bg-white/10 text-white hover:bg-white hover:text-[#1e40af] p-2.5 rounded-xl font-black text-xs transition-all uppercase tracking-wider ${collapsed ? "justify-center" : ""}`}
+          >
+            <LogOut className="w-5 h-5 shrink-0" />
+            {!collapsed && (
+              <span className="animate-[fadeIn_0.2s_ease-out]">{loggingOut ? "..." : "ออกจากระบบ"}</span>
+            )}
+          </button>
+        </div>
+      </aside>
+
+      {/* ===== MOBILE HEADER ===== */}
+      <header className="md:hidden w-full bg-[#1e40af] border-b border-blue-800 h-[72px] flex items-center justify-between px-4 z-50 shadow-md shrink-0">
+        <button
+          className="p-2 text-white hover:bg-white/10 rounded-xl transition-colors active:scale-95 border border-white/20 relative"
+          onClick={() => setMobileMenuOpen(true)}
+        >
+          <Menu className="w-6 h-6" />
+          {(pendingCount > 0 || pendingFuelCount > 0) && (
+            <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-[#1e40af]"></span>
+          )}
+        </button>
+        
+        <div className="flex-1 text-center">
+          <h1 className="text-sm font-black text-white truncate uppercase tracking-widest flex items-center justify-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse shadow-[0_0_8px_rgba(251,191,36,0.5)]"></div>
+            GOV CAR ADMIN
+          </h1>
+        </div>
+        
+        <div className="w-10"></div>
+      </header>
+
+      {/* ===== MOBILE SIDEBAR DRAWER ===== */}
+      <div
+        className={`fixed inset-0 bg-black/40 backdrop-blur-sm z-50 transition-opacity duration-300 ${mobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+        onClick={() => setMobileMenuOpen(false)}
+      />
+      <div className={`fixed left-0 top-0 h-full w-[280px] bg-[#1e40af] text-white shadow-2xl z-50 transform transition-transform duration-300 ease-out flex flex-col ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"}`}>
+        
+        {/* Drawer Header */}
+        <div className="p-6 flex items-start justify-between border-b border-blue-800 bg-blue-950/40 relative overflow-hidden">
+          <div className="flex items-center gap-4 relative z-10">
+            <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white/30 shadow-inner bg-white/20 flex items-center justify-center">
+              {userProfile?.line_picture_url ? (
+                <img src={userProfile.line_picture_url} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <UserCircle className="w-8 h-8 text-blue-100" />
+              )}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-base font-bold text-white drop-shadow-sm truncate max-w-[150px]">
+                {userProfile?.full_name || 'ผู้ดูแลระบบ'}
+              </span>
+              <span className="text-xs text-amber-300 font-black tracking-wider uppercase">ผู้ดูแลระบบ Admin</span>
+            </div>
+          </div>
+          <button onClick={() => setMobileMenuOpen(false)} className="text-white/70 hover:text-white p-1 hover:bg-white/10 rounded-lg transition-colors relative z-10 -mt-1 -mr-1">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        {/* Drawer Links */}
+        <div className="p-4 flex flex-col gap-4 flex-1 overflow-y-auto">
+          <div>
+            <div className="text-[10px] font-extrabold text-blue-300 uppercase tracking-widest px-2 mb-1.5 opacity-80">เมนูหลัก</div>
+            <div className="space-y-1">
+              {mainNav.map((item, idx) => (
+                <Link
+                  key={idx}
+                  href={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`flex items-center justify-between p-2.5 rounded-xl font-bold text-xs transition-all ${
+                    pathname === item.href ? "bg-white text-[#1e40af]" : "text-blue-100 hover:bg-white/10"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <item.icon className="w-4 h-4" />
+                    <span>{item.label}</span>
                   </div>
-                  คำขอใช้รถ
-                  {pendingCount > 0 && (
-                    <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full ml-auto">
-                      {pendingCount}
+                  {item.badge !== undefined && item.badge > 0 && (
+                    <span className="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">
+                      {item.badge}
                     </span>
                   )}
                 </Link>
-                <Link href="/calendar" onClick={() => setMobileMenuOpen(false)} target="_blank" className="flex items-center gap-3 px-3 py-2 hover:bg-blue-50 text-gray-700 rounded-lg font-medium">
-                  <Calendar className="w-5 h-5 text-blue-500" /> ปฏิทินงาน
-                </Link>
-              </div>
-
-              <hr className="border-gray-100" />
-
-              {/* Group 2: Management */}
-              <div>
-                <p className="px-3 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">จัดการข้อมูล</p>
-                <div className="space-y-1">
-                  <Link href="/admin/vehicles" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 text-gray-600 rounded-lg">
-                    <Car className="w-4 h-4" /> รถทั้งหมด
-                  </Link>
-                  <Link href="/admin/drivers" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 text-gray-600 rounded-lg">
-                    <Users className="w-4 h-4" /> คนขับรถ
-                  </Link>
-                  <Link href="/admin/users" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 text-gray-600 rounded-lg">
-                    <Users className="w-4 h-4" /> ผู้ใช้งาน
-                  </Link>
-                  <Link href="/admin/fogging" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 text-gray-600 rounded-lg">
-                    <SprayCan className="w-4 h-4" /> เครื่องพ่นหมอกควัน
-                  </Link>
-                </div>
-              </div>
-
-              <hr className="border-gray-100" />
-
-              {/* Group 3: Operations */}
-              <div>
-                <p className="px-3 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">ระบบงาน</p>
-                <div className="space-y-1">
-                  <Link href="/admin/maintenance" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 text-gray-600 rounded-lg">
-                    <Wrench className="w-4 h-4" /> แจ้งปัญหา/ซ่อมบำรุง
-                  </Link>
-                  <Link href="/admin/fuel" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 text-gray-600 rounded-lg">
-                    <div className="relative">
-                      <Fuel className="w-4 h-4" />
-                      {pendingFuelCount > 0 && (
-                        <span className="absolute -top-1 -right-1 w-2 h-2 bg-rose-500 rounded-full border border-white"></span>
-                      )}
-                    </div>
-                    เบิกน้ำมัน
-                    {pendingFuelCount > 0 && (
-                      <span className="bg-rose-500 text-white text-xs font-bold px-2 py-0.5 rounded-full ml-auto">
-                        {pendingFuelCount}
-                      </span>
-                    )}
-                  </Link>
-                  <Link href="/admin/inspections" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 text-gray-600 rounded-lg">
-                    <ClipboardCheck className="w-4 h-4" /> แบบรายงานสภาพรถ
-                  </Link>
-                  <Link href="/admin/evaluations" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2 hover:bg-yellow-50 text-gray-600 rounded-lg">
-                    <Star className="w-4 h-4 text-yellow-500" /> ผลการประเมิน
-                  </Link>
-                  <Link href="/admin/reports" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 px-3 py-2 hover:bg-orange-50 text-gray-600 rounded-lg transition-colors">
-                    <FileText className="w-4 h-4 text-orange-500" /> รายงาน
-                  </Link>
-                </div>
-              </div>
-
-              <hr className="border-gray-100" />
-
-              {/* Group 4: Help */}
-              <div>
-                <p className="px-3 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">ช่วยเหลือ</p>
-                <div className="space-y-1">
-
-                  <button
-                    onClick={() => {
-                      setMobileMenuOpen(false);
-                      setReportModalOpen(true);
-                    }}
-                    className="w-full text-left flex items-center gap-3 px-3 py-2 hover:bg-gray-50 text-gray-600 rounded-lg"
-                  >
-                    <AlertTriangle className="w-4 h-4" /> แจ้งปัญหา
-                  </button>
-                  <a
-                    href="https://line.me/R/ti/p/@420uicrg"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 text-gray-600 rounded-lg"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    <MessageCircle className="w-4 h-4" /> ติดต่อเรา
-                  </a>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t border-gray-100">
-                <button
-                  onClick={handleLogout}
-                  className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-red-50 text-red-600 rounded-xl font-medium"
-                >
-                  <LogOut className="w-4 h-4" /> ออกจากระบบ
-                </button>
-              </div>
+              ))}
             </div>
           </div>
-        </>
-      )}
 
-      {/* ดันเนื้อหาให้ไม่ชน Header */}
-      <div className="pt-20 px-4 md:px-6">
+          <div>
+            <div className="text-[10px] font-extrabold text-blue-300 uppercase tracking-widest px-2 mb-1.5 opacity-80">จัดการข้อมูล</div>
+            <div className="space-y-1">
+              {manageNav.map((item, idx) => (
+                <Link
+                  key={idx}
+                  href={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`flex items-center justify-between p-2.5 rounded-xl font-bold text-xs transition-all ${
+                    pathname === item.href ? "bg-white text-[#1e40af]" : "text-blue-100 hover:bg-white/10"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <item.icon className="w-4 h-4" />
+                    <span>{item.label}</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
 
-        {/* breadcrumb */}
-        <div className="text-xs md:text-sm text-gray-600 mb-3">
-          <Link href="/admin" className="text-blue-600 hover:underline">
-            หน้าแรก
-          </Link>
-          {pathname !== "/admin" && currentTitle && (
-            <> / <span className="text-gray-800">{currentTitle}</span></>
-          )}
+          <div>
+            <div className="text-[10px] font-extrabold text-blue-300 uppercase tracking-widest px-2 mb-1.5 opacity-80">ระบบงาน</div>
+            <div className="space-y-1">
+              {opsNav.map((item, idx) => (
+                <Link
+                  key={idx}
+                  href={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`flex items-center justify-between p-2.5 rounded-xl font-bold text-xs transition-all ${
+                    pathname === item.href ? "bg-white text-[#1e40af]" : "text-blue-100 hover:bg-white/10"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <item.icon className="w-4 h-4" />
+                    <span>{item.label}</span>
+                  </div>
+                  {item.badge !== undefined && item.badge > 0 && (
+                    <span className="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full">
+                      {item.badge}
+                    </span>
+                  )}
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <div className="text-[10px] font-extrabold text-blue-300 uppercase tracking-widest px-2 mb-1.5 opacity-80">ช่วยเหลือ</div>
+            <div className="space-y-1">
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  setReportModalOpen(true);
+                }}
+                className="w-full flex items-center gap-3 p-2.5 rounded-xl text-xs font-bold text-blue-100 hover:bg-white/10"
+              >
+                <AlertTriangle className="w-4 h-4 text-amber-400" />
+                <span>แจ้งปัญหาการใช้รถ</span>
+              </button>
+              <a
+                href="https://line.me/R/ti/p/@420uicrg"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full flex items-center gap-3 p-2.5 rounded-xl text-xs font-bold text-blue-100 hover:bg-white/10"
+              >
+                <MessageCircle className="w-4 h-4 text-green-400" />
+                <span>ติดต่อผ่าน LINE</span>
+              </a>
+            </div>
+          </div>
         </div>
 
-        <main className="pb-8">{children}</main>
+        {/* Drawer Footer */}
+        <div className="p-4 border-t border-blue-800 bg-blue-950/40">
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center gap-2 bg-red-500/20 text-red-200 border border-red-500/30 hover:bg-red-500 hover:text-white p-3 rounded-xl font-bold text-xs transition-all"
+          >
+            <LogOut className="w-4 h-4" />
+            ออกจากระบบ
+          </button>
+        </div>
+      </div>
+
+      {/* ===== CONTENT AREA ===== */}
+      <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${collapsed ? "md:pl-[80px]" : "md:pl-[260px]"}`}>
+        
+        {/* Top Header Bar for Desktop Breadcrumbs */}
+        <div className="hidden md:flex items-center justify-between h-[72px] bg-white border-b border-gray-100 px-6 shrink-0 shadow-xs">
+          <div className="flex items-center gap-2 text-xs font-extrabold text-gray-500">
+            <Link href="/admin" className="text-blue-600 hover:underline flex items-center gap-1">
+              <Home className="w-3.5 h-3.5" /> หน้าแรก
+            </Link>
+            {pathname !== "/admin" && currentTitle && (
+              <>
+                <ChevronRight className="w-3.5 h-3.5 text-gray-300" />
+                <span className="text-gray-800 font-black">{currentTitle}</span>
+              </>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3">
+            {pendingCount > 0 && (
+              <Link href="/admin/requests" className="flex items-center gap-2 bg-red-50 text-red-600 border border-red-100 px-3 py-1.5 rounded-full text-xs font-black shadow-xs hover:bg-red-100 transition-colors">
+                <Bell className="w-3.5 h-3.5 animate-bounce" />
+                <span>คำขอใหม่ ({pendingCount})</span>
+              </Link>
+            )}
+            {pendingFuelCount > 0 && (
+              <Link href="/admin/fuel" className="flex items-center gap-2 bg-rose-50 text-rose-600 border border-rose-100 px-3 py-1.5 rounded-full text-xs font-black shadow-xs hover:bg-rose-100 transition-colors">
+                <Fuel className="w-3.5 h-3.5" />
+                <span>เบิกน้ำมัน ({pendingFuelCount})</span>
+              </Link>
+            )}
+          </div>
+        </div>
+
+        <main className="flex-1 w-full bg-gray-50/50 p-4 md:p-6">
+          {children}
+        </main>
       </div>
 
       <ReportIssueModal
         open={reportModalOpen}
         onClose={() => setReportModalOpen(false)}
       />
+
+      <style jsx global>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 }

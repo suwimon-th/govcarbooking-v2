@@ -11,10 +11,11 @@ import {
   FileText,
   Key,
   LogOut,
+  ChevronLeft,
   ChevronRight,
   UserCircle,
-  BookOpen,
-  Bell
+  Bell,
+  FolderOpen
 } from "lucide-react";
 
 export default function UserLayout({
@@ -27,21 +28,37 @@ export default function UserLayout({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<{ full_name: string; role: string; line_picture_url?: string } | null>(null);
   const [pendingEvals, setPendingEvals] = useState(0);
+  const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("sidebar_collapsed");
+      if (saved !== null) {
+        setCollapsed(saved === "true");
+      }
+    }
+  }, []);
+
+  const toggleSidebar = () => {
+    const newVal = !collapsed;
+    setCollapsed(newVal);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("sidebar_collapsed", String(newVal));
+    }
+  };
 
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        // Fetch from API which has access to HttpOnly cookies
         const res = await fetch('/api/user/me');
         if (res.ok) {
           const data = await res.json();
           if (data && data.full_name) {
             setUserProfile(data);
-            return; // Successful fetch
+            return;
           }
         }
 
-        // Fallback: If API fails, try getting user directly (in case they used Supabase Auth)
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           const { data, error } = await supabase
@@ -65,11 +82,12 @@ export default function UserLayout({
       try {
         const res = await fetch("/api/user/my-requests");
         if (res.ok) {
-          const data = await res.json();
+          const json = await res.json();
+          const list = Array.isArray(json) ? json : (json.items || json.statusSummary || []);
           const now = new Date();
           const curMonth = now.getMonth();
           const curYear = now.getFullYear();
-          const count = data.filter((b: any) => {
+          const count = list.filter((b: any) => {
             if (b.status !== "COMPLETED" || b.is_satisfied !== null || b.evaluation_comment === "__SKIP__") return false;
             if (!b.start_at) return false;
             const bDate = new Date(b.start_at);
@@ -89,122 +107,158 @@ export default function UserLayout({
   const handleLogout = async () => {
     try {
       setLoggingOut(true);
-      await supabase.auth.signOut().catch(() => { });
-      router.push("/calendar");
+      await fetch("/api/logout", { method: "POST" });
+      router.push("/login");
     } finally {
       setLoggingOut(false);
     }
   };
 
+  const navItems = [
+    { href: "/user", label: "ขอใช้รถใหม่", icon: Car },
+    { href: "/user/my-requests", label: "ประวัติการขอใช้รถ", icon: FileText, showBadge: pendingEvals > 0 },
+    { href: "/user/profile", label: "ข้อมูลส่วนตัว / LINE", icon: UserCircle },
+    { href: "/user/change-password", label: "เปลี่ยนรหัสผ่าน", icon: Key },
+    { href: "https://drive.google.com/drive/folders/1iTsmpuzdDFzqHbtO4UStINj82rBxqCTZ", label: "คลังข้อมูล", icon: FolderOpen, external: true },
+  ];
+
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
+    <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row font-sans">
+      
+      {/* ===== DESKTOP SIDEBAR ===== */}
+      <aside className={`hidden md:flex flex-col fixed top-0 bottom-0 left-0 bg-[#1e40af] border-r border-blue-800 text-white transition-all duration-300 z-40 ${collapsed ? "w-[80px]" : "w-[260px]"}`}>
+        {/* Floating Collapse/Expand Toggle Button on Sidebar Border */}
+        <button
+          onClick={toggleSidebar}
+          title={collapsed ? "ขยายเมนู" : "หุบเมนู"}
+          className="hidden md:flex items-center justify-center w-6 h-6 rounded-full bg-white text-[#1e40af] hover:bg-blue-50 border border-blue-200 shadow-md absolute -right-3 top-[24px] z-50 transition-transform duration-200 hover:scale-110 active:scale-95 cursor-pointer"
+        >
+          {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
+        </button>
 
-      {/* ===== HEADER (Modern High-Visibility Blue) ===== */}
-      <header className="w-full bg-[#1e40af] border-b border-blue-800 fixed top-0 left-0 z-50 transition-all duration-300 shadow-lg">
-        <div className="max-w-[1400px] mx-auto px-4 md:px-6 h-[72px] flex items-center justify-between gap-4">
-
-          {/* Left: Logo/Icon */}
-          <Link href="/user" className="shrink-0 flex items-center gap-3 group cursor-pointer">
-            <div className="w-10 h-10 rounded-xl bg-white text-[#1e40af] flex items-center justify-center shadow-md group-hover:shadow-lg transition-all transform group-hover:scale-105 border border-white">
+        {/* Brand Header */}
+        <div className={`h-[72px] flex items-center border-b border-blue-800 shrink-0 px-4 ${collapsed ? "justify-center" : "justify-start"}`}>
+          <Link href="/user" className="flex items-center gap-3 overflow-hidden">
+            <div className="w-10 h-10 rounded-xl bg-white text-[#1e40af] flex items-center justify-center shadow-md border border-white shrink-0">
               <Car className="w-6 h-6 px-0.5" />
             </div>
-            <div className="hidden md:flex flex-col">
-              <span className="font-black text-white text-base leading-tight tracking-wide group-hover:text-blue-100 transition-colors uppercase">GovCarBooking</span>
-              <span className="text-[10px] text-blue-100 font-black uppercase tracking-[0.2em]">ระบบบริหารการใช้รถราชการ</span>
-            </div>
+            {!collapsed && (
+              <div className="flex flex-col animate-[fadeIn_0.2s_ease-out]">
+                <span className="font-black text-white text-sm leading-tight tracking-wide uppercase">GovCarBooking</span>
+                <span className="text-[9px] text-blue-200 font-bold uppercase tracking-wider">ระบบบริหารการใช้รถราชการ</span>
+              </div>
+            )}
           </Link>
-
-          {/* Center: Title (Mobile Only) */}
-          <div className="md:hidden flex-1 text-center">
-            <h1 className="text-sm font-black text-white truncate uppercase tracking-widest flex items-center justify-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.5)]"></div>
-              GOV CAR
-            </h1>
-          </div>
-
-          {/* Right: Menu */}
-          <div className="shrink-0 flex items-center">
-            {/* Mobile Menu Toggle */}
-            <button
-              className="md:hidden p-2 text-white hover:bg-white/10 rounded-xl transition-colors active:scale-95 border border-white/20"
-              onClick={() => setMobileMenuOpen(true)}
-            >
-              <Menu className="w-6 h-6" />
-            </button>
-
-            {/* Desktop Menu */}
-            <nav className="hidden md:flex items-center gap-2">
-              {[
-                { href: "/user", label: "ขอใช้รถ", icon: Car },
-                { href: "/user/my-requests", label: "ประวัติ", icon: FileText, showBadge: pendingEvals > 0 },
-                { href: "/user/profile", label: "ข้อมูลส่วนตัว", icon: UserCircle },
-                { href: "/user/change-password", label: "รหัสผ่าน", icon: Key },
-              ].map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="relative flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black text-blue-50 hover:text-white hover:bg-white/10 transition-all uppercase tracking-wider"
-                >
-                  <item.icon className="w-4 h-4 opacity-80" />
-                  {item.label}
-                  {item.showBadge && (
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-r from-amber-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg animate-bounce">
-                      <Bell className="w-3 h-3 text-white fill-white" />
-                    </span>
-                  )}
-                </Link>
-              ))}
-
-              <div className="h-6 w-px bg-white/20 mx-3"></div>
-
-              {/* User Profile Section PC */}
-              {userProfile && (
-                <div className="flex items-center gap-3 px-4 py-1.5 bg-white/10 rounded-2xl border border-white/10 mr-2 backdrop-blur-sm">
-                  <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-white/20 bg-white/20 shadow-inner flex items-center justify-center">
-                    {userProfile.line_picture_url ? (
-                      <img src={userProfile.line_picture_url} alt="Profile" className="w-full h-full object-cover" />
-                    ) : (
-                      <UserCircle className="w-6 h-6 text-blue-100" />
-                    )}
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-xs font-black text-white leading-tight truncate max-w-[150px] uppercase tracking-wide">
-                      {userProfile.full_name}
-                    </span>
-                    <span className="text-[10px] text-blue-200 font-bold uppercase tracking-tighter">ผู้ใช้งาน</span>
-                  </div>
-                </div>
-              )}
-
-              <button
-                onClick={handleLogout}
-                disabled={loggingOut}
-                className="group flex items-center gap-2 bg-white text-[#1e40af] px-6 py-2.5 rounded-full transition-all duration-300 text-sm font-black uppercase tracking-widest shadow-[0_8px_20px_rgba(0,0,0,0.15)] hover:shadow-[0_12px_25px_rgba(0,0,0,0.2)] hover:-translate-y-1 active:scale-95 border border-white"
-              >
-                <LogOut className="w-4 h-4 group-hover:rotate-12 transition-transform" />
-                {loggingOut ? "..." : "ออกจากระบบ"}
-              </button>
-            </nav>
-          </div>
         </div>
+
+        {/* User Profile */}
+        {userProfile && (
+          <div className={`p-4 border-b border-blue-800/60 bg-blue-900/20 flex items-center gap-3 overflow-hidden shrink-0 ${collapsed ? "justify-center" : ""}`}>
+            <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/20 bg-white/20 shadow-inner flex items-center justify-center shrink-0">
+              {userProfile.line_picture_url ? (
+                <img src={userProfile.line_picture_url} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <UserCircle className="w-7 h-7 text-blue-100" />
+              )}
+            </div>
+            {!collapsed && (
+              <div className="flex flex-col animate-[fadeIn_0.2s_ease-out] overflow-hidden">
+                <span className="text-xs font-black text-white truncate max-w-[150px] uppercase tracking-wide">
+                  {userProfile.full_name}
+                </span>
+                <span className="text-[9px] text-blue-200 font-bold uppercase tracking-tighter">ผู้ใช้งาน</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Navigation Menu */}
+        <nav className="flex-1 py-4 px-3 space-y-1.5 overflow-y-auto">
+          {navItems.map((item, idx) => {
+            const className = `relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-black text-blue-100 hover:text-white hover:bg-white/10 transition-all uppercase tracking-wider ${collapsed ? "justify-center" : ""}`;
+            
+            const content = (
+              <>
+                <item.icon className="w-5 h-5 shrink-0 opacity-80" />
+                {!collapsed && (
+                  <span className="animate-[fadeIn_0.2s_ease-out] truncate">{item.label}</span>
+                )}
+                {item.showBadge && (
+                  <span className={`absolute bg-gradient-to-r from-amber-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg ${collapsed ? "-top-1 -right-1 w-4 h-4" : "right-3 w-5 h-5"}`}>
+                    <Bell className={`${collapsed ? "w-2.5 h-2.5" : "w-3 h-3"} text-white fill-white`} />
+                  </span>
+                )}
+              </>
+            );
+
+            if (item.external) {
+              return (
+                <a
+                  key={idx}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={className}
+                >
+                  {content}
+                </a>
+              );
+            }
+
+            return (
+              <Link
+                key={idx}
+                href={item.href}
+                className={className}
+              >
+                {content}
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Sidebar Footer */}
+        <div className="p-3 border-t border-blue-800/80 bg-blue-950/20 shrink-0">
+          <button
+            onClick={handleLogout}
+            disabled={loggingOut}
+            className={`w-full flex items-center gap-3 bg-white/10 text-white hover:bg-white hover:text-[#1e40af] p-2.5 rounded-xl font-black text-xs transition-all uppercase tracking-wider ${collapsed ? "justify-center" : ""}`}
+          >
+            <LogOut className="w-5 h-5 shrink-0" />
+            {!collapsed && (
+              <span className="animate-[fadeIn_0.2s_ease-out]">{loggingOut ? "..." : "ออกจากระบบ"}</span>
+            )}
+          </button>
+        </div>
+      </aside>
+
+      {/* ===== MOBILE HEADER ===== */}
+      <header className="md:hidden w-full bg-[#1e40af] border-b border-blue-800 h-[72px] flex items-center justify-between px-4 z-50 shadow-md shrink-0">
+        <button
+          className="p-2 text-white hover:bg-white/10 rounded-xl transition-colors active:scale-95 border border-white/20"
+          onClick={() => setMobileMenuOpen(true)}
+        >
+          <Menu className="w-6 h-6" />
+        </button>
+        
+        <div className="flex-1 text-center">
+          <h1 className="text-sm font-black text-white truncate uppercase tracking-widest flex items-center justify-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.5)]"></div>
+            GOV CAR
+          </h1>
+        </div>
+        
+        <div className="w-10"></div>
       </header>
 
-      {/* ===== MOBILE DRAWER (Slide-in) ===== */}
-      {/* Backdrop */}
+      {/* ===== MOBILE DRAWER ===== */}
       <div
         className={`fixed inset-0 bg-black/30 backdrop-blur-sm z-50 transition-opacity duration-300 ${mobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
         onClick={() => setMobileMenuOpen(false)}
       />
-
-      {/* Drawer */}
       <div className={`fixed right-0 top-0 h-full w-[280px] bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-out flex flex-col ${mobileMenuOpen ? "translate-x-0" : "translate-x-full"}`}>
-
-        {/* Drawer Header */}
         <div className="p-6 flex items-start justify-between bg-gradient-to-br from-blue-700 to-indigo-800 text-white shadow-md relative overflow-hidden">
-          {/* Decorative shapes */}
           <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
-          <div className="absolute bottom-0 right-0 w-20 h-20 bg-blue-400/20 rounded-full blur-xl"></div>
-
           <div className="flex items-center gap-4 relative z-10">
             <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white/30 shadow-inner backdrop-blur-sm bg-white/20">
               {userProfile?.line_picture_url ? (
@@ -227,75 +281,51 @@ export default function UserLayout({
           </button>
         </div>
 
-        {/* Drawer Links */}
         <div className="p-5 flex flex-col gap-3 flex-1 overflow-y-auto bg-gray-50/30">
           <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 px-1">เมนูหลัก</div>
+          {navItems.map((item, idx) => {
+            const content = (
+              <>
+                <div className="flex items-center gap-3.5">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-sm">
+                    <item.icon className="w-5 h-5" />
+                  </div>
+                  <span className="font-bold text-gray-700 group-hover:text-blue-700 transition-colors">{item.label}</span>
+                </div>
+                <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-blue-400 transition-colors" />
+              </>
+            );
 
-          <Link
-            href="/user"
-            onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center justify-between p-3.5 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md hover:border-blue-200 transition-all group"
-          >
-            <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-sm">
-                <Car className="w-5 h-5" />
-              </div>
-              <span className="font-bold text-gray-700 group-hover:text-blue-700 transition-colors">ขอใช้รถใหม่</span>
-            </div>
-            <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-blue-400 transition-colors" />
-          </Link>
+            const className = "flex items-center justify-between p-3.5 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md hover:border-blue-200 transition-all group relative";
 
-          <Link
-            href="/user/my-requests"
-            onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center justify-between p-3.5 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all group relative"
-          >
-            {pendingEvals > 0 && (
-              <div className="absolute -top-2 -right-2 w-7 h-7 bg-gradient-to-r from-amber-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg shadow-orange-200 animate-bounce">
-                <Bell className="w-4 h-4 text-white fill-white" />
-              </div>
-            )}
-            <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300 shadow-sm">
-                <FileText className="w-5 h-5" />
-              </div>
-              <span className="font-bold text-gray-700 group-hover:text-indigo-700 transition-colors">ประวัติการขอใช้รถ</span>
-            </div>
-            <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-indigo-400 transition-colors" />
-          </Link>
+            if (item.external) {
+              return (
+                <a
+                  key={idx}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={className}
+                >
+                  {content}
+                </a>
+              );
+            }
 
-          <Link
-            href="/user/profile"
-            onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center justify-between p-3.5 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md hover:border-blue-200 transition-all group"
-          >
-            <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300 shadow-sm">
-                <UserCircle className="w-5 h-5" />
-              </div>
-              <span className="font-bold text-gray-700 group-hover:text-emerald-700 transition-colors">ข้อมูลส่วนตัว / LINE</span>
-            </div>
-            <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-emerald-400 transition-colors" />
-          </Link>
-
-          <div className="h-px bg-gray-200/60 my-2 mx-2" />
-
-          <Link
-            href="/user/change-password"
-            onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center justify-between p-3.5 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md hover:border-slate-300 transition-all group"
-          >
-            <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-slate-50 text-slate-600 flex items-center justify-center group-hover:bg-slate-600 group-hover:text-white transition-all duration-300 shadow-sm">
-                <Key className="w-5 h-5" />
-              </div>
-              <span className="font-bold text-gray-700 group-hover:text-slate-700 transition-colors">เปลี่ยนรหัสผ่าน</span>
-            </div>
-            <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-slate-400 transition-colors" />
-          </Link>
+            return (
+              <Link
+                key={idx}
+                href={item.href}
+                onClick={() => setMobileMenuOpen(false)}
+                className={className}
+              >
+                {content}
+              </Link>
+            );
+          })}
         </div>
 
-        {/* Drawer Footer */}
         <div className="p-5 border-t border-gray-100 bg-white">
           <button
             onClick={handleLogout}
@@ -304,16 +334,23 @@ export default function UserLayout({
             <LogOut className="w-5 h-5" />
             ออกจากระบบ
           </button>
-          <p className="text-center text-[10px] text-gray-400 mt-5 font-medium">
-            Version 2.0.0 &copy; 2026
-          </p>
         </div>
       </div>
 
-      {/* ===== CONTENT ===== */}
-      <div className="pt-[72px] flex-1 w-full bg-gray-50/50">
-        <main className="w-full h-full">{children}</main>
+      {/* ===== CONTENT AREA ===== */}
+      <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${collapsed ? "md:pl-[80px]" : "md:pl-[260px]"}`}>
+        <main className="flex-1 w-full bg-gray-50/50">
+          {children}
+        </main>
       </div>
+
+      <style jsx global>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+      `}</style>
+
     </div>
   );
 }

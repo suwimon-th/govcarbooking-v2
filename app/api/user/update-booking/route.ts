@@ -108,11 +108,12 @@ export async function PUT(req: Request) {
         if (status !== undefined) updateData.status = status;
         if (is_ot !== undefined) updateData.is_ot = is_ot;
         if (passengers !== undefined) updateData.passengers = passengers;
+        if (vehicle_id !== undefined) updateData.vehicle_id = vehicle_id || null;
+        if (body.requester_name !== undefined) updateData.requester_name = body.requester_name;
 
         // Admin only overrides
         if (userRole === "ADMIN") {
             if (driver_id !== undefined) updateData.driver_id = driver_id || null;
-            if (vehicle_id !== undefined) updateData.vehicle_id = vehicle_id || null;
             if (requester_id !== undefined) updateData.requester_id = requester_id;
         }
 

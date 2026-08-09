@@ -7,6 +7,7 @@ import {
   generateDriverAssignmentEmailHtml,
 } from "@/lib/email";
 import { getAutoAssignEnabled } from "@/lib/settings";
+import { resequenceRequestCodes } from "@/lib/requestCodeHelper";
 
 /* ---------------------------
    helper: เติมวินาทีให้เวลา
@@ -54,10 +55,6 @@ async function generateRequestCode(vehicleId: string): Promise<string> {
       if (!isNaN(parsed)) running = parsed + 1;
     }
   }
-
-  // Add random offset (1-5) to reduce collision probability during concurrent inserts
-  const jitter = Math.floor(Math.random() * 5);
-  running += jitter;
 
   return `${prefix}${String(running).padStart(3, "0")}`;
 }
@@ -365,6 +362,15 @@ export async function POST(req: Request) {
         { error: `ไม่สามารถบันทึกคำขอได้: ${insertError?.message || JSON.stringify(insertError)}` },
         { status: 500 }
       );
+    }
+
+    // ✅ Automatically resequence request codes for this vehicle by Usage Date/Time (start_at)
+    if (vehicle_id && !no_request_code && requester?.role !== 'TESTER') {
+      try {
+        await resequenceRequestCodes(vehicle_id);
+      } catch (seqErr) {
+        console.error("Resequence error:", seqErr);
+      }
     }
 
     /* ---------------------------

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { X, Save, Pencil, MapPin, Clock, Calendar, Users, Building, AlertTriangle, Plus, Trash2, MessageSquare, Send, User } from "lucide-react";
+import { useEffect, useState } from "react";
+import { X, Save, Pencil, MapPin, Clock, Calendar, Users, Building, Car, CheckCircle2, User } from "lucide-react";
 import TimePicker24 from "@/app/components/TimePicker24";
 import { supabase } from "@/lib/supabaseClient";
 import Swal from "sweetalert2";
@@ -24,10 +24,26 @@ interface Department {
     name: string;
 }
 
+interface Vehicle {
+    id: string;
+    plate_number: string | null;
+    brand: string | null;
+    model: string | null;
+    name?: string | null;
+}
+
 interface Props {
     booking: {
         id: string;
         request_code: string;
+        vehicle_id?: string | null;
+        vehicle?: {
+            id: string;
+            plate_number: string | null;
+            brand: string | null;
+            model: string | null;
+            name?: string | null;
+        } | null;
         purpose: string;
         destination?: string;
         start_at: string;
@@ -66,6 +82,7 @@ export default function EditBookingModal({ booking, onClose, onUpdated }: Props)
     const [endTime, setEndTime] = useState(extractTime(booking.end_at));
     const [purpose, setPurpose] = useState(booking.purpose);
     const [destination, setDestination] = useState(booking.destination || "");
+    const [requesterName, setRequesterName] = useState<string>(booking.requester_name || "");
     const [passengerCount, setPassengerCount] = useState(String(booking.passenger_count || ""));
     const [passengers, setPassengers] = useState<Passenger[]>(
         (booking.passengers || []).filter((p: any) => p.type !== "config")
@@ -73,8 +90,14 @@ export default function EditBookingModal({ booking, onClose, onUpdated }: Props)
     const [deptId, setDeptId] = useState<number>(booking.department_id || 1);
     const [remark, setRemark] = useState(booking.remark || "");
     const [isOt, setIsOt] = useState(booking.is_ot || false);
+    const [otMode, setOtMode] = useState<"IN_HOURS" | "OT" | "OFF_HOURS_NO_OT">(
+        booking.is_ot ? "OT" : "IN_HOURS"
+    );
 
-    // Lists loaded from DB
+    const [vehicleId, setVehicleId] = useState<string>(
+        booking.vehicle_id || booking.vehicle?.id || ""
+    );
+    const [vehicles, setVehicles] = useState<Vehicle[]>([]);
     const [departments, setDepartments] = useState<Department[]>([]);
     const [profiles, setProfiles] = useState<Profile[]>([]);
     const [loadingLists, setLoadingLists] = useState(true);
@@ -84,13 +107,15 @@ export default function EditBookingModal({ booking, onClose, onUpdated }: Props)
     useEffect(() => {
         const loadLists = async () => {
             try {
-                const [deptRes, profRes] = await Promise.all([
+                const [deptRes, profRes, vehRes] = await Promise.all([
                     supabase.from("departments").select("id, name").order("id"),
-                    supabase.from("profiles").select("id, full_name, position").eq("role", "USER").order("full_name")
+                    supabase.from("profiles").select("id, full_name, position").eq("role", "USER").order("full_name"),
+                    supabase.from("vehicles").select("id, plate_number, brand, model, name").order("plate_number")
                 ]);
 
                 if (deptRes.data) setDepartments(deptRes.data);
                 if (profRes.data) setProfiles(profRes.data as Profile[]);
+                if (vehRes.data) setVehicles(vehRes.data as Vehicle[]);
             } catch (err) {
                 console.error("Error loading master lists:", err);
             } finally {
@@ -107,12 +132,10 @@ export default function EditBookingModal({ booking, onClose, onUpdated }: Props)
         setPassengers(prev => {
             const newArr = [...prev];
             if (count > newArr.length) {
-                // Add empty passengers
                 for (let i = newArr.length; i < count; i++) {
                     newArr.push({ type: "external", name: "", position: "" });
                 }
             } else if (count < newArr.length) {
-                // Trim
                 newArr.length = count;
             }
             return newArr;
@@ -123,7 +146,6 @@ export default function EditBookingModal({ booking, onClose, onUpdated }: Props)
         const newPassengers = [...passengers];
         newPassengers[index] = { ...newPassengers[index], [field]: value };
 
-        // If selecting a profile, auto-fill position and name
         if (field === 'profile_id') {
             const profile = profiles.find(p => p.id === value);
             if (profile) {
@@ -133,7 +155,6 @@ export default function EditBookingModal({ booking, onClose, onUpdated }: Props)
             }
         }
 
-        // If switching to external type, clear profile_id and text
         if (field === 'type' && value === 'external') {
             newPassengers[index].profile_id = undefined;
             newPassengers[index].name = "";
@@ -166,11 +187,12 @@ export default function EditBookingModal({ booking, onClose, onUpdated }: Props)
 
         const count = parseInt(passengerCount) || 1;
 
-        // Verify that passengers are filled out
-        for (let i = 0; i < passengers.length; i++) {
-            if (!passengers[i].name.trim()) {
-                Swal.fire("ข้อผิดพลาด", `กรุณาระบุชื่อผู้โดยสารลำดับที่ ${i + 1}`, "warning");
-                return;
+        if (count > 1) {
+            for (let i = 0; i < passengers.length; i++) {
+                if (!passengers[i].name.trim()) {
+                    Swal.fire("ข้อผิดพลาด", `กรุณาระบุชื่อผู้โดยสารลำดับที่ ${i + 1}`, "warning");
+                    return;
+                }
             }
         }
 
@@ -187,6 +209,8 @@ export default function EditBookingModal({ booking, onClose, onUpdated }: Props)
                 body: JSON.stringify({
                     id: booking.id,
                     department_id: deptId,
+                    vehicle_id: vehicleId || null,
+                    requester_name: requesterName,
                     purpose,
                     destination,
                     passenger_count: count,
@@ -262,75 +286,166 @@ export default function EditBookingModal({ booking, onClose, onUpdated }: Props)
                                 <div className="flex items-center gap-2 border-l-4 border-blue-500 pl-2">
                                     <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">วันและเวลาเดินทาง</h3>
                                 </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div>
-                                        <label className="block text-xs font-bold text-gray-500 mb-1.5 flex items-center gap-1">
-                                            <Calendar className="w-3.5 h-3.5" /> วันเดินทาง
+                                        <label className="block text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
+                                            <Calendar className="w-4 h-4 text-blue-600" /> วันเดินทาง
                                         </label>
                                         <input
                                             type="date"
                                             value={date}
                                             onChange={(e) => setDate(e.target.value)}
-                                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                                            className="w-full px-3.5 py-2 bg-white border border-gray-200 rounded-xl text-gray-800 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-xs"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-bold text-gray-500 mb-1.5 flex items-center gap-1">
-                                            <Clock className="w-3.5 h-3.5" /> เวลาเริ่ม
+                                        <label className="block text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
+                                            <Clock className="w-4 h-4 text-blue-600" /> เวลาเริ่ม
                                         </label>
-                                        <div className="bg-white border border-gray-200 rounded-xl px-1 shadow-sm">
-                                            <TimePicker24
-                                                id="startTime"
-                                                name="startTime"
-                                                value={startTime}
-                                                onChange={setStartTime}
-                                            />
-                                        </div>
+                                        <TimePicker24
+                                            id="startTime"
+                                            name="startTime"
+                                            value={startTime}
+                                            onChange={setStartTime}
+                                        />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-bold text-gray-500 mb-1.5 flex items-center gap-1">
-                                            <Clock className="w-3.5 h-3.5" /> เวลาสิ้นสุด (ถ้ามี)
+                                        <label className="block text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
+                                            <Clock className="w-4 h-4 text-blue-600" /> เวลาสิ้นสุด (ถ้ามี)
                                         </label>
-                                        <div className="bg-white border border-gray-200 rounded-xl px-1 shadow-sm">
-                                            <TimePicker24
-                                                id="endTime"
-                                                name="endTime"
-                                                value={endTime}
-                                                onChange={setEndTime}
-                                            />
-                                        </div>
+                                        <TimePicker24
+                                            id="endTime"
+                                            name="endTime"
+                                            value={endTime}
+                                            onChange={setEndTime}
+                                        />
                                     </div>
                                 </div>
-                                {/* OT Checkbox option */}
-                                <div className="flex items-center gap-2 bg-amber-50 border border-amber-100 p-3 rounded-xl">
-                                    <input
-                                        type="checkbox"
-                                        id="editIsOt"
-                                        className="w-4 h-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
-                                        checked={isOt}
-                                        onChange={(e) => setIsOt(e.target.checked)}
-                                    />
-                                    <label htmlFor="editIsOt" className="text-xs font-bold text-amber-800 cursor-pointer select-none">
-                                        ขอใช้นอกเวลาราชการ (OT)
+
+                                {/* 3-Option OT Selector (เหมือนหน้ากรอกคำขอ) */}
+                                <div className="space-y-2 pt-2">
+                                    <label className="block text-xs font-bold text-gray-700">
+                                        ประเภทการใช้รถ / ช่วงเวลาการปฏิบัติงาน:
                                     </label>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setOtMode("IN_HOURS");
+                                                setIsOt(false);
+                                            }}
+                                            className={`px-3 py-2.5 rounded-xl border text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs ${
+                                                otMode === "IN_HOURS"
+                                                    ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-blue-700 ring-2 ring-blue-300 shadow-blue-200"
+                                                    : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-gray-300"
+                                            }`}
+                                        >
+                                            <span>☀️ ในเวลาราชการ</span>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setOtMode("OT");
+                                                setIsOt(true);
+                                            }}
+                                            className={`px-3 py-2.5 rounded-xl border text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs ${
+                                                otMode === "OT"
+                                                    ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white border-amber-600 ring-2 ring-amber-300 shadow-amber-200"
+                                                    : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-gray-300"
+                                            }`}
+                                        >
+                                            <span>🌙 นอกเวลา (เบิก OT)</span>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setOtMode("OFF_HOURS_NO_OT");
+                                                setIsOt(true);
+                                            }}
+                                            className={`px-3 py-2.5 rounded-xl border text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs ${
+                                                otMode === "OFF_HOURS_NO_OT"
+                                                    ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-indigo-700 ring-2 ring-indigo-300 shadow-indigo-200"
+                                                    : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-gray-300"
+                                            }`}
+                                        >
+                                            <span>🌙 นอกเวลา (ไม่เบิก OT)</span>
+                                        </button>
+                                    </div>
+
+                                    {/* Info Badge */}
+                                    <div className="mt-2 text-xs font-bold">
+                                        {otMode === "OT" && (
+                                            <div className="p-3 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl flex items-center gap-2 shadow-xs">
+                                                <CheckCircle2 className="w-4 h-4 text-amber-600 shrink-0" />
+                                                <span>งานนอกเวลาราชการแบบเบิก OT ➔ เอกสารใช้แบบ OT</span>
+                                            </div>
+                                        )}
+                                        {otMode === "OFF_HOURS_NO_OT" && (
+                                            <div className="p-3 bg-indigo-50 border border-indigo-200 text-indigo-900 rounded-xl flex items-center gap-2 shadow-xs">
+                                                <CheckCircle2 className="w-4 h-4 text-indigo-600 shrink-0" />
+                                                <span>งานนอกเวลาราชการแบบไม่เบิก OT ➔ เอกสารพิมพ์แบบ OT (แอดมินจัดสรรคนขับให้)</span>
+                                            </div>
+                                        )}
+                                        {otMode === "IN_HOURS" && (
+                                            <div className="p-3 bg-blue-50 border border-blue-200 text-blue-900 rounded-xl flex items-center gap-2 shadow-xs">
+                                                <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+                                                <span>งานในเวลาราชการปกติ ➔ เอกสารใช้แบบในเวลาราชการ</span>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* Section 2: รายละเอียดภารกิจ */}
+                            {/* Section 2: รายละเอียดภารกิจ & รถยนต์ที่ขอใช้ */}
                             <div className="space-y-4">
                                 <div className="flex items-center gap-2 border-l-4 border-blue-500 pl-2">
-                                    <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">รายละเอียดภารกิจ</h3>
+                                    <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">รายละเอียดภารกิจ & รถยนต์ที่ขอใช้</h3>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {/* Requester Name */}
+                                    <div className="md:col-span-2">
+                                        <label className="block text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
+                                            <User className="w-4 h-4 text-blue-600" /> ชื่อผู้ขอใช้รถ (กรณีจองแทนบุคคลอื่น)
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={requesterName}
+                                            onChange={(e) => setRequesterName(e.target.value)}
+                                            placeholder="ระบุชื่อ-นามสกุล ของผู้ขอใช้รถตัวจริง..."
+                                            className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-800 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-xs"
+                                        />
+                                    </div>
+
+                                    {/* Vehicle Selector */}
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
+                                            <Car className="w-4 h-4 text-blue-600" /> รถยนต์ที่ขอใช้ (Vehicle)
+                                        </label>
+                                        <select
+                                            value={vehicleId}
+                                            onChange={(e) => setVehicleId(e.target.value)}
+                                            className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-800 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-xs cursor-pointer"
+                                        >
+                                            <option value="">-- ไม่ระบุ / ให้แอดมินหรือระบบจัดสรรรถให้ --</option>
+                                            {vehicles.map((v) => (
+                                                <option key={v.id} value={v.id}>
+                                                    {v.plate_number ? `${v.plate_number} - ` : ""}{v.brand || ""} {v.model || ""} {v.name ? `(${v.name})` : ""}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
                                     {/* Department */}
                                     <div>
-                                        <label className="block text-xs font-bold text-gray-500 mb-1.5 flex items-center gap-1">
-                                            <Building className="w-3.5 h-3.5" /> หน่วยงาน / กลุ่มงาน
+                                        <label className="block text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
+                                            <Building className="w-4 h-4 text-blue-600" /> หน่วยงาน / กลุ่มงาน
                                         </label>
                                         <select
                                             value={deptId}
                                             onChange={(e) => setDeptId(Number(e.target.value))}
-                                            className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                                            className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-800 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-xs"
                                         >
                                             {departments.map((d) => (
                                                 <option key={d.id} value={d.id}>{d.name}</option>
@@ -339,16 +454,16 @@ export default function EditBookingModal({ booking, onClose, onUpdated }: Props)
                                     </div>
 
                                     {/* Passenger count */}
-                                    <div>
-                                        <label className="block text-xs font-bold text-gray-500 mb-1.5 flex items-center gap-1">
-                                            <Users className="w-3.5 h-3.5" /> จำนวนผู้โดยสาร (คน)
+                                    <div className="md:col-span-2">
+                                        <label className="block text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
+                                            <Users className="w-4 h-4 text-blue-600" /> จำนวนผู้โดยสาร (คน)
                                         </label>
                                         <input
                                             type="number"
                                             min="1"
                                             value={passengerCount}
                                             onChange={(e) => setPassengerCount(e.target.value)}
-                                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                                            className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
                                             placeholder="ระบุจำนวนผู้เดินทาง..."
                                         />
                                     </div>
@@ -389,7 +504,12 @@ export default function EditBookingModal({ booking, onClose, onUpdated }: Props)
                                     <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">รายชื่อผู้เดินทาง</h3>
                                 </div>
 
-                                {passengers.length === 0 ? (
+                                {(parseInt(passengerCount) || 1) <= 1 ? (
+                                    <div className="p-3.5 bg-blue-50 border border-blue-200 rounded-2xl text-blue-800 text-xs font-bold flex items-center gap-2">
+                                        <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+                                        <span>ผู้เดินทาง 1 คน ➔ ระบบใช้ชื่อผู้ขอใช้รถ ({booking.requester_name || "ผู้ขอใช้รถ"}) เป็นผู้เดินทางหลักโดยอัตโนมัติ (ไม่ต้องกรอกรายชื่อ)</span>
+                                    </div>
+                                ) : passengers.length === 0 ? (
                                     <div className="text-center py-4 bg-gray-50 rounded-2xl border border-dashed border-gray-200 text-xs text-gray-400 italic">
                                         ยังไม่ได้กำหนดรายชื่อ หรือจำนวนผู้เดินทางเป็น 0
                                     </div>
@@ -401,7 +521,6 @@ export default function EditBookingModal({ booking, onClose, onUpdated }: Props)
                                                     คนที่ {idx + 1}
                                                 </span>
                                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 flex-1 w-full">
-                                                    {/* Select Type */}
                                                     <select
                                                         value={p.type}
                                                         onChange={(e) => updatePassenger(idx, 'type', e.target.value as any)}
@@ -411,7 +530,6 @@ export default function EditBookingModal({ booking, onClose, onUpdated }: Props)
                                                         <option value="profile">บุคลากรในระบบ</option>
                                                     </select>
 
-                                                    {/* Passenger Name */}
                                                     {p.type === 'profile' ? (
                                                         <select
                                                             value={p.profile_id || ""}
@@ -433,7 +551,6 @@ export default function EditBookingModal({ booking, onClose, onUpdated }: Props)
                                                         />
                                                     )}
 
-                                                    {/* Passenger Position */}
                                                     <input
                                                         type="text"
                                                         placeholder="ตำแหน่ง..."
@@ -459,10 +576,9 @@ export default function EditBookingModal({ booking, onClose, onUpdated }: Props)
                                     value={remark}
                                     onChange={(e) => setRemark(e.target.value)}
                                     placeholder="ระบุหมายเหตุ หรือเงื่อนไขภารกิจพิเศษ..."
-                                    className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-850 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                                    className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
                                 />
                             </div>
-
                         </>
                     )}
                 </div>

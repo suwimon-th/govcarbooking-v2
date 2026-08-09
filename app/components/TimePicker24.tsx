@@ -44,7 +44,7 @@ export default function TimePicker24({ value, onChange, className, disabled, nam
     };
 
     return (
-        <div id={id} className={`flex items-center gap-2 ${className} !p-0 !border-none !bg-transparent`}>
+        <div id={id} className={`flex items-center gap-1.5 ${className || ""} !p-0 !border-none !bg-transparent`}>
             {/* Hour Select */}
             <div className="relative flex-1">
                 <select
@@ -53,7 +53,7 @@ export default function TimePicker24({ value, onChange, className, disabled, nam
                     value={hour}
                     onChange={(e) => handleHourChange(e.target.value)}
                     disabled={disabled}
-                    className={`w-full appearance-none bg-gray-50/50 border border-gray-200 text-gray-900 text-center rounded-xl py-3 focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all ${!hour ? "text-gray-400" : ""
+                    className={`w-full appearance-none bg-white border border-gray-200 text-gray-800 font-bold text-center rounded-xl py-2 px-1 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-xs cursor-pointer hover:bg-gray-50 ${!hour ? "text-gray-400" : ""
                         }`}
                 >
                     <option value="" disabled>ชม.</option>
@@ -65,7 +65,7 @@ export default function TimePicker24({ value, onChange, className, disabled, nam
                 </select>
             </div>
 
-            <span className="text-gray-400 font-bold">:</span>
+            <span className="text-gray-400 font-extrabold text-sm select-none">:</span>
 
             {/* Minute Select */}
             <div className="relative flex-1">
@@ -75,7 +75,7 @@ export default function TimePicker24({ value, onChange, className, disabled, nam
                     value={minute}
                     onChange={(e) => handleMinuteChange(e.target.value)}
                     disabled={disabled}
-                    className={`w-full appearance-none bg-gray-50/50 border border-gray-200 text-gray-900 text-center rounded-xl py-3 focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all ${!minute ? "text-gray-400" : ""
+                    className={`w-full appearance-none bg-white border border-gray-200 text-gray-800 font-bold text-center rounded-xl py-2 px-1 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all shadow-xs cursor-pointer hover:bg-gray-50 ${!minute ? "text-gray-400" : ""
                         }`}
                 >
                     <option value="" disabled>นาที</option>

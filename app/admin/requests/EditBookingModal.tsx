@@ -98,6 +98,10 @@ export default function EditBookingModal({
     other_vehicle_plate: booking.other_vehicle_plate || "",
   });
 
+  const [otMode, setOtMode] = useState<"IN_HOURS" | "OT" | "OFF_HOURS_NO_OT">(
+    booking.is_ot ? (booking.driver_id || booking.other_driver_name ? "OT" : "OFF_HOURS_NO_OT") : "IN_HOURS"
+  );
+
   const [isManualDriver, setIsManualDriver] = useState(!!booking.other_driver_name);
 
   // ===============================
@@ -458,21 +462,57 @@ export default function EditBookingModal({
                 />
               </div>
 
-              {/* OT Toggle (Full Width) */}
-              <div className="md:col-span-2 flex items-center gap-3 bg-red-50 p-3 rounded-xl border border-red-100">
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.is_ot}
-                    onChange={(e) => setFormData(p => ({ ...p, is_ot: e.target.checked }))}
-                    className="sr-only peer"
-                    id="ot_toggle"
-                  />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-500"></div>
+              {/* OT 3-Option Selector */}
+              <div className="md:col-span-2 space-y-2 pt-2 border-t border-gray-100">
+                <label className="block text-xs font-bold text-gray-700">
+                  ประเภทการใช้รถ / ช่วงเวลาการปฏิบัติงาน:
                 </label>
-                <label htmlFor="ot_toggle" className="text-sm font-semibold text-red-700 cursor-pointer select-none">
-                  ขอใช้นอกเวลาราชการ (OT)
-                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOtMode("IN_HOURS");
+                      setFormData(p => ({ ...p, is_ot: false }));
+                    }}
+                    className={`px-3 py-2.5 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      otMode === "IN_HOURS"
+                        ? "bg-blue-600 text-white border-blue-700 shadow-sm ring-2 ring-blue-300"
+                        : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                    }`}
+                  >
+                    <span>☀️ ในเวลาราชการ</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOtMode("OT");
+                      setFormData(p => ({ ...p, is_ot: true }));
+                    }}
+                    className={`px-3 py-2.5 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      otMode === "OT"
+                        ? "bg-amber-500 text-white border-amber-600 shadow-sm ring-2 ring-amber-300"
+                        : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                    }`}
+                  >
+                    <span>🌙 นอกเวลา (เบิก OT)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOtMode("OFF_HOURS_NO_OT");
+                      setFormData(p => ({ ...p, is_ot: true })); // ✅ ใช้พิมพ์เอกสารแบบ OT
+                    }}
+                    className={`px-3 py-2.5 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      otMode === "OFF_HOURS_NO_OT"
+                        ? "bg-indigo-600 text-white border-indigo-700 shadow-sm ring-2 ring-indigo-300"
+                        : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                    }`}
+                  >
+                    <span>🌙 นอกเวลา (ไม่เบิก OT)</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
