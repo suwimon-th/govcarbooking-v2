@@ -172,8 +172,30 @@ export default function EditBookingModal({
   const loadLists = async (): Promise<void> => {
     const { data: profilesData } = await supabase
       .from("profiles")
-      .select("id, full_name, position");
-    if (profilesData) setProfiles(profilesData as Profile[]);
+      .select("id, full_name, position, username, role")
+      .neq("id", "00000000-0000-0000-0000-000000000000")
+      .order("full_name");
+
+    if (profilesData) {
+      const filtered = (profilesData as any[]).filter((p) => {
+        if (!p.full_name) return false;
+        const name = p.full_name.trim();
+        if (name.startsWith("{") || name.startsWith("[")) return false;
+        const nameLower = name.toLowerCase();
+        const usernameLower = (p.username || "").toLowerCase();
+        if (
+          nameLower === "admin" ||
+          nameLower === "tester" ||
+          usernameLower === "admin" ||
+          usernameLower === "tester" ||
+          nameLower.includes("global_enabled")
+        ) {
+          return false;
+        }
+        return true;
+      });
+      setProfiles(filtered as Profile[]);
+    }
 
     const { data: driversData } = await supabase
       .from("drivers")

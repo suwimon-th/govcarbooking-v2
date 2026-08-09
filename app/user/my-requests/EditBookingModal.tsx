@@ -114,7 +114,17 @@ export default function EditBookingModal({ booking, onClose, onUpdated }: Props)
                 ]);
 
                 if (deptRes.data) setDepartments(deptRes.data);
-                if (profRes.data) setProfiles(profRes.data as Profile[]);
+                if (profRes.data) {
+                    const filtered = (profRes.data as any[]).filter((p) => {
+                        if (!p.full_name) return false;
+                        const name = p.full_name.trim();
+                        if (name.startsWith("{") || name.startsWith("[")) return false;
+                        const nameLower = name.toLowerCase();
+                        if (nameLower === "admin" || nameLower === "tester" || nameLower.includes("global_enabled")) return false;
+                        return true;
+                    });
+                    setProfiles(filtered as Profile[]);
+                }
                 if (vehRes.data) setVehicles(vehRes.data as Vehicle[]);
             } catch (err) {
                 console.error("Error loading master lists:", err);
