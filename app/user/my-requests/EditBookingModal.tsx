@@ -118,9 +118,17 @@ export default function EditBookingModal({ booking, onClose, onUpdated }: Props)
                     const filtered = (profRes.data as any[]).filter((p) => {
                         if (!p.full_name) return false;
                         const name = p.full_name.trim();
+                        if (!name || name.length <= 2) return false;
                         if (name.startsWith("{") || name.startsWith("[")) return false;
                         const nameLower = name.toLowerCase();
-                        if (nameLower === "admin" || nameLower === "tester" || nameLower.includes("global_enabled")) return false;
+                        const testKeywords = ["admin", "tester", "test", "demo", "1", "a"];
+                        if (
+                            testKeywords.includes(nameLower) ||
+                            nameLower.includes("global_enabled") ||
+                            nameLower.includes("monthly_duties")
+                        ) {
+                            return false;
+                        }
                         return true;
                     });
                     setProfiles(filtered as Profile[]);

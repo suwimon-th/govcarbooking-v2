@@ -180,15 +180,16 @@ export default function EditBookingModal({
       const filtered = (profilesData as any[]).filter((p) => {
         if (!p.full_name) return false;
         const name = p.full_name.trim();
+        if (!name || name.length <= 2) return false;
         if (name.startsWith("{") || name.startsWith("[")) return false;
         const nameLower = name.toLowerCase();
         const usernameLower = (p.username || "").toLowerCase();
+        const testKeywords = ["admin", "tester", "test", "demo", "1", "a"];
         if (
-          nameLower === "admin" ||
-          nameLower === "tester" ||
-          usernameLower === "admin" ||
-          usernameLower === "tester" ||
-          nameLower.includes("global_enabled")
+          testKeywords.includes(nameLower) ||
+          testKeywords.includes(usernameLower) ||
+          nameLower.includes("global_enabled") ||
+          nameLower.includes("monthly_duties")
         ) {
           return false;
         }
