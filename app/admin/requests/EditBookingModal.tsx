@@ -82,6 +82,7 @@ export default function EditBookingModal({
   const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
+    request_code: booking.request_code ?? "",
     requester_id: booking.requester_id,
     driver_id: booking.driver_id ?? "",
     vehicle_id: booking.vehicle_id ?? "",
@@ -174,6 +175,7 @@ export default function EditBookingModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: booking.id,
+          request_code: formData.request_code,
           requester_id: formData.requester_id,
           driver_id: formData.driver_id || null,
           vehicle_id: formData.vehicle_id || null,
@@ -354,6 +356,20 @@ export default function EditBookingModal({
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* เลขคำขอใช้รถ (Request Code) */}
+              <div className="space-y-1.5 md:col-span-2">
+                <label className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-gray-400" /> เลขคำขอใช้รถ (Request Code)
+                </label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-slate-800 text-sm font-mono font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                  value={formData.request_code}
+                  onChange={(e) => setFormData((p) => ({ ...p, request_code: e.target.value }))}
+                  placeholder="เช่น ENV-01/001"
+                />
+              </div>
+
               {/* ผู้ขอ */}
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-gray-700 flex items-center gap-1.5">

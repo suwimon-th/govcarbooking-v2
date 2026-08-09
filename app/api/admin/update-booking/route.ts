@@ -53,6 +53,7 @@ export async function POST(req: Request) {
         const body = await req.json();
         const {
             id,
+            request_code,
             requester_id,
             driver_id,
             vehicle_id,
@@ -114,6 +115,29 @@ export async function POST(req: Request) {
             .eq("id", id)
             .single();
 
+        let isManualRequestCode = false;
+        const trimmedRequestCode = typeof request_code === "string" ? request_code.trim() : "";
+
+        // Check if admin manually edited request_code
+        if (trimmedRequestCode && trimmedRequestCode !== oldBooking?.request_code) {
+            // ตรวจสอบว่ามีเลขคำขอนี้ในระบบกับงานอื่นแล้วหรือยัง (ซ้ำหรือไม่)
+            const { data: existingBooking } = await supabase
+                .from("bookings")
+                .select("id")
+                .eq("request_code", trimmedRequestCode)
+                .neq("id", id)
+                .maybeSingle();
+
+            if (existingBooking) {
+                return NextResponse.json(
+                    { error: `เลขคำขอใช้รถ "${trimmedRequestCode}" มีในระบบอยู่แล้ว กรุณาระบุเลขอื่น` },
+                    { status: 400 }
+                );
+            }
+
+            isManualRequestCode = true;
+        }
+
         // 2) Update ข้อมูล Booking
         const updateData: any = {
             requester_id,
@@ -126,6 +150,10 @@ export async function POST(req: Request) {
             end_mileage: end_mileage ?? null,
             distance: distance,
         };
+
+        if (isManualRequestCode) {
+            updateData.request_code = trimmedRequestCode;
+        }
 
         // Fetch new requester name if changed
         if (requester_id && requester_id !== oldBooking?.requester_id) {
@@ -157,16 +185,16 @@ export async function POST(req: Request) {
         }
 
         // ✅ generate request_code ใหม่เมื่อ:
-        // 1) vehicle_id เปลี่ยน หรือ
-        // 2) prefix ของ request_code ไม่ตรงกับรถที่ใช้อยู่ (กรณีเปลี่ยนรถไปก่อน deploy fix)
+        // 1) ไม่ได้แก้มือ (isManualRequestCode = false) และ
+        // 2) vehicle_id เปลี่ยน หรือ prefix ของ request_code ไม่ตรงกับรถที่ใช้อยู่
         const effectiveVehicleId = vehicle_id || oldBooking?.vehicle_id;
-        const currentCode = oldBooking?.request_code || "";
+        const currentCode = isManualRequestCode ? trimmedRequestCode : (oldBooking?.request_code || "");
         const isTester = currentCode.startsWith("TEST-");
-        let newRequestCode: string | null = null;
+        let newRequestCode: string | null = isManualRequestCode ? trimmedRequestCode : null;
 
-        console.log(`🔍 [CODE_CHECK] effectiveVehicleId=${effectiveVehicleId}, currentCode=${currentCode}, isTester=${isTester}`);
+        console.log(`🔍 [CODE_CHECK] effectiveVehicleId=${effectiveVehicleId}, currentCode=${currentCode}, isTester=${isTester}, isManual=${isManualRequestCode}`);
 
-        if (effectiveVehicleId && !isTester) {
+        if (effectiveVehicleId && !isTester && !isManualRequestCode) {
             // ดึง plate number ของรถปัจจุบัน
             const { data: veh, error: vehError } = await supabase
                 .from("vehicles")
