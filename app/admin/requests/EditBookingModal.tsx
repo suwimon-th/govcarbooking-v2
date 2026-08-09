@@ -33,6 +33,14 @@ import {
 interface Profile {
   id: string;
   full_name: string | null;
+  position?: string | null;
+}
+
+interface Passenger {
+  type?: "external" | "profile" | "config" | string;
+  profile_id?: string;
+  name: string;
+  position?: string;
 }
 
 interface Driver {
@@ -99,6 +107,58 @@ export default function EditBookingModal({
     other_vehicle_plate: booking.other_vehicle_plate || "",
   });
 
+  const [passengers, setPassengers] = useState<Passenger[]>(
+    ((booking.passengers || []).filter((p: any) => p.type !== "config") as Passenger[])
+  );
+
+  const updatePassenger = (index: number, field: keyof Passenger, value: any) => {
+    const newPassengers = [...passengers];
+    newPassengers[index] = { ...newPassengers[index], [field]: value };
+
+    if (field === "profile_id" && value) {
+      const profile = profiles.find((p) => p.id === value);
+      if (profile) {
+        newPassengers[index].name = profile.full_name || "";
+        newPassengers[index].position = profile.position || "";
+        newPassengers[index].type = "profile";
+      }
+    }
+
+    if (field === "type" && value === "external") {
+      newPassengers[index].profile_id = undefined;
+    }
+
+    setPassengers(newPassengers);
+  };
+
+  const handlePassengerCountChange = (countVal: number) => {
+    const newCount = Math.max(1, countVal);
+    setFormData((p) => ({ ...p, passenger_count: newCount }));
+    setPassengers((prev) => {
+      const newArr = [...prev];
+      if (newCount > newArr.length) {
+        for (let i = newArr.length; i < newCount; i++) {
+          newArr.push({ type: "external", name: "", position: "" });
+        }
+      } else if (newCount < newArr.length) {
+        newArr.length = newCount;
+      }
+      return newArr;
+    });
+  };
+
+  const addPassenger = () => {
+    const newArr = [...passengers, { type: "external" as const, name: "", position: "" }];
+    setPassengers(newArr);
+    setFormData((p) => ({ ...p, passenger_count: newArr.length }));
+  };
+
+  const removePassenger = (index: number) => {
+    const newArr = passengers.filter((_, i) => i !== index);
+    setPassengers(newArr);
+    setFormData((p) => ({ ...p, passenger_count: Math.max(1, newArr.length) }));
+  };
+
   const [otMode, setOtMode] = useState<"IN_HOURS" | "OT" | "OFF_HOURS_NO_OT">(
     booking.is_ot ? (booking.driver_id || booking.other_driver_name ? "OT" : "OFF_HOURS_NO_OT") : "IN_HOURS"
   );
@@ -112,8 +172,8 @@ export default function EditBookingModal({
   const loadLists = async (): Promise<void> => {
     const { data: profilesData } = await supabase
       .from("profiles")
-      .select("id, full_name");
-    if (profilesData) setProfiles(profilesData);
+      .select("id, full_name, position");
+    if (profilesData) setProfiles(profilesData as Profile[]);
 
     const { data: driversData } = await supabase
       .from("drivers")
@@ -170,6 +230,7 @@ export default function EditBookingModal({
   const handleSave = async (forceStatus?: string): Promise<void> => {
     setLoading(true);
     try {
+      const originalConfig = (booking.passengers || []).filter((p: any) => p.type === "config");
       const res = await fetch("/api/admin/update-booking", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -182,6 +243,7 @@ export default function EditBookingModal({
           purpose: formData.purpose,
           destination: formData.destination,
           passenger_count: formData.passenger_count,
+          passengers: [...passengers, ...originalConfig],
           start_at: formData.start_at || null,
           end_at: formData.end_at || null,
           status: forceStatus || formData.status,
@@ -399,31 +461,95 @@ export default function EditBookingModal({
                 <input
                   type="number"
                   min="1"
-                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                  className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all font-bold"
                   value={formData.passenger_count}
-                  onChange={(e) => setFormData((p) => ({ ...p, passenger_count: parseInt(e.target.value) || 1 }))}
+                  onChange={(e) => handlePassengerCountChange(parseInt(e.target.value) || 1)}
                 />
               </div>
 
-              {/* Passengers List (Read-only display) */}
-              <div className="md:col-span-2 space-y-1.5">
-                <label className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
-                  <Users className="w-3.5 h-3.5 text-gray-400" /> รายชื่อผู้โดยสาร
-                </label>
-                <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm text-gray-600 max-h-[150px] overflow-y-auto">
-                  {booking.passengers && (booking.passengers || []).filter((p: any) => p.type !== "config").length > 0 ? (
-                    <ul className="list-disc list-inside space-y-1">
-                      {(booking.passengers || []).filter((p: any) => p.type !== "config").map((p, idx) => (
-                        <li key={idx} className="truncate">
-                          <span className="font-medium text-gray-800">{p.name}</span>
-                          {p.position && <span className="text-gray-500"> - {p.position}</span>}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-gray-400 italic">ไม่มีข้อมูลผู้โดยสารระบุไว้</p>
-                  )}
+              {/* Passengers List (Editable) */}
+              <div className="md:col-span-2 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5 text-blue-600" /> รายชื่อผู้โดยสาร ({passengers.length} คน)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={addPassenger}
+                    className="text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold px-3 py-1 rounded-xl transition-all flex items-center gap-1 cursor-pointer active:scale-95"
+                  >
+                    + เพิ่มผู้โดยสาร
+                  </button>
                 </div>
+
+                {passengers.length === 0 ? (
+                  <div className="text-center py-4 bg-gray-50 rounded-xl border border-dashed border-gray-200 text-xs text-gray-400 italic">
+                    ยังไม่มีรายชื่อผู้โดยสาร กด "+ เพิ่มผู้โดยสาร" เพื่อระบุรายชื่อ
+                  </div>
+                ) : (
+                  <div className="space-y-2.5 max-h-[220px] overflow-y-auto pr-1">
+                    {passengers.map((p, idx) => (
+                      <div key={idx} className="bg-gray-50 p-3 rounded-xl border border-gray-200 flex flex-col sm:flex-row gap-2 items-start sm:items-center">
+                        <span className="text-xs font-bold text-blue-600 bg-blue-100/70 px-2.5 py-1 rounded-lg shrink-0">
+                          คนที่ {idx + 1}
+                        </span>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 flex-1 w-full">
+                          {/* Type Select */}
+                          <select
+                            value={p.type || "external"}
+                            onChange={(e) => updatePassenger(idx, "type", e.target.value as any)}
+                            className="px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                          >
+                            <option value="external">บุคคลภายนอก</option>
+                            <option value="profile">บุคลากรในระบบ</option>
+                          </select>
+
+                          {/* Profile Select / Name Input */}
+                          {p.type === "profile" ? (
+                            <select
+                              value={p.profile_id || ""}
+                              onChange={(e) => updatePassenger(idx, "profile_id", e.target.value)}
+                              className="px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                            >
+                              <option value="">-- เลือกบุคลากร --</option>
+                              {profiles.map((prof) => (
+                                <option key={prof.id} value={prof.id}>{prof.full_name}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            <input
+                              type="text"
+                              placeholder="ชื่อ-นามสกุล..."
+                              value={p.name}
+                              onChange={(e) => updatePassenger(idx, "name", e.target.value)}
+                              className="px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                            />
+                          )}
+
+                          {/* Position Input */}
+                          <input
+                            type="text"
+                            placeholder="ตำแหน่ง..."
+                            value={p.position || ""}
+                            onChange={(e) => updatePassenger(idx, "position", e.target.value)}
+                            className="px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                          />
+                        </div>
+
+                        {/* Remove button */}
+                        <button
+                          type="button"
+                          onClick={() => removePassenger(idx)}
+                          className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors shrink-0 self-end sm:self-center cursor-pointer"
+                          title="ลบรายชื่อนี้"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Destination (Full Width) */}

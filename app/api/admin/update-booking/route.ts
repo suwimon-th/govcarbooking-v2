@@ -60,6 +60,7 @@ export async function POST(req: Request) {
             purpose,
             destination,
             passenger_count,
+            passengers,
             start_at,
             end_at,
             status,
@@ -150,6 +151,10 @@ export async function POST(req: Request) {
             end_mileage: end_mileage ?? null,
             distance: distance,
         };
+
+        if (Array.isArray(passengers)) {
+            updateData.passengers = passengers;
+        }
 
         if (isManualRequestCode) {
             updateData.request_code = trimmedRequestCode;
