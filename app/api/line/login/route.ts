@@ -72,7 +72,7 @@ export async function POST(req: Request) {
       path: "/",
       httpOnly: true,
       sameSite: "lax" as const,
-      maxAge: 60 * 60 * 24 * 7, // 7 วัน
+      maxAge: 60 * 60 * 24 * 30, // 30 วัน
       secure: isProd,
     };
 

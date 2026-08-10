@@ -6,7 +6,7 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-const SESSION_MAX_AGE = 60 * 60 * 24; // 1 วัน (86400 วินาที)
+const SESSION_MAX_AGE = 60 * 60 * 24 * 30; // 30 วัน (2592000 วินาที)
 
 export async function POST(req: Request) {
   try {

@@ -11,22 +11,19 @@ const PROTECTED_ROUTES: { pattern: RegExp; allowedRoles: string[] }[] = [
     pattern: /^\/user(\/.*)?$/,
     allowedRoles: ["USER", "ADMIN", "TESTER"],
   },
-  {
-    pattern: /^\/driver(\/.*)?$/,
-    allowedRoles: ["DRIVER"],
-  },
 ];
 
 // Roles ที่ระบบรู้จัก — ถ้า role ไม่อยู่ในนี้ → ถือว่าไม่มีสิทธิ์
 const VALID_ROLES = ["USER", "ADMIN", "DRIVER", "TESTER"];
 
-// Paths ที่ไม่ต้องตรวจ auth
+// Paths ที่ไม่ต้องตรวจ auth (รวมทั้ง /driver เพื่อให้คนขับเปิดลิงก์จาก LINE ได้ทันที)
 const PUBLIC_PATHS = [
   /^\/login(\/.*)?$/,
   /^\/register(\/.*)?$/,
   /^\/forgot-password(\/.*)?$/,
   /^\/calendar(\/.*)?$/,
   /^\/manual(\/.*)?$/,
+  /^\/driver(\/.*)?$/,
   /^\/api(\/.*)?$/,
   /^\/vehicle-info(\/.*)?$/,
   /^\/vehicle-inspection(\/.*)?$/,
