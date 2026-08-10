@@ -251,52 +251,68 @@ export default function UserLayout({
         <div className="w-10"></div>
       </header>
 
-      {/* ===== MOBILE DRAWER ===== */}
+      {/* ===== MOBILE SIDEBAR (LEFT DRAWER WITH DESKTOP SIDEBAR STYLING) ===== */}
       <div
-        className={`fixed inset-0 bg-black/30 backdrop-blur-sm z-50 transition-opacity duration-300 ${mobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+        className={`fixed inset-0 bg-black/40 backdrop-blur-sm z-50 transition-opacity duration-300 md:hidden ${mobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
         onClick={() => setMobileMenuOpen(false)}
       />
-      <div className={`fixed right-0 top-0 h-full w-[280px] bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-out flex flex-col ${mobileMenuOpen ? "translate-x-0" : "translate-x-full"}`}>
-        <div className="p-6 flex items-start justify-between bg-gradient-to-br from-blue-700 to-indigo-800 text-white shadow-md relative overflow-hidden">
-          <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
-          <div className="flex items-center gap-4 relative z-10">
-            <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white/30 shadow-inner backdrop-blur-sm bg-white/20">
-              {userProfile?.line_picture_url ? (
-                <img src={userProfile.line_picture_url} alt="Profile" className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-white">
-                  <UserCircle className="w-7 h-7" />
-                </div>
-              )}
+      <aside className={`fixed left-0 top-0 bottom-0 w-[270px] bg-[#1e40af] border-r border-blue-800 text-white shadow-2xl z-50 transform transition-transform duration-300 ease-out flex flex-col md:hidden ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"}`}>
+        
+        {/* Brand Header */}
+        <div className="h-[72px] flex items-center justify-between border-b border-blue-800 shrink-0 px-4">
+          <Link href="/user" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 overflow-hidden">
+            <div className="w-10 h-10 rounded-xl bg-white text-[#1e40af] flex items-center justify-center shadow-md border border-white shrink-0">
+              <Car className="w-6 h-6 px-0.5" />
             </div>
             <div className="flex flex-col">
-              <span className="text-base font-bold text-white drop-shadow-sm truncate max-w-[150px]">
-                {userProfile?.full_name || 'ชื่อผู้ใช้งาน'}
-              </span>
-              <span className="text-xs text-blue-100/90 font-medium">สำนักงานเขตจอมทอง</span>
+              <span className="font-black text-white text-sm leading-tight tracking-wide uppercase">GovCarBooking</span>
+              <span className="text-[9px] text-blue-200 font-bold uppercase tracking-wider">ระบบบริหารการใช้รถราชการ</span>
             </div>
-          </div>
-          <button onClick={() => setMobileMenuOpen(false)} className="text-white/70 hover:text-white p-1 hover:bg-white/10 rounded-lg transition-colors relative z-10 -mt-1 -mr-1">
-            <X className="w-6 h-6" />
+          </Link>
+
+          <button
+            onClick={() => setMobileMenuOpen(false)}
+            className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-white/80 hover:bg-white/20 hover:text-white transition-colors"
+          >
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="p-5 flex flex-col gap-3 flex-1 overflow-y-auto bg-gray-50/30">
-          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 px-1">เมนูหลัก</div>
+        {/* User Profile */}
+        {userProfile && (
+          <div className="p-4 border-b border-blue-800/60 bg-blue-900/20 flex items-center gap-3 overflow-hidden shrink-0">
+            <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/20 bg-white/20 shadow-inner flex items-center justify-center shrink-0">
+              {userProfile.line_picture_url ? (
+                <img src={userProfile.line_picture_url} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <UserCircle className="w-7 h-7 text-blue-100" />
+              )}
+            </div>
+            <div className="flex flex-col overflow-hidden">
+              <span className="text-xs font-black text-white truncate max-w-[170px] uppercase tracking-wide">
+                {userProfile.full_name}
+              </span>
+              <span className="text-[9px] text-blue-200 font-bold uppercase tracking-tighter">ผู้ใช้งาน</span>
+            </div>
+          </div>
+        )}
+
+        {/* Navigation Menu */}
+        <nav className="flex-1 py-4 px-3 space-y-1.5 overflow-y-auto">
           {navItems.map((item, idx) => {
+            const className = "relative flex items-center gap-3 px-3 py-3 rounded-xl text-xs font-black text-blue-100 hover:text-white hover:bg-white/10 transition-all uppercase tracking-wider";
+            
             const content = (
               <>
-                <div className="flex items-center gap-3.5">
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-sm">
-                    <item.icon className="w-5 h-5" />
-                  </div>
-                  <span className="font-bold text-gray-700 group-hover:text-blue-700 transition-colors">{item.label}</span>
-                </div>
-                <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-blue-400 transition-colors" />
+                <item.icon className="w-5 h-5 shrink-0 opacity-80" />
+                <span className="truncate">{item.label}</span>
+                {item.showBadge && (
+                  <span className="absolute right-3 bg-gradient-to-r from-amber-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg w-5 h-5">
+                    <Bell className="w-3 h-3 text-white fill-white" />
+                  </span>
+                )}
               </>
             );
-
-            const className = "flex items-center justify-between p-3.5 rounded-2xl bg-white border border-gray-100 shadow-sm hover:shadow-md hover:border-blue-200 transition-all group relative";
 
             if (item.external) {
               return (
@@ -324,18 +340,21 @@ export default function UserLayout({
               </Link>
             );
           })}
-        </div>
+        </nav>
 
-        <div className="p-5 border-t border-gray-100 bg-white">
+        {/* Sidebar Footer */}
+        <div className="p-3 border-t border-blue-800/80 bg-blue-950/20 shrink-0">
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 bg-red-50 text-red-600 border border-red-100 hover:bg-red-500 hover:text-white hover:border-red-500 p-3.5 rounded-2xl font-bold transition-all duration-300 shadow-sm hover:shadow-md hover:shadow-red-500/20"
+            disabled={loggingOut}
+            className="w-full flex items-center gap-3 bg-white/10 text-white hover:bg-white hover:text-[#1e40af] p-3 rounded-xl font-black text-xs transition-all uppercase tracking-wider justify-center"
           >
-            <LogOut className="w-5 h-5" />
-            ออกจากระบบ
+            <LogOut className="w-5 h-5 shrink-0" />
+            <span>{loggingOut ? "..." : "ออกจากระบบ"}</span>
           </button>
         </div>
-      </div>
+
+      </aside>
 
       {/* ===== CONTENT AREA ===== */}
       <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${collapsed ? "md:pl-[80px]" : "md:pl-[260px]"}`}>
