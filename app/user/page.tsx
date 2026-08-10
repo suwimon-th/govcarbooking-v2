@@ -517,43 +517,7 @@ export default function UserPage() {
 
 
 
-            {/* QUICK ACTIONS ROW */}
-            <div className="w-full max-w-[1240px] mx-auto px-4 md:px-8 mt-4 md:mt-6 mb-2 z-10 relative">
-                <style jsx>{`
-                    .hide-scrollbar::-webkit-scrollbar { display: none; }
-                    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-                `}</style>
-                <div className="flex items-center gap-3 md:gap-4 overflow-x-auto pb-4 pt-1 hide-scrollbar snap-x">
-                    
-                    {/* Item 1: Request Car (Mobile only) */}
-                    <Link href="/user/request" className="md:hidden shrink-0 snap-start bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-2xl p-3 w-[100px] shadow-lg shadow-blue-200/50 flex flex-col items-center justify-center gap-1.5 group transition-all active:scale-95 border border-blue-500/20">
-                        <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
-                            <Plus className="w-5 h-5 text-white" />
-                        </div>
-                        <span className="font-bold text-[12px] tracking-wide">ขอใช้รถ</span>
-                    </Link>
-                    
-                    {[
-                        { href: "/fuel", icon: Fuel, color: "rose", label: "เบิกน้ำมัน" },
-                        { onClick: () => setReportModalOpen(true), icon: AlertTriangle, color: "amber", label: "แจ้งปัญหา" },
-                        { href: "/quality", icon: Star, color: "yellow", label: "ประเมิน/ตรวจสภาพ" },
-                        { href: "/vehicle-info", icon: Car, color: "indigo", label: "ข้อมูลรถ" },
-                        { href: "https://line.me/R/ti/p/@420uicrg", icon: MessageCircle, color: "emerald", label: "ติดต่อเรา", external: true }
-                    ].map((item, idx) => {
-                        const Comp: any = item.href ? (item.external ? 'a' : Link) : 'button';
-                        const props = item.href ? (item.external ? { href: item.href, target: "_blank", rel: "noopener noreferrer" } : { href: item.href }) : { onClick: item.onClick };
-                        
-                        return (
-                            <Comp key={idx} {...props} className={`shrink-0 snap-start bg-white border border-${item.color}-100 rounded-2xl p-3 w-[100px] md:flex-1 shadow-sm hover:shadow-md hover:border-${item.color}-200 flex flex-col items-center justify-center gap-1.5 group transition-all active:scale-95 duration-300 hover:-translate-y-1`}>
-                                <div className={`w-8 h-8 rounded-full bg-${item.color}-50 flex items-center justify-center text-${item.color}-500 group-hover:bg-${item.color}-500 group-hover:text-white transition-all duration-300 shadow-inner md:group-hover:scale-110`}>
-                                    <item.icon className="w-4 h-4" />
-                                </div>
-                                <span className={`font-bold text-[12px] text-gray-700 leading-tight group-hover:text-${item.color}-600 transition-colors text-center`}>{item.label}</span>
-                            </Comp>
-                        );
-                    })}
-                </div>
-            </div>
+
 
             {/* DASHBOARD HEADER */}
             <div className="w-full max-w-[1240px] mx-auto px-4 md:px-8 mt-2 md:mt-4 mb-6">

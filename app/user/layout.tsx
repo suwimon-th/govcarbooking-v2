@@ -15,7 +15,11 @@ import {
   ChevronRight,
   UserCircle,
   Bell,
-  FolderOpen
+  FolderOpen,
+  Fuel,
+  AlertTriangle,
+  Star,
+  MessageCircle
 } from "lucide-react";
 
 export default function UserLayout({
@@ -117,6 +121,11 @@ export default function UserLayout({
   const navItems = [
     { href: "/user", label: "ขอใช้รถใหม่", icon: Car },
     { href: "/user/my-requests", label: "ประวัติการขอใช้รถ", icon: FileText, showBadge: pendingEvals > 0 },
+    { href: "/fuel", label: "เบิกน้ำมัน", icon: Fuel },
+    { href: "/report", label: "แจ้งปัญหา", icon: AlertTriangle },
+    { href: "/quality", label: "ประเมิน/ตรวจสภาพ", icon: Star },
+    { href: "/vehicle-info", label: "ข้อมูลรถ", icon: Car },
+    { href: "https://line.me/R/ti/p/@420uicrg", label: "ติดต่อเรา", icon: MessageCircle, external: true },
     { href: "/user/profile", label: "ข้อมูลส่วนตัว / LINE", icon: UserCircle },
     { href: "/user/change-password", label: "เปลี่ยนรหัสผ่าน", icon: Key },
     { href: "https://drive.google.com/drive/folders/1iTsmpuzdDFzqHbtO4UStINj82rBxqCTZ", label: "คลังข้อมูล", icon: FolderOpen, external: true },
