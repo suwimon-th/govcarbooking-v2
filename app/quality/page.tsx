@@ -781,40 +781,26 @@ function InspectionTab() {
 // MAIN PAGE
 // ═══════════════════════════════════════════════════════════════
 export default function QualityPage() {
-  const [tab, setTab] = useState<"evaluate" | "inspect">("evaluate");
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/calendar" className="flex items-center gap-2 text-gray-500 hover:text-gray-800 text-sm font-medium transition-colors">
+          <Link href="/user" className="flex items-center gap-2 text-gray-500 hover:text-gray-800 text-sm font-medium transition-colors">
             <ArrowLeft className="w-4 h-4" /> กลับ
           </Link>
           <div className="flex items-center gap-2">
             <Star className="w-5 h-5 text-yellow-500 fill-yellow-400" />
-            <span className="font-bold text-gray-800">คุณภาพการบริการ</span>
+            <span className="font-bold text-gray-800">ประเมินความพึงพอใจ</span>
           </div>
           <div className="w-16" />
         </div>
       </div>
 
       <div className="max-w-3xl mx-auto px-4 py-6">
-        {/* Main Tabs */}
-        <div className="flex bg-white rounded-2xl p-1.5 shadow-sm border border-gray-100 mb-6 gap-1">
-          <button onClick={() => setTab("evaluate")}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-bold transition-all ${tab === "evaluate" ? "bg-yellow-400 text-white shadow-md" : "text-gray-500 hover:bg-gray-50"}`}>
-            <Star className="w-4 h-4" /> แบบประเมินความพึงพอใจ
-          </button>
-          <button onClick={() => setTab("inspect")}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-bold transition-all ${tab === "inspect" ? "bg-blue-600 text-white shadow-md" : "text-gray-500 hover:bg-gray-50"}`}>
-            <ClipboardCheck className="w-4 h-4" /> ตรวจสภาพรถ
-          </button>
-        </div>
-
         {/* Tab Content */}
         <Suspense fallback={<div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>}>
-          {tab === "evaluate" ? <EvaluationTab /> : <InspectionTab />}
+          <EvaluationTab />
         </Suspense>
       </div>
     </div>

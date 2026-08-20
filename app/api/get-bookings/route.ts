@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabaseClient";
-import { isOffHours } from "@/lib/statusHelper";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 /* ----------------------------------------
    helper: normalize เวลาไทย (string ล้วน)
@@ -8,7 +12,8 @@ import { isOffHours } from "@/lib/statusHelper";
    - YYYY-MM-DD HH:mm:ss
    - YYYY-MM-DDTHH:mm:ss
 ---------------------------------------- */
-function normalizeThaiTime(v: string) {
+function normalizeThaiTime(v: string | null | undefined) {
+  if (!v) return "";
   return v.replace(" ", "T").slice(0, 19);
 }
 
@@ -22,6 +27,7 @@ function normalizeThaiTime(v: string) {
 interface BookingItem {
   id: string;
   purpose: string;
+  remark?: string | null;
   start_at: string;
   end_at: string | null;
   created_at: string;
@@ -35,6 +41,7 @@ interface BookingItem {
   } | null;
   drivers: {
     full_name: string;
+    phone?: string;
   } | null;
 }
 
@@ -68,63 +75,50 @@ export async function GET(req: Request) {
         )
       `);
 
-    // ✅ Optimization: Filter by date range if provided
-    /* 
-    if (startParam && endParam) {
-      // Filter bookings that overlap with the range or start within the range
-      // Identifying overlapping ranges: StartA <= EndB AND EndA >= StartB
-      // But simpler for this context: start_at >= startParam AND start_at <= endParam (Showing bookings starting in this month)
-      query = query.gte("start_at", startParam).lte("start_at", endParam);
-    }
-    */
-
     const { data, error } = await query
       .order("start_at", { ascending: true })
-      .order("created_at", { ascending: true })
-      .returns<BookingItem[]>();
+      .order("created_at", { ascending: true });
 
     if (error) {
-      console.error("GET_BOOKINGS_ERROR:", error);
-      return NextResponse.json(
-        { error: "ดึงข้อมูลล้มเหลว" },
-        { status: 500 }
-      );
+      console.error("GET_BOOKINGS_ERROR:", error.message);
+      return NextResponse.json([], { status: 200 });
     }
 
-    const events = data.map((item) => {
-      const start = normalizeThaiTime(item.start_at);
+    if (!data || !Array.isArray(data)) {
+      return NextResponse.json([], { status: 200 });
+    }
 
-      const end = item.end_at
-        ? normalizeThaiTime(item.end_at)
-        : null; // ✅ ไม่แสดงเวลาสิ้นสุดถ้าไม่ได้ระบุต้นทาง
+    const events = data
+      .filter((item: any) => item && item.start_at)
+      .map((item: any) => {
+        const start = normalizeThaiTime(item.start_at);
 
-      return {
-        id: item.id,
-        title: item.requester_name || "ใช้งานรถ",
-        start,
-        end,
-        status: item.status,
-        request_code: (item as any).request_code ?? null,
-        purpose: item.purpose,
-        vehicle_id: item.vehicle_id,
-        vehicle_color: item.vehicles?.color ?? "#9CA3AF",
-        vehicle_plate: item.vehicles?.plate_number ?? "-",
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        driver_name: (item.drivers as any)?.full_name ?? null,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        driver_phone: (item.drivers as any)?.phone ?? null,
-        requester_name: item.requester_name,
-        is_off_hours: item.is_ot,
-        created_at: item.created_at,
-      };
-    });
+        const end = item.end_at
+          ? normalizeThaiTime(item.end_at)
+          : null; // ✅ ไม่แสดงเวลาสิ้นสุดถ้าไม่ได้ระบุต้นทาง
+
+        return {
+          id: item.id,
+          title: item.requester_name || "ใช้งานรถ",
+          start,
+          end,
+          status: item.status,
+          request_code: item.request_code ?? null,
+          purpose: item.purpose,
+          vehicle_id: item.vehicle_id,
+          vehicle_color: item.vehicles?.color ?? "#3B82F6",
+          vehicle_plate: item.vehicles?.plate_number ?? "-",
+          driver_name: item.drivers?.full_name ?? null,
+          driver_phone: item.drivers?.phone ?? null,
+          requester_name: item.requester_name,
+          is_off_hours: item.is_ot,
+          created_at: item.created_at,
+        };
+      });
 
     return NextResponse.json(events, { status: 200 });
   } catch (e) {
-    console.error("SERVER ERROR:", e);
-    return NextResponse.json(
-      { error: "SERVER ERROR" },
-      { status: 500 }
-    );
+    console.error("SERVER ERROR in GET_BOOKINGS:", e);
+    return NextResponse.json([], { status: 200 });
   }
 }

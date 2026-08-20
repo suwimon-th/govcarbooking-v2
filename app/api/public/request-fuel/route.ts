@@ -10,7 +10,8 @@ export async function POST(req: Request) {
             plate_number,
             request_date,
             system_quota,
-            period
+            period,
+            remark
         } = body;
 
         if (!driver_name || !plate_number) {
@@ -29,6 +30,7 @@ export async function POST(req: Request) {
                 request_date,
                 system_quota,
                 period,
+                remark: remark || null,
                 status: "PENDING"
             });
 

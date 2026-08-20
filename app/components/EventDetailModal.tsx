@@ -23,6 +23,7 @@ export type BookingDetail = {
   department: string;
 
   purpose: string;
+  remark?: string | null;
   destination: string;
 
   start_at: string;
@@ -120,6 +121,12 @@ export default function EventDetailModal({ open, detail, onClose }: Props) {
                     <div className="flex items-center gap-1.5 text-sm text-gray-600 font-medium bg-white/50 w-fit px-3 py-1 rounded-lg">
                       <MapPin className="w-3.5 h-3.5 text-rose-500" />
                       <span>ไปที่: {detail.destination}</span>
+                    </div>
+                  )}
+                  {detail.remark && (
+                    <div className="flex items-center gap-1.5 text-xs text-amber-800 font-medium bg-amber-50 border border-amber-200/80 w-fit px-3 py-1.5 rounded-lg mt-2">
+                      <FileText className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                      <span>หมายเหตุ: {detail.remark}</span>
                     </div>
                   )}
                 </div>

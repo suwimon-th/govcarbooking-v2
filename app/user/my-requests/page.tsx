@@ -33,7 +33,9 @@ type MyRequest = {
   id: string;
   request_code: string;
   purpose: string;
+  remark?: string | null;
   created_at: string;
+  requester_id?: string;
   requester_name: string;
   start_at: string;
   end_at: string | null;
@@ -412,6 +414,11 @@ export default function MyRequestsPage() {
                           <p className="text-base font-semibold text-gray-800 line-clamp-2 max-w-[280px] leading-relaxed" title={it.purpose}>
                             {it.purpose}
                           </p>
+                          {it.remark && (
+                            <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200/70 rounded-md px-2 py-1 mt-1 font-medium max-w-[280px]">
+                              <span className="font-bold">หมายเหตุ:</span> {it.remark}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </td>

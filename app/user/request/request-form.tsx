@@ -92,11 +92,12 @@ export default function RequestForm({
   }, [requesterId, requesterName]);
 
   // Passenger Logic
-  const [passengerCount, setPassengerCount] = useState<string>(""); // Default empty
+  const [passengerCount, setPassengerCount] = useState<string>("1"); // Default 1 person
   const [passengers, setPassengers] = useState<Passenger[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
 
   const [destination, setDestination] = useState<string>("");
+  const [remark, setRemark] = useState<string>("");
   const [isMobile, setIsMobile] = useState(false);
   const [position, setPosition] = useState<string>("");
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -133,21 +134,41 @@ export default function RequestForm({
 
   // Update passengers array when count changes
   useEffect(() => {
-    const count = parseInt(passengerCount) || 0;
+    const count = parseInt(passengerCount) || 1;
+    const nameToMatch = (reqName || requesterName || "").trim();
+    const matched = profiles.find(p => (reqId && p.id === reqId) || (nameToMatch && p.full_name && p.full_name.trim() === nameToMatch));
+
     setPassengers(prev => {
       const newArr = [...prev];
       if (count > newArr.length) {
-        // Add new empty passengers
         for (let i = newArr.length; i < count; i++) {
-          newArr.push({ type: "external", name: "", position: "" });
+          if (i === 0) {
+            newArr.push({
+              type: "profile",
+              profile_id: matched ? matched.id : (reqId || ""),
+              name: matched ? matched.full_name : (reqName || requesterName || ""),
+              position: matched ? (matched.position || "") : (position || "")
+            });
+          } else {
+            newArr.push({ type: "external", name: "", position: "" });
+          }
         }
       } else if (count < newArr.length) {
-        // Trim
         newArr.length = count;
+      }
+
+      if (newArr.length > 0) {
+        newArr[0] = {
+          ...newArr[0],
+          type: "profile",
+          profile_id: matched ? matched.id : (newArr[0].profile_id || reqId || ""),
+          name: matched ? matched.full_name : (newArr[0].name || reqName || requesterName || ""),
+          position: matched ? (matched.position || "") : (newArr[0].position || position || "")
+        };
       }
       return newArr;
     });
-  }, [passengerCount]);
+  }, [passengerCount, profiles, reqId, reqName, requesterName, position]);
 
   const updatePassenger = (index: number, field: keyof Passenger, value: string) => {
     const newPassengers = [...passengers];
@@ -546,6 +567,7 @@ export default function RequestForm({
         start_time: startTime,
         end_time: endTime || null,
         purpose,
+        remark: remark.trim() || null,
         // For Retroactive: Always send driver. For OffHours: Send driver. Also support admin selection.
         driver_id: (isOt || isRetroactive || canSelectRequester) ? driverId : null,
         passenger_count: parseInt(passengerCount) || 1,
@@ -629,7 +651,8 @@ export default function RequestForm({
       setVehicleId("");
       setDriverId("");
       setPurpose("");
-      setPassengerCount("");
+      setRemark("");
+      setPassengerCount("1");
       setPassengers([]);
       setDestination("");
       setIsOtherVehicle(false);
@@ -1327,6 +1350,22 @@ export default function RequestForm({
                 rows={3}
                 className={`${textInputClasses} pt-3 h-auto resize-none font-sarabun-thai`}
                 placeholder="เช่น ลงพื้นที่ตรวจสอบเรื่องร้องเรียน..."
+              />
+            </div>
+          </div>
+
+          <div className="relative">
+            <label htmlFor="remark" className={labelClasses}>หมายเหตุเพิ่มเติม (ถ้ามี)</label>
+            <div className="relative">
+              <FileText className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" />
+              <input
+                id="remark"
+                name="remark"
+                type="text"
+                value={remark}
+                onChange={(e) => setRemark(e.target.value)}
+                className={textInputClasses}
+                placeholder="ระบุหมายเหตุ หรือเงื่อนไขภารกิจพิเศษ (ถ้ามี)..."
               />
             </div>
           </div>

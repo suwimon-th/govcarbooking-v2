@@ -7,7 +7,7 @@ import {
   generateDriverAssignmentEmailHtml,
 } from "@/lib/email";
 import { getAutoAssignEnabled } from "@/lib/settings";
-import { resequenceRequestCodes } from "@/lib/requestCodeHelper";
+import { generateRequestCode } from "@/lib/requestCodeHelper";
 
 /* ---------------------------
    helper: เติมวินาทีให้เวลา
@@ -17,47 +17,7 @@ function padTime(t: string) {
   return t.length === 5 ? `${t}:00` : t;
 }
 
-/* ---------------------------
-   สร้างเลขคำขอ ENV-YY/XXXX
-   YY = ปี พ.ศ. 2 หลัก (เช่น 2569 -> 69)
-   XXXX = รันต่อเนื่องทั้งปี
----------------------------- */
-/* ---------------------------
-   generate request code เหมือนใน update-booking
-   ENV-{plate2digits}/{seq3}
----------------------------- */
-async function generateRequestCode(vehicleId: string): Promise<string> {
-  const { data: vehicle } = await supabase
-    .from("vehicles")
-    .select("plate_number")
-    .eq("id", vehicleId)
-    .single();
 
-  const plate = vehicle?.plate_number || "";
-  const digits = plate.replace(/\D/g, "");
-  const plateSuffix = digits.slice(-2) || "00";
-  const prefix = `ENV-${plateSuffix}/`;
-
-  // Query the highest existing code for this prefix
-  const { data } = await supabase
-    .from("bookings")
-    .select("request_code")
-    .like("request_code", `${prefix}%`)
-    .order("request_code", { ascending: false })
-    .limit(1);
-
-  let running = 1;
-  if (data && data.length > 0) {
-    const last = data[0].request_code;
-    const parts = last.split("/");
-    if (parts.length === 2) {
-      const parsed = Number(parts[1]);
-      if (!isNaN(parsed)) running = parsed + 1;
-    }
-  }
-
-  return `${prefix}${String(running).padStart(3, "0")}`;
-}
 
 export async function POST(req: Request) {
   try {
@@ -72,6 +32,7 @@ export async function POST(req: Request) {
       start_time,  // "21:52"
       end_time,    // "22:30" | null
       purpose,
+      remark = null,
       driver_id,
       passenger_count = 1, // Default 1
       destination = "",
@@ -321,6 +282,7 @@ export async function POST(req: Request) {
             start_at,
             end_at: dbEndAt,
             purpose,
+            remark: remark || null,
             request_code,
             status: initialStatus,
             driver_id: driver_id || null,
@@ -364,14 +326,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // ✅ Automatically resequence request codes for this vehicle by Usage Date/Time (start_at)
-    if (vehicle_id && !no_request_code && requester?.role !== 'TESTER') {
-      try {
-        await resequenceRequestCodes(vehicle_id);
-      } catch (seqErr) {
-        console.error("Resequence error:", seqErr);
-      }
-    }
+
 
     /* ---------------------------
        Auto-assign คนขับ (ถ้ามี)

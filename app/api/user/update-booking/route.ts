@@ -2,41 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { supabase } from "@/lib/supabaseClient";
 
-/* ---------------------------
-   generate request code
-   ENV-{plate2digits}/{seq3}
----------------------------- */
-async function generateRequestCode(vehicleId: string): Promise<string> {
-    const { data: vehicle } = await supabase
-        .from("vehicles")
-        .select("plate_number")
-        .eq("id", vehicleId)
-        .single();
-
-    const plate = vehicle?.plate_number || "";
-    const digits = plate.replace(/\D/g, "");
-    const plateSuffix = digits.slice(-2) || "00";
-    const prefix = `ENV-${plateSuffix}/`;
-
-    const { data } = await supabase
-        .from("bookings")
-        .select("request_code")
-        .like("request_code", `${prefix}%`)
-        .order("request_code", { ascending: false })
-        .limit(1);
-
-    let running = 1;
-    if (data && data.length > 0) {
-        const last = data[0].request_code;
-        const parts = last.split("/");
-        if (parts.length === 2) {
-            const parsed = Number(parts[1]);
-            if (!isNaN(parsed)) running = parsed + 1;
-        }
-    }
-
-    return `${prefix}${String(running).padStart(3, "0")}`;
-}
+import { generateRequestCode } from "@/lib/requestCodeHelper";
 
 export async function PUT(req: Request) {
     try {

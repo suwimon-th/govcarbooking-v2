@@ -3,50 +3,7 @@ import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseClient";
 import { sendLinePush, flexAssignDriver } from "@/lib/line";
 import { sendAdminEmail, generateDriverAssignmentEmailHtml } from "@/lib/email";
-
-/* ---------------------------
-   generate request code เหมือนใน create-booking
-   ENV-{plate2digits}/{seq3}
----------------------------- */
-async function generateRequestCode(vehicleId: string): Promise<string> {
-    const { data: vehicle } = await supabase
-        .from("vehicles")
-        .select("plate_number")
-        .eq("id", vehicleId)
-        .single();
-
-    const plate = vehicle?.plate_number || "";
-    const digits = plate.replace(/\D/g, "");
-    const plateSuffix = digits.slice(-2) || "00";
-    const prefix = `ENV-${plateSuffix}/`;
-
-    // --- REUSE CANCELLED CODE LOGIC (REMOVED) ---
-    // ผู้ใช้ไม่ต้องการนำเลขเดิมที่ยกเลิกกลับมาใช้ใหม่ (ต้องการให้ข้ามไปเลย)
-    // ----------------------------------
-
-    // ⚠️ Query ทุก booking ที่มี prefix นี้ (ไม่ว่าจะ vehicle_id ใด)
-    // เพื่อป้องกัน duplicate key เมื่อรถเปลี่ยนมือ
-    // ใช้ ORDER BY request_code DESC (ไม่ใช่ created_at) เพื่อได้เลขสูงสุดจริงๆ
-    const { data } = await supabase
-        .from("bookings")
-        .select("request_code")
-        .like("request_code", `${prefix}%`)
-        .order("request_code", { ascending: false })
-        .limit(1);
-
-    // ถ้ายังหาไม่เจอ ให้ลองเรียงตาม request_code เพื่อหาตัวสุดท้ายจริงๆ
-    let running = 1;
-    if (data && data.length > 0) {
-        const last = data[0].request_code;
-        const parts = last.split("/");
-        if (parts.length === 2) {
-            const parsed = Number(parts[1]);
-            if (!isNaN(parsed)) running = parsed + 1;
-        }
-    }
-
-    return `${prefix}${String(running).padStart(3, "0")}`;
-}
+import { generateRequestCode } from "@/lib/requestCodeHelper";
 
 export async function POST(req: Request) {
     try {

@@ -53,6 +53,10 @@ interface Props {
         department_id?: number;
         remark?: string;
         requester_name?: string;
+        requester_id?: string;
+        requester?: {
+            position?: string | null;
+        } | null;
         is_ot?: boolean;
     };
     onClose: () => void;
@@ -83,10 +87,29 @@ export default function EditBookingModal({ booking, onClose, onUpdated }: Props)
     const [purpose, setPurpose] = useState(booking.purpose);
     const [destination, setDestination] = useState(booking.destination || "");
     const [requesterName, setRequesterName] = useState<string>(booking.requester_name || "");
-    const [passengerCount, setPassengerCount] = useState(String(booking.passenger_count || ""));
-    const [passengers, setPassengers] = useState<Passenger[]>(
-        (booking.passengers || []).filter((p: any) => p.type !== "config")
-    );
+    const [passengerCount, setPassengerCount] = useState(String(booking.passenger_count || "1"));
+    const [passengers, setPassengers] = useState<Passenger[]>(() => {
+        const raw = (booking.passengers || []).filter((p: any) => p.type !== "config");
+        const count = parseInt(String(booking.passenger_count || 1)) || 1;
+        const reqName = booking.requester_name || "";
+        const reqPos = booking.requester?.position || "";
+
+        const list: Passenger[] = [...raw];
+        while (list.length < count) {
+            list.push({ type: "external", name: "", position: "" });
+        }
+
+        if (list.length > 0) {
+            list[0] = {
+                ...list[0],
+                type: "profile",
+                profile_id: list[0].profile_id || booking.requester_id || "",
+                name: list[0].name || reqName,
+                position: list[0].position || reqPos
+            };
+        }
+        return list;
+    });
     const [deptId, setDeptId] = useState<number>(booking.department_id || 1);
     const [remark, setRemark] = useState(booking.remark || "");
     const [isOt, setIsOt] = useState(booking.is_ot || false);
@@ -115,7 +138,8 @@ export default function EditBookingModal({ booking, onClose, onUpdated }: Props)
 
                 if (deptRes.data) setDepartments(deptRes.data);
                 if (profRes.data) {
-                    const filtered = (profRes.data as any[]).filter((p) => {
+                    const raw = profRes.data as any[];
+                    let filtered = raw.filter((p) => {
                         if (!p.full_name) return false;
                         const name = p.full_name.trim();
                         if (!name || name.length <= 2) return false;
@@ -131,6 +155,13 @@ export default function EditBookingModal({ booking, onClose, onUpdated }: Props)
                         }
                         return true;
                     });
+                    const reqProf = raw.find((p) =>
+                        (booking.requester_id && p.id === booking.requester_id) ||
+                        (booking.requester_name && p.full_name && p.full_name.trim() === booking.requester_name.trim())
+                    );
+                    if (reqProf && !filtered.some((p) => p.id === reqProf.id)) {
+                        filtered = [reqProf, ...filtered];
+                    }
                     setProfiles(filtered as Profile[]);
                 }
                 if (vehRes.data) setVehicles(vehRes.data as Vehicle[]);
@@ -146,19 +177,43 @@ export default function EditBookingModal({ booking, onClose, onUpdated }: Props)
 
     // Sync passengers array when passenger count changes
     useEffect(() => {
-        const count = parseInt(passengerCount) || 0;
+        const count = parseInt(passengerCount) || 1;
+        const reqName = (booking.requester_name || requesterName || "").trim();
+        const reqId = booking.requester_id;
+        const matched = profiles.find(p => (reqId && p.id === reqId) || (reqName && p.full_name && p.full_name.trim() === reqName));
+
         setPassengers(prev => {
             const newArr = [...prev];
             if (count > newArr.length) {
                 for (let i = newArr.length; i < count; i++) {
-                    newArr.push({ type: "external", name: "", position: "" });
+                    if (i === 0) {
+                        newArr.push({
+                            type: "profile",
+                            profile_id: matched ? matched.id : (reqId || ""),
+                            name: matched ? matched.full_name : reqName,
+                            position: matched ? (matched.position || "") : (booking.requester?.position || "")
+                        });
+                    } else {
+                        newArr.push({ type: "external", name: "", position: "" });
+                    }
                 }
             } else if (count < newArr.length) {
                 newArr.length = count;
             }
+
+            if (newArr.length > 0) {
+                newArr[0] = {
+                    ...newArr[0],
+                    type: "profile",
+                    profile_id: matched ? matched.id : (newArr[0].profile_id || reqId || ""),
+                    name: matched ? matched.full_name : (newArr[0].name || reqName),
+                    position: matched ? (matched.position || "") : (newArr[0].position || booking.requester?.position || "")
+                };
+            }
+
             return newArr;
         });
-    }, [passengerCount]);
+    }, [passengerCount, profiles, booking.requester_id, booking.requester_name, requesterName, booking.requester?.position]);
 
     const updatePassenger = (index: number, field: keyof Passenger, value: string) => {
         const newPassengers = [...passengers];
@@ -536,7 +591,7 @@ export default function EditBookingModal({ booking, onClose, onUpdated }: Props)
                                         {passengers.map((p, idx) => (
                                             <div key={idx} className="bg-gray-50 p-3 rounded-2xl border border-gray-100 flex flex-col sm:flex-row gap-3 items-end sm:items-center">
                                                 <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full shrink-0">
-                                                    คนที่ {idx + 1}
+                                                    คนที่ {idx + 1} {idx === 0 ? "(ผู้ขอใช้รถ)" : ""}
                                                 </span>
                                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 flex-1 w-full">
                                                     <select
@@ -563,7 +618,7 @@ export default function EditBookingModal({ booking, onClose, onUpdated }: Props)
                                                         <input
                                                             type="text"
                                                             placeholder="ชื่อ-นามสกุล..."
-                                                            value={p.name}
+                                                            value={p.name || (idx === 0 ? (booking.requester_name || requesterName) : "")}
                                                             onChange={(e) => updatePassenger(idx, 'name', e.target.value)}
                                                             className="px-3 py-1.5 bg-white border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
                                                         />

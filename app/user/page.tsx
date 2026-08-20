@@ -10,7 +10,6 @@ import type { EventClickArg } from "@fullcalendar/core";
 import EventDetailModal from "../components/EventDetailModal";
 import {
     Plus,
-    Calendar as CalendarIcon,
     Clock,
     ChevronLeft,
     ChevronRight,
@@ -35,7 +34,6 @@ import { getStatusLabel, getStatusColor } from "@/lib/statusHelper";
 import ReportIssueModal from "@/app/components/ReportIssueModal";
 
 import PublicQueueCard from "@/app/components/PublicQueueCard";
-import MonthlyBookingList from "@/app/components/MonthlyBookingList";
 import DailyBookingList from "@/app/components/DailyBookingList";
 import { THAI_HOLIDAYS } from "@/lib/thai-holidays";
 
@@ -207,13 +205,10 @@ export default function UserPage() {
     }, []);
 
     // Table View State
-    const [currentMonthStart, setCurrentMonthStart] = useState<Date | null>(null);
-    const [currentMonthEnd, setCurrentMonthEnd] = useState<Date | null>(null);
     const [currentViewTitle, setCurrentViewTitle] = useState("");
     // Search & Filter State
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("ALL");
-    const [viewMode, setViewMode] = useState<'month' | 'day'>('month');
 
     /* Detect Mobile */
     useEffect(() => {
@@ -273,7 +268,10 @@ export default function UserPage() {
                     vehicle: `รถ ${item.vehicle_plate || '-'}`,
                     isOffHours: item.is_off_hours,
                     driver: item.driver_name,
-                    request_code: item.request_code
+                    driver_name: item.driver_name,
+                    driver_phone: item.driver_phone,
+                    request_code: item.request_code,
+                    remark: item.remark
                 }
             };
         });
@@ -805,8 +803,6 @@ export default function UserPage() {
                             const startStr = arg.view.activeStart.toISOString();
                             const endStr = arg.view.activeEnd.toISOString();
 
-                            setCurrentMonthStart(arg.view.currentStart);
-                            setCurrentMonthEnd(arg.view.currentEnd);
                             setCurrentViewTitle(arg.view.title);
 
                             // Load data for this range
@@ -848,68 +844,37 @@ export default function UserPage() {
                     </div>
                 </div>
 
-                {/* Tab Header */}
-                <div className="flex items-end gap-1 border-b-2 border-gray-200 mb-6">
-                    <button
-                        onClick={() => setViewMode('month')}
-                        className={`relative px-6 py-3 text-sm font-bold transition-all rounded-t-xl flex items-center gap-2 ${
-                            viewMode === 'month'
-                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 -mb-0.5 pb-3.5'
-                                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                        }`}
-                    >
-                        <CalendarIcon className="w-4 h-4" />
-                        รายการเดือนนี้
-                        {viewMode === 'month' && (
-                            <span className="ml-1 bg-white/20 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
-                                {filteredEvents.filter(e => currentMonthStart && currentMonthEnd && new Date(e.start) >= currentMonthStart && new Date(e.start) < currentMonthEnd).length}
-                            </span>
-                        )}
-                    </button>
-                    <button
-                        onClick={() => setViewMode('day')}
-                        className={`relative px-6 py-3 text-sm font-bold transition-all rounded-t-xl flex items-center gap-2 ${
-                            viewMode === 'day'
-                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 -mb-0.5 pb-3.5'
-                                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                        }`}
-                    >
-                        <Clock className="w-4 h-4" />
-                        รายวัน
-                        {viewMode === 'day' && (
-                            <span className="ml-1 bg-white/20 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
-                                {dailyEvents.length}
-                            </span>
-                        )}
-                    </button>
-                </div>
-
-                {/* Tab Content: รายเดือน */}
-                {viewMode === 'month' && (
-                    <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden animate-in fade-in duration-200">
-                        <div className="overflow-x-auto overflow-y-auto max-h-[480px]">
-                            <MonthlyBookingList
-                                events={filteredEvents}
-                                currentMonthStart={currentMonthStart}
-                                currentMonthEnd={currentMonthEnd}
-                                currentViewTitle={currentViewTitle}
-                                onItemClick={openDetail}
-                            />
+                {/* Section Header */}
+                <div className="flex items-center justify-between mb-5">
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center shadow-sm shadow-blue-200">
+                            <Clock className="w-4 h-4 text-white" />
+                        </div>
+                        <div>
+                            <h2 className="text-base font-black text-gray-800 leading-none">รายการประจำวัน</h2>
+                            <p className="text-xs text-gray-400 mt-0.5">
+                                {selectedDate
+                                    ? new Date(selectedDate).toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+                                    : 'เลือกวันที่จากปฏิทิน'}
+                            </p>
                         </div>
                     </div>
-                )}
+                    {dailyEvents.filter(e => !e.extendedProps?.isHoliday && !e.extendedProps?.isDuty).length > 0 && (
+                        <span className="inline-flex items-center gap-1.5 bg-blue-50 border border-blue-100 text-blue-700 text-xs font-black px-3 py-1.5 rounded-full">
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                            {dailyEvents.filter(e => !e.extendedProps?.isHoliday && !e.extendedProps?.isDuty).length} รายการ
+                        </span>
+                    )}
+                </div>
 
-                {/* Tab Content: รายวัน */}
-                {viewMode === 'day' && (
-                    <div className="animate-in fade-in duration-200">
-                        <DailyBookingList
-                            events={filteredEvents}
-                            selectedDate={selectedDate}
-                            onItemClick={openDetail}
-                            onDateChange={setSelectedDate}
-                        />
-                    </div>
-                )}
+                <div className="animate-in fade-in duration-200">
+                    <DailyBookingList
+                        events={filteredEvents}
+                        selectedDate={selectedDate}
+                        onItemClick={openDetail}
+                        onDateChange={setSelectedDate}
+                    />
+                </div>
             </div>
 
             {/* AGENDA LIST SECTION (MOBILE ONLY) */}

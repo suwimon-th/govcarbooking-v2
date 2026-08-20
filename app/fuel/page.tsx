@@ -17,6 +17,7 @@ interface FuelRequest {
     status: string;
     request_number: string | null;
     actual_amount: number | null;
+    remark?: string | null;
 }
 
 export default function FuelPage() {
@@ -57,6 +58,7 @@ export default function FuelPage() {
     const [requestDate, setRequestDate] = useState(() => new Date().toISOString().split('T')[0]);
     const [systemQuota, setSystemQuota] = useState("");
     const [period, setPeriod] = useState("");
+    const [remark, setRemark] = useState("");
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState<"IDLE" | "SUCCESS" | "ERROR">("IDLE");
     const [errorMsg, setErrorMsg] = useState("");
@@ -186,7 +188,8 @@ export default function FuelPage() {
                                 plate_number: finalPlatePerMachine,
                                 request_date: requestDate,
                                 system_quota: mReq.quota,
-                                period: period
+                                period: period,
+                                remark: remark.trim() || null
                             }),
                         });
                         if (!res.ok) throw new Error(`Failed to submit request for ${machineCode}: ${mReq.quota}`);
@@ -202,12 +205,14 @@ export default function FuelPage() {
                         plate_number: plateNumber,
                         request_date: requestDate,
                         system_quota: systemQuota,
-                        period: period
+                        period: period,
+                        remark: remark.trim() || null
                     }),
                 });
                 if (!res.ok) throw new Error("Failed to submit");
             }
 
+            setRemark("");
             setStatus("SUCCESS");
         } catch (err: any) {
             setStatus("ERROR");
@@ -351,6 +356,17 @@ export default function FuelPage() {
                                         <span className="text-rose-600 font-bold">{systemQuota}</span>
                                     </div>
                                 )}
+
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">หมายเหตุเพิ่มเติม (ถ้ามี)</label>
+                                    <input 
+                                        type="text" 
+                                        value={remark} 
+                                        onChange={(e) => setRemark(e.target.value)} 
+                                        placeholder="ระบุหมายเหตุเพิ่มเติม..." 
+                                        className="w-full h-11 px-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none text-sm bg-white" 
+                                    />
+                                </div>
 
                                 <button type="submit" disabled={loading} className="w-full h-12 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl shadow-lg shadow-rose-100 transition-all flex items-center justify-center gap-2">
                                     {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "บันทึกคำขอ"}

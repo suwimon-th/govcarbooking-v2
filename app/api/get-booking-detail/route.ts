@@ -75,6 +75,7 @@ export async function GET(req: Request) {
       requester_name: booking.requester_name ?? "-",
       department: dept?.name ?? "-",
       purpose: booking.purpose ?? "-",
+      remark: booking.remark ?? null,
       destination: booking.destination ?? "-",
 
       // ⭐ แก้ตรงนี้

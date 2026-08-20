@@ -19,7 +19,9 @@ import {
   Fuel,
   AlertTriangle,
   Star,
-  MessageCircle
+  MessageCircle,
+  Calendar,
+  ClipboardCheck
 } from "lucide-react";
 
 export default function UserLayout({
@@ -121,9 +123,11 @@ export default function UserLayout({
   const navItems = [
     { href: "/user", label: "ขอใช้รถใหม่", icon: Car },
     { href: "/user/my-requests", label: "ประวัติการขอใช้รถ", icon: FileText, showBadge: pendingEvals > 0 },
+    { href: "/calendar", label: "ปฏิทินการใช้รถ", icon: Calendar },
     { href: "/fuel", label: "เบิกน้ำมัน", icon: Fuel },
     { href: "/report", label: "แจ้งปัญหา", icon: AlertTriangle },
-    { href: "/quality", label: "ประเมิน/ตรวจสภาพ", icon: Star },
+    { href: "/quality", label: "ประเมินความพึงพอใจ", icon: Star },
+    { href: "/vehicle-inspection", label: "ตรวจสภาพรถยนต์", icon: ClipboardCheck },
     { href: "/vehicle-info", label: "ข้อมูลรถ", icon: Car },
     { href: "https://line.me/R/ti/p/@420uicrg", label: "ติดต่อเรา", icon: MessageCircle, external: true },
     { href: "/user/profile", label: "ข้อมูลส่วนตัว / LINE", icon: UserCircle },

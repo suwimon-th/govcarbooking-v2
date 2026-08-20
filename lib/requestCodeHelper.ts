@@ -5,8 +5,49 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 /**
+ * Generates the next sequential request_code for a vehicle.
+ * Format: ENV-{plate2digits}/{seq3} (e.g. ENV-73/311)
+ * Calculates the true numerical maximum running number for the prefix.
+ */
+export async function generateRequestCode(vehicleId: string): Promise<string> {
+    const { data: vehicle } = await supabase
+        .from("vehicles")
+        .select("plate_number")
+        .eq("id", vehicleId)
+        .single();
+
+    const plate = vehicle?.plate_number || "";
+    const digits = plate.replace(/\D/g, "");
+    const plateSuffix = digits.slice(-2) || "00";
+    const prefix = `ENV-${plateSuffix}/`;
+
+    // Query all bookings matching this prefix to find true numerical maximum
+    const { data } = await supabase
+        .from("bookings")
+        .select("request_code")
+        .like("request_code", `${prefix}%`);
+
+    let maxRunning = 0;
+    if (data && data.length > 0) {
+        for (const row of data) {
+            if (!row.request_code) continue;
+            const parts = row.request_code.split("/");
+            if (parts.length === 2) {
+                const parsed = parseInt(parts[1], 10);
+                if (!isNaN(parsed) && parsed > maxRunning) {
+                    maxRunning = parsed;
+                }
+            }
+        }
+    }
+
+    const nextRunning = maxRunning + 1;
+    return `${prefix}${String(nextRunning).padStart(3, "0")}`;
+}
+
+/**
  * Resequences request_code for all bookings of a vehicle (or all vehicles)
- * ordered strictly by start_at ASC (date/time of usage), then created_at ASC.
+ * ordered strictly by created_at ASC (booking submission time), then start_at ASC.
  * Format: ENV-{plate2digits}/{seq3} (e.g. ENV-05/001, ENV-05/002...)
  */
 export async function resequenceRequestCodes(targetVehicleId?: string): Promise<{ success: boolean; updatedCount: number; error?: string }> {
@@ -61,18 +102,18 @@ export async function resequenceRequestCodes(targetVehicleId?: string): Promise<
 
         let totalUpdated = 0;
 
-        // GLOBAL PASS 2: Group bookings by prefix and assign sequential codes chronologically
+        // GLOBAL PASS 2: Group bookings by prefix and assign sequential codes chronologically by created_at ASC
         for (const [prefix, vIds] of prefixVehiclesMap.entries()) {
             const prefixBookings = bookings.filter((b) => b.vehicle_id && vIds.includes(b.vehicle_id));
 
-            // Sort chronologically by start_at ASC, then created_at ASC
+            // Sort chronologically by created_at ASC (whoever booked first gets earlier number), then start_at ASC
             prefixBookings.sort((a, b) => {
-                const ta = a.start_at ? new Date(a.start_at).getTime() : 0;
-                const tb = b.start_at ? new Date(b.start_at).getTime() : 0;
-                if (ta !== tb) return ta - tb;
                 const ca = a.created_at ? new Date(a.created_at).getTime() : 0;
                 const cb = b.created_at ? new Date(b.created_at).getTime() : 0;
-                return ca - cb;
+                if (ca !== cb) return ca - cb;
+                const ta = a.start_at ? new Date(a.start_at).getTime() : 0;
+                const tb = b.start_at ? new Date(b.start_at).getTime() : 0;
+                return ta - tb;
             });
 
             const updatePromises = prefixBookings.map((b, idx) => {

@@ -407,14 +407,18 @@ export default function PublicCalendarPage() {
 
     /* โหลด booking */
     const loadBookings = useCallback(async () => {
-        const res = await fetch("/api/get-bookings");
-        const raw = await res.json();
+        try {
+            const res = await fetch("/api/get-bookings");
+            if (!res.ok) {
+                setEvents([]);
+                return;
+            }
+            const raw = await res.json();
 
-        if (!Array.isArray(raw)) {
-            console.error("Failed to load bookings, API response:", raw);
-            setEvents([]);
-            return;
-        }
+            if (!Array.isArray(raw)) {
+                setEvents([]);
+                return;
+            }
 
         const formatted: CalendarEvent[] = raw.map((item: any) => {
             const isCompleted = item.status === "COMPLETED";
@@ -442,6 +446,7 @@ export default function PublicCalendarPage() {
                     driver: item.driver_name,
                     created_at: item.created_at,
                     request_code: item.request_code,
+                    remark: item.remark,
                 }
             };
         });
@@ -550,6 +555,10 @@ export default function PublicCalendarPage() {
             }));
 
         setEvents([...formatted, ...dutyEvents, ...holidayEvents]);
+    } catch (e) {
+        console.error("loadBookings error:", e);
+        setEvents([]);
+    }
     }, []);
 
     /* Initial Load */
@@ -572,16 +581,13 @@ export default function PublicCalendarPage() {
     /* คลิกวันที่ เลือกวัน */
     const onDateClick = (info: { dateStr: string; jsEvent: MouseEvent }) => {
         setSelectedDate(info.dateStr);
-        if (typeof window !== "undefined" && window.innerWidth < 768) {
-            setTimeout(() => {
-                const el = document.getElementById("mobile-daily-list");
-                if (el) {
-                    el.scrollIntoView({ behavior: "smooth", block: "start" });
-                }
-            }, 100);
-        } else if (!isMobile) {
-            setViewMode('day');
-        }
+        setViewMode('day');
+        setTimeout(() => {
+            const el = document.getElementById("daily-list-section") || document.getElementById("mobile-daily-list");
+            if (el) {
+                el.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+        }, 100);
     };
 
     /* คลิกรายการ -> ดูรายละเอียด */
@@ -714,7 +720,8 @@ export default function PublicCalendarPage() {
                     {[
                         { href: "/fuel", icon: Fuel, label: "เบิกน้ำมัน" },
                         { onClick: () => setReportModalOpen(true), icon: AlertTriangle, label: "แจ้งปัญหา" },
-                        { href: "/quality", icon: Star, label: "ประเมิน/ตรวจสภาพ" },
+                        { href: "/quality", icon: Star, label: "ประเมินความพึงพอใจ" },
+                        { href: "/vehicle-inspection", icon: ClipboardCheck, label: "ตรวจสภาพรถยนต์" },
                         { href: "/vehicle-info", icon: Car, label: "ข้อมูลรถ" },
                         { href: "https://line.me/R/ti/p/@420uicrg", icon: MessageCircle, label: "ติดต่อเรา", external: true },
                         { href: "https://drive.google.com/drive/folders/1iTsmpuzdDFzqHbtO4UStINj82rBxqCTZ", icon: FolderOpen, label: "คลังข้อมูล", external: true }
@@ -940,7 +947,8 @@ export default function PublicCalendarPage() {
                         {[
                             { href: "/fuel", icon: Fuel, label: "เบิกน้ำมัน" },
                             { onClick: () => { setReportModalOpen(true); setMobileMenuOpen(false); }, icon: AlertTriangle, label: "แจ้งปัญหา" },
-                            { href: "/quality", icon: Star, label: "ประเมิน/ตรวจสภาพ" },
+                            { href: "/quality", icon: Star, label: "ประเมินความพึงพอใจ" },
+                            { href: "/vehicle-inspection", icon: ClipboardCheck, label: "ตรวจสภาพรถยนต์" },
                             { href: "/vehicle-info", icon: Car, label: "ข้อมูลรถ" },
                             { href: "https://line.me/R/ti/p/@420uicrg", icon: MessageCircle, label: "ติดต่อเรา", external: true },
                             { href: "https://drive.google.com/drive/folders/1iTsmpuzdDFzqHbtO4UStINj82rBxqCTZ", icon: FolderOpen, label: "คลังข้อมูล", external: true }
@@ -1324,23 +1332,28 @@ export default function PublicCalendarPage() {
                                 );
                             }
 
+                            const cardBg = arg.event.backgroundColor || arg.event.borderColor || '#2563EB';
+
                             return (
-                                <div className="px-2 py-1 overflow-hidden w-full">
+                                <div
+                                    className="w-full rounded-md px-2 py-1 shadow-sm text-white leading-tight overflow-hidden my-0.5 border border-white/20"
+                                    style={{ backgroundColor: cardBg }}
+                                >
                                     <div className="flex items-start gap-1.5">
                                         {isOff && <span className="shrink-0 bg-white/30 text-white text-[9px] font-black px-1 py-0.5 rounded mt-0.5">OT</span>}
                                         <div className="min-w-0 flex-1">
-                                            <div className="font-bold truncate text-[12px] text-white leading-tight">
+                                            <div className="font-bold truncate text-[11.5px] text-white leading-tight">
                                                 {arg.event.title}
                                             </div>
                                             {requester && (
-                                                <div className="text-[10px] font-medium text-white/80 truncate leading-tight mt-0.5 flex items-center gap-0.5">
-                                                    <span className="opacity-70">👤</span>
+                                                <div className="text-[10px] font-medium text-white/90 truncate leading-tight mt-0.5 flex items-center gap-0.5">
+                                                    <span className="opacity-80">👤</span>
                                                     <span>{requester}</span>
                                                 </div>
                                             )}
                                         </div>
-                                        {isCancelled && <span className="shrink-0 text-[9px] bg-black/30 text-white/90 px-1 py-0.5 rounded font-bold">ยกเลิก</span>}
-                                        {isCompleted && <span className="shrink-0 text-[9px] bg-black/20 text-white/90 px-1 py-0.5 rounded font-bold">เสร็จ</span>}
+                                        {isCancelled && <span className="shrink-0 text-[9px] bg-black/40 text-white px-1 py-0.5 rounded font-bold">ยกเลิก</span>}
+                                        {isCompleted && <span className="shrink-0 text-[9px] bg-black/20 text-white px-1 py-0.5 rounded font-bold">เสร็จ</span>}
                                     </div>
                                 </div>
                             );
@@ -1357,187 +1370,40 @@ export default function PublicCalendarPage() {
                 </div>
             </div>
 
-            {/* ===== TABS SECTION (Desktop Only) ===== */}
-            <div className="hidden md:block max-w-[1200px] mx-auto px-8 mt-8 mb-20">
+            {/* ===== DAILY LIST SECTION (Desktop Only) ===== */}
+            <div id="daily-list-section" className="hidden md:block max-w-[1200px] mx-auto px-8 mt-8 mb-20">
 
-                {/* Tab Header */}
-                <div className="flex items-end gap-1 border-b-2 border-gray-200 mb-6">
-                    <button
-                        onClick={() => setViewMode('month')}
-                        className={`relative px-6 py-3 text-sm font-bold transition-all rounded-t-xl flex items-center gap-2 ${
-                            viewMode === 'month'
-                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 -mb-0.5 pb-3.5'
-                                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                        }`}
-                    >
-                        <CalendarIcon className="w-4 h-4" />
-                        รายการเดือนนี้
-                        {viewMode === 'month' && (
-                            <span className="ml-1 bg-white/20 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
-                                {events.filter(e => currentMonthStart && currentMonthEnd && new Date(e.start) >= currentMonthStart && new Date(e.start) < currentMonthEnd).length}
-                            </span>
-                        )}
-                    </button>
-                    <button
-                        onClick={() => setViewMode('day')}
-                        className={`relative px-6 py-3 text-sm font-bold transition-all rounded-t-xl flex items-center gap-2 ${
-                            viewMode === 'day'
-                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 -mb-0.5 pb-3.5'
-                                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                        }`}
-                    >
-                        <Clock className="w-4 h-4" />
-                        รายวัน
-                        {viewMode === 'day' && (
-                            <span className="ml-1 bg-white/20 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
-                                {dailyEvents.length}
-                            </span>
-                        )}
-                    </button>
+                {/* Section Header */}
+                <div className="flex items-center justify-between mb-5">
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center shadow-sm shadow-blue-200">
+                            <Clock className="w-4 h-4 text-white" />
+                        </div>
+                        <div>
+                            <h2 className="text-base font-black text-gray-800 leading-none">รายการประจำวัน</h2>
+                            <p className="text-xs text-gray-400 mt-0.5">
+                                {selectedDate
+                                    ? new Date(selectedDate).toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+                                    : 'เลือกวันที่จากปฏิทิน'}
+                            </p>
+                        </div>
+                    </div>
+                    {dailyEvents.filter(e => !e.extendedProps?.isHoliday && !e.extendedProps?.isDuty).length > 0 && (
+                        <span className="inline-flex items-center gap-1.5 bg-blue-50 border border-blue-100 text-blue-700 text-xs font-black px-3 py-1.5 rounded-full">
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                            {dailyEvents.filter(e => !e.extendedProps?.isHoliday && !e.extendedProps?.isDuty).length} รายการ
+                        </span>
+                    )}
                 </div>
 
-                {/* Tab Content: รายเดือน */}
-                {viewMode === 'month' && (
-                    <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden animate-in fade-in duration-200">
-                        <div className="overflow-x-auto overflow-y-auto max-h-[480px]">
-                            <table className="w-full text-sm text-left">
-                                <thead className="bg-blue-50 text-blue-700 uppercase text-xs tracking-wider border-b border-blue-100">
-                                    <tr>
-                                        <th className="px-6 py-4 font-bold">วันที่</th>
-                                        <th className="px-6 py-4 font-bold">เวลา</th>
-                                        <th className="px-6 py-4 font-bold">ผู้ขอ / จุดหมาย</th>
-                                        <th className="px-6 py-4 font-bold">รถปฏิบัติงาน</th>
-                                        <th className="px-6 py-4 font-bold text-center">สถานะ</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-50">
-                                    {(() => {
-                                        const filtered = events
-                                            .filter(e => currentMonthStart && currentMonthEnd && new Date(e.start) >= currentMonthStart && new Date(e.start) < currentMonthEnd)
-                                            .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
-
-                                        if (filtered.length === 0) {
-                                            return (
-                                                <tr>
-                                                    <td colSpan={5} className="px-6 py-16 text-center text-gray-400 font-medium">
-                                                        ไม่มีรายการขอใช้รถในช่วงนี้
-                                                    </td>
-                                                </tr>
-                                            );
-                                        }
-
-                                        return filtered.map((evt, index) => {
-                                            const prevEvt = filtered[index - 1];
-                                            const isNewDay = index === 0 || normalizeDate(evt.start) !== normalizeDate(prevEvt.start);
-                                            const isOff = evt.extendedProps?.isOffHours;
-
-                                            return (
-                                                <tr
-                                                    key={evt.id}
-                                                    onClick={() => openDetail(evt.id)}
-                                                    className={`hover:bg-blue-50/40 transition-colors cursor-pointer group ${isNewDay ? 'border-t-2 border-gray-100' : ''}`}
-                                                >
-                                                    {/* DATE */}
-                                                    <td className={`px-4 py-4 whitespace-nowrap align-top ${isNewDay ? 'bg-gray-50/50' : ''}`}>
-                                                        {isNewDay && (
-                                                            <div className="flex flex-col items-center w-10">
-                                                                <span className="font-extrabold text-[#1E3A8A] text-2xl leading-none">
-                                                                    {new Date(evt.start).getDate()}
-                                                                </span>
-                                                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter mt-0.5">
-                                                                    {new Date(evt.start).toLocaleDateString('th-TH', { month: 'short' })}
-                                                                </span>
-                                                            </div>
-                                                        )}
-                                                    </td>
-
-                                                    {/* TIME */}
-                                                    <td className="px-6 py-4 whitespace-nowrap align-top">
-                                                        <div className="flex flex-col text-gray-600">
-                                                            <span className="font-medium text-gray-900 border-l-2 border-blue-300 pl-2 flex items-center gap-1">
-                                                                {isOff && <span className="text-amber-600 font-bold text-xs" title="นอกเวลาราชการ">OT</span>}
-                                                                {formatTime(evt.start)}
-                                                            </span>
-                                                            {evt.end && <span className="text-xs text-gray-400 pl-2.5">ถึง {formatTime(evt.end)}</span>}
-                                                        </div>
-                                                    </td>
-
-                                                    {/* DETAILS */}
-                                                    <td className="px-6 py-4 align-top max-w-[300px]">
-                                                        <div className="flex flex-col gap-1.5">
-                                                            <span className="font-extrabold text-gray-900 text-base leading-tight">
-                                                                {evt.extendedProps?.requester || 'ไม่ระบุชื่อ'}
-                                                            </span>
-                                                            <span className="text-xs text-gray-500 line-clamp-1" title={evt.extendedProps?.location}>
-                                                                {evt.extendedProps?.location || 'ไม่ระบุรายละเอียด'}
-                                                            </span>
-                                                        </div>
-                                                    </td>
-
-                                                    {/* VEHICLE */}
-                                                    <td className="px-6 py-4 align-top">
-                                                        <span
-                                                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border bg-white shadow-sm whitespace-nowrap"
-                                                            style={{ borderColor: evt.color || '#E5E7EB', color: evt.color || '#374151' }}
-                                                        >
-                                                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: evt.color || '#9CA3AF' }}></span>
-                                                            {evt.extendedProps?.vehicle}
-                                                        </span>
-                                                        {evt.extendedProps?.driver_name && (
-                                                            <div className="mt-1.5 text-[11px] font-bold text-gray-700">
-                                                                {evt.extendedProps.driver_name}
-                                                                {evt.extendedProps?.driver_phone && (
-                                                                    <span className="text-gray-400 font-normal ml-1">{evt.extendedProps.driver_phone}</span>
-                                                                )}
-                                                            </div>
-                                                        )}
-                                                    </td>
-
-                                                    {/* STATUS */}
-                                                    <td className="px-6 py-4 align-top text-center">
-                                                        <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-bold border ${getStatusColor(evt.extendedProps?.status || 'REQUESTED', evt.extendedProps?.request_code)}`}>
-                                                            {getStatusLabel(evt.extendedProps?.status || 'REQUESTED', evt.extendedProps?.request_code)}
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        });
-                                    })()}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {/* Footer: Go to today */}
-                        <div className="bg-gray-50 px-6 py-3 border-t border-gray-100 flex justify-end">
-                            <button
-                                onClick={() => {
-                                    const now = new Date();
-                                    const y = now.getFullYear();
-                                    const m = String(now.getMonth() + 1).padStart(2, '0');
-                                    const d = String(now.getDate()).padStart(2, '0');
-                                    setSelectedDate(`${y}-${m}-${d}`);
-                                    if (calendarRef.current) calendarRef.current.getApi().today();
-                                }}
-                                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold transition-all text-sm border border-blue-100"
-                            >
-                                <CalendarCheck className="w-4 h-4" />
-                                ดูวันปัจจุบัน
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {/* Tab Content: รายวัน */}
-                {viewMode === 'day' && (
-                    <div className="animate-in fade-in duration-200">
-                        <DailyBookingList
-                            events={events}
-                            selectedDate={selectedDate}
-                            onItemClick={openDetail}
-                            onDateChange={setSelectedDate}
-                        />
-                    </div>
-                )}
+                <div className="animate-in fade-in duration-200">
+                    <DailyBookingList
+                        events={events}
+                        selectedDate={selectedDate}
+                        onItemClick={openDetail}
+                        onDateChange={setSelectedDate}
+                    />
+                </div>
             </div>
 
 
