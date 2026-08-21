@@ -60,7 +60,6 @@ export interface BookingRow {
   request_code: string;
   created_at: string;
   purpose: string | null;
-  remark?: string | null;
   start_at: string | null;
   end_at: string | null;
   status: string;
@@ -297,7 +296,6 @@ function AdminRequestsContent() {
         driver_id,
         vehicle_id,
         purpose,
-        remark,
         start_at,
         end_at,
         status,
@@ -316,9 +314,9 @@ function AdminRequestsContent() {
         other_vehicle_plate,
         other_driver_name,
 
-        requester:profiles(full_name, position),
-        driver:drivers(full_name),
-        vehicle:vehicles(plate_number, brand, model, photo_urls)
+        requester:requester_id(full_name, position),
+        driver:driver_id(full_name),
+        vehicle:vehicle_id(plate_number, brand, model, photo_urls)
       `, { count: "exact" });
 
     // Status Filter
@@ -831,11 +829,7 @@ function AdminRequestsContent() {
                     <FileText className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" />
                     <span className="text-gray-700 font-medium line-clamp-2">{b.purpose}</span>
                   </div>
-                  {b.remark && (
-                    <div className="text-xs text-amber-800 bg-amber-50 border border-amber-200/60 rounded px-2 py-1 font-medium">
-                      <span className="font-bold">หมายเหตุ:</span> {b.remark}
-                    </div>
-                  )}
+
                   <div className="flex gap-2">
                     <User className="w-4 h-4 text-gray-400 shrink-0" />
                     <span className="text-gray-600">{b.requester?.full_name || "-"}</span>
@@ -991,11 +985,7 @@ function AdminRequestsContent() {
                                   {b.purpose}
                                 </div>
                               )}
-                              {b.remark && (
-                                <div className="text-amber-800 bg-amber-50 border border-amber-200/60 rounded px-1.5 py-0.5 text-[11px] mt-0.5 font-medium max-w-[160px] truncate" title={b.remark}>
-                                  หมายเหตุ: {b.remark}
-                                </div>
-                              )}
+
                             </div>
                           </div>
                         </td>
