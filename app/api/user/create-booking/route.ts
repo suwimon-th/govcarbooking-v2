@@ -32,7 +32,6 @@ export async function POST(req: Request) {
       start_time,  // "21:52"
       end_time,    // "22:30" | null
       purpose,
-      remark = null,
       driver_id,
       passenger_count = 1, // Default 1
       destination = "",
@@ -282,7 +281,6 @@ export async function POST(req: Request) {
             start_at,
             end_at: dbEndAt,
             purpose,
-            remark: remark || null,
             request_code,
             status: initialStatus,
             driver_id: driver_id || null,

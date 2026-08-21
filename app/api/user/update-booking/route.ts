@@ -27,7 +27,6 @@ export async function PUT(req: Request) {
             end_at,
             status,
             is_ot,
-            remark,
             passengers,
         } = body;
 

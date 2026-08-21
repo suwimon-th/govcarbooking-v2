@@ -34,7 +34,6 @@ export async function GET(req: Request) {
       vehicle_id,
       requester_id,
       purpose,
-      remark,
       created_at,
       requester_name,
       start_at,
