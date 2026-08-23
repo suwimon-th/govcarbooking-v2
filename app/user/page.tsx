@@ -59,6 +59,10 @@ type CalendarEvent = {
         isHoliday?: boolean;
         holidayName?: string;
         request_code?: string;
+        dutyMileageStatus?: string;
+        start_mileage?: number | null;
+        end_mileage?: number | null;
+        distance?: number | null;
     };
     backgroundColor?: string;
     borderColor?: string;
@@ -379,6 +383,55 @@ export default function UserPage() {
                 borderColor: "transparent",
             }));
 
+        // ── โหลดสถานะการบันทึกไมล์ duty events (batch by unique dates) ──
+        if (dutyEvents.length > 0) {
+            try {
+                const { data: dutyBookings } = await (await import("@/lib/supabaseClient")).supabase
+                    .from("bookings")
+                    .select("id, status, start_at, start_mileage, end_mileage, distance")
+                    .eq("request_code", "DUTY-VAN")
+                    .in("status", ["COMPLETED", "CANCELLED", "IN_PROGRESS"])
+                    .order("created_at", { ascending: false });
+
+                if (dutyBookings && dutyBookings.length > 0) {
+                    const dutyStatusMap: Record<string, { status: string; start_mileage: number | null; end_mileage: number | null; distance: number | null }> = {};
+                    dutyBookings.forEach((b: any) => {
+                        const dateKey = b.start_at ? b.start_at.substring(0, 10) : "";
+                        if (dateKey && !dutyStatusMap[dateKey]) {
+                            dutyStatusMap[dateKey] = {
+                                status: b.status,
+                                start_mileage: b.start_mileage,
+                                end_mileage: b.end_mileage,
+                                distance: b.distance,
+                            };
+                        }
+                    });
+
+                    for (const evt of dutyEvents) {
+                        const dateKey = evt.start.substring(0, 10);
+                        const rec = dutyStatusMap[dateKey];
+                        if (rec) {
+                            evt.extendedProps = {
+                                ...evt.extendedProps,
+                                dutyMileageStatus: rec.status,
+                                start_mileage: rec.start_mileage,
+                                end_mileage: rec.end_mileage,
+                                distance: rec.distance,
+                            };
+                            // ปรับสีตามสถานะ (ทั้ง COMPLETED และ CANCELLED เป็นเสร็จสิ้นโทนเขียว)
+                            if (rec.status === "COMPLETED" || rec.status === "CANCELLED") {
+                                evt.color = "#16A34A";
+                            } else if (rec.status === "IN_PROGRESS") {
+                                evt.color = "#2563EB";
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("Error loading duty mileage statuses in user page:", e);
+            }
+        }
+
         setEvents([...formatted, ...dutyEvents, ...holidayEvents]);
     }, []);
 
@@ -651,6 +704,19 @@ export default function UserPage() {
 
                         events={events}
                         eventDisplay="block"
+                        eventOrder={(a: any, b: any) => {
+                            const aDuty = a.extendedProps?.isDuty ? 1 : 0;
+                            const bDuty = b.extendedProps?.isDuty ? 1 : 0;
+                            if (aDuty !== bDuty) return bDuty - aDuty;
+
+                            const aHol = a.extendedProps?.isHoliday ? 1 : 0;
+                            const bHol = b.extendedProps?.isHoliday ? 1 : 0;
+                            if (aHol !== bHol) return bHol - aHol;
+
+                            const aStart = a.start ? new Date(a.start).getTime() : 0;
+                            const bStart = b.start ? new Date(b.start).getTime() : 0;
+                            return aStart - bStart;
+                        }}
                         dayMaxEvents={isMobile ? false : 3}
 
                         dayCellContent={(arg) => {
@@ -708,9 +774,19 @@ export default function UserPage() {
                                     );
                                 }
                                 if (isDuty) {
+                                    const mileStatus = arg.event.extendedProps?.dutyMileageStatus;
+                                    const startMile = arg.event.extendedProps?.start_mileage;
+                                    const isNotUsed = mileStatus === "CANCELLED" || (mileStatus === "COMPLETED" && (startMile === null || startMile === undefined));
+                                    const isCompletedWithTrip = mileStatus === "COMPLETED" && !isNotUsed;
+
+                                    const bgCls =
+                                        isCompletedWithTrip          ? "bg-green-600 border-green-500"
+                                      : isNotUsed                    ? "bg-teal-600 border-teal-500"
+                                      : mileStatus === "IN_PROGRESS" ? "bg-blue-600 border-blue-500"
+                                      : "bg-amber-500 border-amber-400";
                                     return (
-                                        <div className="w-full bg-amber-500 text-white rounded-lg p-1.5 my-1 shadow-sm text-center font-extrabold text-[9.5px] leading-tight overflow-hidden border border-amber-400">
-                                            <div className="line-clamp-2">🚐 {titleText}</div>
+                                        <div className={`w-full ${bgCls} text-white rounded-lg p-1.5 my-1 shadow-sm text-center font-extrabold text-[9.5px] leading-tight overflow-hidden border`}>
+                                            <div className="line-clamp-2">🚐 {titleText} {(isCompletedWithTrip || isNotUsed) ? "(เสร็จ)" : ""}</div>
                                         </div>
                                     );
                                 }
@@ -748,16 +824,32 @@ export default function UserPage() {
                             }
 
                             if (isDuty) {
+                                const mileStatus = arg.event.extendedProps?.dutyMileageStatus;
+                                const startMile = arg.event.extendedProps?.start_mileage;
+                                const isNotUsed = mileStatus === "CANCELLED" || (mileStatus === "COMPLETED" && (startMile === null || startMile === undefined));
+                                const isCompletedWithTrip = mileStatus === "COMPLETED" && !isNotUsed;
+
+                                const gradientCls =
+                                    isCompletedWithTrip          ? "from-green-600 via-green-700 to-emerald-700 border-green-300/80"
+                                  : isNotUsed                    ? "from-teal-600 via-emerald-700 to-green-700 border-green-300/80"
+                                  : mileStatus === "IN_PROGRESS" ? "from-blue-500 via-blue-600 to-blue-700 border-blue-300/80"
+                                  : "from-amber-500 via-amber-600 to-amber-700 border-amber-300/80";
+
+                                const badgeText =
+                                    (isCompletedWithTrip || isNotUsed) ? "✓ เสร็จ"
+                                  : mileStatus === "IN_PROGRESS" ? "⏳ ออกอยู่"
+                                  : "เวร";
+
                                 return (
-                                    <div className="w-full px-2 py-1 bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 text-white rounded-lg shadow-md border border-amber-300/80 flex items-center justify-between gap-1 overflow-hidden transition-all hover:scale-[1.02] cursor-pointer">
+                                    <div className={`w-full px-2 py-1 bg-gradient-to-r ${gradientCls} text-white rounded-lg shadow-md border flex items-center justify-between gap-1 overflow-hidden transition-all hover:scale-[1.02] cursor-pointer`}>
                                         <div className="flex items-center gap-1.5 min-w-0">
                                             <span className="text-xs shrink-0">🚐</span>
                                             <span className="font-extrabold text-[11px] md:text-xs truncate text-white drop-shadow-sm">
                                                 {arg.event.title}
                                             </span>
                                         </div>
-                                        <span className="hidden md:inline-block bg-amber-950/60 text-amber-100 text-[9px] font-black px-1.5 py-0.5 rounded shrink-0 tracking-tight">
-                                            เวร
+                                        <span className="hidden md:inline-block bg-black/20 text-white/90 text-[9px] font-black px-1.5 py-0.5 rounded shrink-0 tracking-tight">
+                                            {badgeText}
                                         </span>
                                     </div>
                                 );

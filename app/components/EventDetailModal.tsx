@@ -115,7 +115,7 @@ export default function EventDetailModal({ open, detail, onClose }: Props) {
                     <MapPin className="w-4 h-4" /> วัตถุประสงค์ / สถานที่
                   </div>
                   <div className="text-lg md:text-xl font-bold text-gray-900 leading-relaxed mb-1">
-                    {detail.purpose || "-"}
+                    {(detail.purpose || "-").replace(/^\[ไม่ได้ออก(ใช้)?รถ\]\s*/, "")}
                   </div>
                   {detail.destination && (
                     <div className="flex items-center gap-1.5 text-sm text-gray-600 font-medium bg-white/50 w-fit px-3 py-1 rounded-lg">

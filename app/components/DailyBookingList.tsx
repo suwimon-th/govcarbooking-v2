@@ -23,6 +23,11 @@ interface CalendarEvent {
         created_at?: string;
         request_code?: string;
         remark?: string;
+        // duty mileage fields
+        dutyMileageStatus?: string;  // "COMPLETED" | "CANCELLED" | "IN_PROGRESS"
+        start_mileage?: number | null;
+        end_mileage?: number | null;
+        distance?: number | null;
     };
 }
 
@@ -68,10 +73,10 @@ export default function DailyBookingList({ events, selectedDate, onItemClick, on
         const startDate = e.start ? e.start.substring(0, 10) : "";
         return startDate === selectedDate || normalizeDate(e.start) === selectedDate;
     }).sort((a, b) => {
-        if (a.extendedProps?.isHoliday) return -1;
-        if (b.extendedProps?.isHoliday) return 1;
         if (a.extendedProps?.isDuty) return -1;
         if (b.extendedProps?.isDuty) return 1;
+        if (a.extendedProps?.isHoliday) return -1;
+        if (b.extendedProps?.isHoliday) return 1;
         const timeDiff = new Date(a.start).getTime() - new Date(b.start).getTime();
         if (timeDiff !== 0) return timeDiff;
         const ca = a.extendedProps?.created_at ? new Date(a.extendedProps.created_at).getTime() : 0;
@@ -157,34 +162,81 @@ export default function DailyBookingList({ events, selectedDate, onItemClick, on
                         );
 
                         /* ── Duty ── */
-                        if (isDuty) return (
-                            <div key={evt.id} onClick={() => onItemClick(evt.id)} className="bg-gradient-to-br from-amber-500 via-amber-600 to-amber-700 text-white rounded-2xl p-4 shadow-lg border border-amber-300/60 transition-all hover:scale-[1.005] cursor-pointer overflow-hidden">
-                                <div className="flex items-center justify-between gap-3">
-                                    <div className="flex items-center gap-3 min-w-0">
-                                        <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl shrink-0">🚐</div>
-                                        <div className="min-w-0">
-                                            <div className="flex items-center gap-2 mb-0.5">
-                                                <span className="text-[10px] font-black uppercase bg-amber-950/40 text-amber-100 px-2 py-0.5 rounded shrink-0">เวรส่วนกลาง</span>
-                                                <span className="text-xs font-bold text-amber-100 shrink-0">08:30-16:30</span>
-                                            </div>
-                                            <div className="text-sm font-black text-white truncate">{evt.title}</div>
-                                            {driverName && (
-                                                <div className="text-xs text-amber-100 flex items-center gap-1.5 mt-1">
-                                                    <User className="w-3.5 h-3.5 shrink-0" />
-                                                    <span className="truncate">{driverName}</span>
-                                                    {driverPhone && driverPhone !== '-' && (
-                                                        <span className="flex items-center gap-1 bg-white/20 px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0">
-                                                            <Phone className="w-3 h-3" />{driverPhone}
-                                                        </span>
-                                                    )}
+                        if (isDuty) {
+                            const mileStatus = evt.extendedProps?.dutyMileageStatus;
+                            const startMile  = evt.extendedProps?.start_mileage;
+                            const endMile    = evt.extendedProps?.end_mileage;
+                            const dist       = evt.extendedProps?.distance;
+
+                            // ตรวจสอบสถานะ: ทั้งออกใช้รถและไม่ออกรถ บันทึกเป็นเสร็จสิ้น (COMPLETED) ทั้งคู่
+                            const isNotUsed = mileStatus === "CANCELLED" || (mileStatus === "COMPLETED" && (startMile === null || startMile === undefined));
+                            const isCompletedWithTrip = mileStatus === "COMPLETED" && !isNotUsed;
+                            const isFinished = isNotUsed || isCompletedWithTrip;
+
+                            const dutyGradient =
+                                isCompletedWithTrip          ? "from-green-600 via-green-700 to-emerald-700"
+                              : isNotUsed                    ? "from-teal-600 via-emerald-700 to-green-700"
+                              : mileStatus === "IN_PROGRESS" ? "from-blue-500 via-blue-600 to-blue-700"
+                              : "from-amber-500 via-amber-600 to-amber-700"; // default amber
+
+                            const dutyBorder =
+                                isFinished                   ? "border-green-300/60"
+                              : mileStatus === "IN_PROGRESS" ? "border-blue-300/60"
+                              : "border-amber-300/60";
+
+                            const badgeBg =
+                                isCompletedWithTrip          ? "bg-white text-green-800"
+                              : isNotUsed                    ? "bg-white text-emerald-800"
+                              : mileStatus === "IN_PROGRESS" ? "bg-white text-blue-700"
+                              : "bg-white text-amber-800";
+
+                            const badgeText =
+                                isFinished                   ? "✅ เสร็จสิ้น"
+                              : mileStatus === "IN_PROGRESS" ? "⏳ กำลังออก"
+                              : "รถตู้ไม่ว่าง";
+
+                            return (
+                                <div key={evt.id} onClick={() => onItemClick(evt.id)}
+                                    className={`bg-gradient-to-br ${dutyGradient} text-white rounded-2xl p-4 shadow-lg border ${dutyBorder} transition-all hover:scale-[1.005] cursor-pointer overflow-hidden`}
+                                >
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-xl shrink-0">🚐</div>
+                                            <div className="min-w-0">
+                                                <div className="flex items-center gap-2 mb-0.5">
+                                                    <span className="text-[10px] font-black uppercase bg-black/20 text-white/90 px-2 py-0.5 rounded shrink-0">เวรส่วนกลาง</span>
+                                                    <span className="text-xs font-bold text-white/80 shrink-0">08:30-16:30</span>
                                                 </div>
-                                            )}
+                                                <div className="text-sm font-black text-white truncate">{evt.title}</div>
+                                                {driverName && (
+                                                    <div className="text-xs text-white/80 flex items-center gap-1.5 mt-1">
+                                                        <User className="w-3.5 h-3.5 shrink-0" />
+                                                        <span className="truncate">{driverName}</span>
+                                                        {driverPhone && driverPhone !== '-' && (
+                                                            <span className="flex items-center gap-1 bg-white/20 px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0">
+                                                                <Phone className="w-3 h-3" />{driverPhone}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                )}
+                                                {/* แสดงเลขไมล์ถ้ามีข้อมูล */}
+                                                {mileStatus === "COMPLETED" && startMile !== null && startMile !== undefined && (
+                                                    <div className="text-[10px] font-mono text-white/70 mt-1 flex items-center gap-1">
+                                                        <span>ไมล์: {startMile?.toLocaleString()}</span>
+                                                        {endMile !== null && endMile !== undefined && (
+                                                            <><span>→</span><span>{endMile?.toLocaleString()}</span>
+                                                            {dist !== null && dist !== undefined && <span className="bg-white/20 px-1.5 rounded">({dist?.toLocaleString()} กม.)</span>}
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
+                                        <span className={`${badgeBg} text-xs font-black px-3 py-1.5 rounded-xl shadow-sm shrink-0 whitespace-nowrap`}>{badgeText}</span>
                                     </div>
-                                    <span className="bg-white text-amber-800 text-xs font-black px-3 py-1.5 rounded-xl shadow-sm shrink-0 whitespace-nowrap">รถตู้ไม่ว่าง</span>
                                 </div>
-                            </div>
-                        );
+                            );
+                        }
 
                         /* ── Regular Booking — CSS Grid, strict fixed column widths ── */
                         return (

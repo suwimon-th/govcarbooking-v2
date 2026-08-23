@@ -73,7 +73,8 @@ export async function GET(req: Request) {
           full_name,
           phone
         )
-      `);
+      `)
+      .neq("request_code", "DUTY-VAN");
 
     const { data, error } = await query
       .order("start_at", { ascending: true })

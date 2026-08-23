@@ -82,6 +82,10 @@ type CalendarEvent = {
         request_code?: string;
         isHoliday?: boolean;
         holidayName?: string;
+        dutyMileageStatus?: string;
+        start_mileage?: number | null;
+        end_mileage?: number | null;
+        distance?: number | null;
     };
     backgroundColor?: string;
     borderColor?: string;
@@ -554,7 +558,61 @@ export default function PublicCalendarPage() {
                 borderColor: "transparent",
             }));
 
+        // ── โหลดสถานะการบันทึกไมล์ duty events (batch by unique dates) ──
+        if (dutyEvents.length > 0) {
+            const dutyDates = [...new Set(dutyEvents.map(e => e.start.substring(0, 10)))];
+            try {
+                // ดึง booking records แบบ DUTY-VAN ทั้งหมดใน range
+                const { data: dutyBookings } = await (await import("@/lib/supabaseClient")).supabase
+                    .from("bookings")
+                    .select("id, status, start_at, start_mileage, end_mileage, distance")
+                    .eq("request_code", "DUTY-VAN")
+                    .in("status", ["COMPLETED", "CANCELLED", "IN_PROGRESS"])
+                    .order("created_at", { ascending: false });
+
+                if (dutyBookings && dutyBookings.length > 0) {
+                    // สร้าง map: date → booking
+                    const dutyStatusMap: Record<string, { status: string; start_mileage: number | null; end_mileage: number | null; distance: number | null }> = {};
+                    dutyBookings.forEach((b: any) => {
+                        const dateKey = b.start_at ? b.start_at.substring(0, 10) : "";
+                        if (dateKey && !dutyStatusMap[dateKey]) {
+                            dutyStatusMap[dateKey] = {
+                                status: b.status,
+                                start_mileage: b.start_mileage,
+                                end_mileage: b.end_mileage,
+                                distance: b.distance,
+                            };
+                        }
+                    });
+
+                    // อัปเดต duty events ด้วยสีและ status
+                    for (const evt of dutyEvents) {
+                        const dateKey = evt.start.substring(0, 10);
+                        const rec = dutyStatusMap[dateKey];
+                        if (rec) {
+                            evt.extendedProps = {
+                                ...evt.extendedProps,
+                                dutyMileageStatus: rec.status,
+                                start_mileage: rec.start_mileage,
+                                end_mileage: rec.end_mileage,
+                                distance: rec.distance,
+                            };
+                            // ปรับสีตามสถานะ (ทั้ง COMPLETED และ CANCELLED เป็นเสร็จสิ้นโทนเขียว)
+                            if (rec.status === "COMPLETED" || rec.status === "CANCELLED") {
+                                evt.color = "#16A34A";        // green-600
+                            } else if (rec.status === "IN_PROGRESS") {
+                                evt.color = "#2563EB";        // blue-600
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("Error loading duty mileage statuses:", e);
+            }
+        }
+
         setEvents([...formatted, ...dutyEvents, ...holidayEvents]);
+
     } catch (e) {
         console.error("loadBookings error:", e);
         setEvents([]);
@@ -1209,6 +1267,19 @@ export default function PublicCalendarPage() {
 
                         events={displayedEvents}
                         eventDisplay="block"
+                        eventOrder={(a: any, b: any) => {
+                            const aDuty = a.extendedProps?.isDuty ? 1 : 0;
+                            const bDuty = b.extendedProps?.isDuty ? 1 : 0;
+                            if (aDuty !== bDuty) return bDuty - aDuty;
+
+                            const aHol = a.extendedProps?.isHoliday ? 1 : 0;
+                            const bHol = b.extendedProps?.isHoliday ? 1 : 0;
+                            if (aHol !== bHol) return bHol - aHol;
+
+                            const aStart = a.start ? new Date(a.start).getTime() : 0;
+                            const bStart = b.start ? new Date(b.start).getTime() : 0;
+                            return aStart - bStart;
+                        }}
                         dayMaxEvents={isMobile ? false : 3}
 
                         dayCellContent={(arg) => {
@@ -1306,16 +1377,32 @@ export default function PublicCalendarPage() {
                             }
 
                             if (isDuty) {
+                                const mileStatus = arg.event.extendedProps?.dutyMileageStatus;
+                                const startMile = arg.event.extendedProps?.start_mileage;
+                                const isNotUsed = mileStatus === "CANCELLED" || (mileStatus === "COMPLETED" && (startMile === null || startMile === undefined));
+                                const isCompletedWithTrip = mileStatus === "COMPLETED" && !isNotUsed;
+
+                                const gradientCls =
+                                    isCompletedWithTrip          ? "from-green-600 via-green-700 to-emerald-700 border-green-300/80"
+                                  : isNotUsed                    ? "from-teal-600 via-emerald-700 to-green-700 border-green-300/80"
+                                  : mileStatus === "IN_PROGRESS" ? "from-blue-500 via-blue-600 to-blue-700 border-blue-300/80"
+                                  : "from-amber-500 via-amber-600 to-amber-700 border-amber-300/80";
+
+                                const badgeText =
+                                    (isCompletedWithTrip || isNotUsed) ? "✓ เสร็จ"
+                                  : mileStatus === "IN_PROGRESS" ? "⏳ ออกอยู่"
+                                  : "เวร";
+
                                 return (
-                                    <div className="w-full px-2 py-1 bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 text-white rounded-lg shadow-md border border-amber-300/80 flex items-center justify-between gap-1 overflow-hidden transition-all hover:scale-[1.02] cursor-pointer">
+                                    <div className={`w-full px-2 py-1 bg-gradient-to-r ${gradientCls} text-white rounded-lg shadow-md border flex items-center justify-between gap-1 overflow-hidden transition-all hover:scale-[1.02] cursor-pointer`}>
                                         <div className="flex items-center gap-1.5 min-w-0">
                                             <span className="text-xs shrink-0">🚐</span>
                                             <span className="font-extrabold text-[11px] md:text-xs truncate text-white drop-shadow-sm">
                                                 {arg.event.title}
                                             </span>
                                         </div>
-                                        <span className="hidden md:inline-block bg-amber-950/60 text-amber-100 text-[9px] font-black px-1.5 py-0.5 rounded shrink-0 tracking-tight">
-                                            เวร
+                                        <span className="hidden md:inline-block bg-black/20 text-white/90 text-[9px] font-black px-1.5 py-0.5 rounded shrink-0 tracking-tight">
+                                            {badgeText}
                                         </span>
                                     </div>
                                 );

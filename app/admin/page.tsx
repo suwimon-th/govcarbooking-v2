@@ -137,6 +137,7 @@ export default function AdminDashboardPage() {
         requester:requester_id(full_name),
         status
       `)
+      .neq("request_code", "DUTY-VAN")
       .order("created_at", { ascending: false })
       .limit(5);
 

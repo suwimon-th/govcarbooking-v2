@@ -221,7 +221,8 @@ function AdminRequestsContent() {
   const loadStatusSummary = async () => {
     const { data } = await supabase
       .from("bookings")
-      .select("status, request_code");
+      .select("status, request_code")
+      .neq("request_code", "DUTY-VAN");
     if (data) {
       setAllStatusSummary(data);
     }
@@ -317,7 +318,8 @@ function AdminRequestsContent() {
         requester:requester_id(full_name, position),
         driver:driver_id(full_name),
         vehicle:vehicle_id(plate_number, brand, model, photo_urls)
-      `, { count: "exact" });
+      `, { count: "exact" })
+      .neq("request_code", "DUTY-VAN");
 
     // Status Filter
     if (filterStatus && filterStatus !== "ทั้งหมด") {

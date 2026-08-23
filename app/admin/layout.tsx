@@ -87,7 +87,8 @@ export default function AdminLayout({
       const { count: bookingCount } = await supabase
         .from("bookings")
         .select("*", { count: "exact", head: true })
-        .eq("status", "REQUESTED");
+        .eq("status", "REQUESTED")
+        .neq("request_code", "DUTY-VAN");
       setPendingCount(bookingCount || 0);
 
       const { count: fuelCount } = await supabase

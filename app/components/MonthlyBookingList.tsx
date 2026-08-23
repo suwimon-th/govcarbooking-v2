@@ -19,6 +19,8 @@ interface CalendarEvent {
         vehicle?: string;
         driver?: string;
         isOffHours?: boolean;
+        isDuty?: boolean;
+        isHoliday?: boolean;
     };
 }
 
@@ -83,6 +85,17 @@ export default function MonthlyBookingList({ events, currentMonthStart, currentM
         const dateKey = normalizeDate(evt.start);
         if (!grouped[dateKey]) grouped[dateKey] = [];
         grouped[dateKey].push(evt);
+    });
+
+    // Ensure duty events are at the top of each date
+    Object.keys(grouped).forEach(k => {
+        grouped[k].sort((a, b) => {
+            if (a.extendedProps?.isDuty) return -1;
+            if (b.extendedProps?.isDuty) return 1;
+            if (a.extendedProps?.isHoliday) return -1;
+            if (b.extendedProps?.isHoliday) return 1;
+            return new Date(a.start).getTime() - new Date(b.start).getTime();
+        });
     });
 
     const dates = Object.keys(grouped).sort();

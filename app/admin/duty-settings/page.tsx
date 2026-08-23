@@ -1,9 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Settings, Save, AlertTriangle, CheckCircle2, Loader2, Calendar, User, Clock, Phone, FileText, ChevronLeft, ChevronRight } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import { Settings, Save, AlertTriangle, CheckCircle2, Loader2, Calendar, User, Clock, Phone, FileText, ChevronLeft, ChevronRight, Gauge, XCircle, CarFront, Ban, Pencil } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import Swal from "sweetalert2";
+
+// ── Duty Mileage Record ──────────────────────────────────────────────
+interface DutyMileageRecord {
+  id: string;
+  status: string;            // "COMPLETED" | "CANCELLED" | "IN_PROGRESS"
+  start_mileage: number | null;
+  end_mileage: number | null;
+  distance: number | null;
+  remark: string | null;
+  completed_at: string | null;
+  created_at: string;
+}
 
 interface Driver {
   id: string;
@@ -61,6 +73,136 @@ export default function AdminDutySettingsPage() {
   const [note, setNote] = useState("");
   const [monthEnabled, setMonthEnabled] = useState(true);
 
+  // ── Mileage Section State ───────────────────────────────────────────
+  const [mileageRecord, setMileageRecord] = useState<DutyMileageRecord | null>(null);
+  const [mileageLoading, setMileageLoading] = useState(false);
+  const [savingMileage, setSavingMileage] = useState(false);
+  const [isEditingMileage, setIsEditingMileage] = useState(false);
+  // form fields
+  const [mileageDutyStatus, setMileageDutyStatus] = useState<"USED" | "NOT_USED" | "">("");
+  const [mileageStart, setMileageStart] = useState("");
+  const [mileageEnd, setMileageEnd] = useState("");
+  const [mileageRemark, setMileageRemark] = useState("");
+  // admin profile
+  const [adminProfile, setAdminProfile] = useState<{ id: string; name: string } | null>(null);
+
+  // Fetch admin profile once
+  useEffect(() => {
+    fetch("/api/user/me").then(r => r.ok ? r.json() : null).then(p => {
+      if (p) setAdminProfile({ id: p.id, name: p.full_name || "Admin" });
+    }).catch(() => {});
+  }, []);
+
+  // Load mileage record for selected month's duty date
+  const loadDutyMileage = useCallback(async (date: string) => {
+    if (!date) { setMileageRecord(null); setIsEditingMileage(false); return; }
+    setMileageLoading(true);
+    try {
+      const res = await fetch(`/api/admin/duty-mileage?duty_date=${date}`);
+      const json = await res.json();
+      const rec: DutyMileageRecord | null = json.data || null;
+      setMileageRecord(rec);
+      if (rec) {
+        // populate form from existing record
+        const isNotUsed = rec.status === "CANCELLED" || (rec.status === "COMPLETED" && (rec.start_mileage === null || rec.start_mileage === undefined));
+        if (isNotUsed) {
+          setMileageDutyStatus("NOT_USED");
+          setMileageStart("");
+          setMileageEnd("");
+        } else {
+          setMileageDutyStatus("USED");
+          setMileageStart(rec.start_mileage !== null ? String(rec.start_mileage) : "");
+          setMileageEnd(rec.end_mileage !== null ? String(rec.end_mileage) : "");
+        }
+        setMileageRemark(rec.remark || "");
+        setIsEditingMileage(false); // ซ่อนฟอร์มเมื่อมีข้อมูลบันทึกอยู่แล้ว
+      } else {
+        setMileageDutyStatus("");
+        setMileageStart("");
+        setMileageEnd("");
+        setMileageRemark("");
+        setIsEditingMileage(true); // เปิดฟอร์มถ้ายังไม่มีข้อมูล
+      }
+    } catch {
+      setMileageRecord(null);
+      setIsEditingMileage(true);
+    } finally {
+      setMileageLoading(false);
+    }
+  }, []);
+
+  const handleSaveMileage = async () => {
+    if (!mileageDutyStatus) {
+      Swal.fire({ icon: "warning", title: "กรุณาเลือกสถานะการออกรถ" });
+      return;
+    }
+    if (mileageDutyStatus === "USED" && (!mileageStart || mileageStart === "")) {
+      Swal.fire({ icon: "warning", title: "กรุณากรอกเลขไมล์ออก" });
+      return;
+    }
+    try {
+      setSavingMileage(true);
+      const res = await fetch("/api/admin/duty-mileage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          duty_date: dutyDate,
+          duty_status: mileageDutyStatus,
+          start_mileage: mileageDutyStatus === "USED" ? Number(mileageStart) : undefined,
+          end_mileage: mileageDutyStatus === "USED" && mileageEnd ? Number(mileageEnd) : undefined,
+          driver_name: driverName || "เวรรถตู้ส่วนกลาง",
+          title: title || defaultTitle,
+          remark: mileageRemark || undefined,
+          admin_id: adminProfile?.id,
+          admin_name: adminProfile?.name,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Save failed");
+      Swal.fire({ icon: "success", title: "บันทึกสำเร็จ", timer: 1500, showConfirmButton: false });
+      await loadDutyMileage(dutyDate);
+    } catch (err: any) {
+      Swal.fire({ icon: "error", title: "บันทึกไม่สำเร็จ", text: err.message });
+    } finally {
+      setSavingMileage(false);
+    }
+  };
+
+  // บันทึก "ไม่ได้ออก" ทันทีโดยไม่ต้องกดปุ่มบันทึกอีกรอบ
+  const handleSaveMileageNotUsed = async () => {
+    if (!dutyDate) {
+      Swal.fire({ icon: "warning", title: "ยังไม่ได้กำหนดวันที่เวร", text: "กรุณาบันทึกวันที่เวรในส่วนตั้งค่าด้านบนก่อน" });
+      return;
+    }
+    try {
+      setSavingMileage(true);
+      setMileageDutyStatus("NOT_USED");
+      setMileageStart("");
+      setMileageEnd("");
+      const res = await fetch("/api/admin/duty-mileage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          duty_date: dutyDate,
+          duty_status: "NOT_USED",
+          driver_name: driverName || "เวรรถตู้ส่วนกลาง",
+          title: title || defaultTitle,
+          admin_id: adminProfile?.id,
+          admin_name: adminProfile?.name,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Save failed");
+      Swal.fire({ icon: "success", title: "บันทึกสำเร็จ", text: "บันทึกสถานะ: ไม่ได้ออกใช้รถเรียบร้อย", timer: 1500, showConfirmButton: false });
+      await loadDutyMileage(dutyDate);
+    } catch (err: any) {
+      setMileageDutyStatus("");
+      Swal.fire({ icon: "error", title: "บันทึกไม่สำเร็จ", text: err.message });
+    } finally {
+      setSavingMileage(false);
+    }
+  };
+
   // Load Drivers & System Duty State
   useEffect(() => {
     const loadInitialData = async () => {
@@ -116,6 +258,7 @@ export default function AdminDutySettingsPage() {
     const monthIndex = (Number(monthStr) || 1) - 1;
     const defaultDate = get3rdMonday(year, monthIndex);
 
+    let resolvedDate = defaultDate;
     if (existing) {
       setDutyDate(existing.duty_date || defaultDate);
       setTitle(existing.title || defaultTitle || "เวรรถยนต์โดยสารส่วนกลาง (รถตู้)");
@@ -125,6 +268,7 @@ export default function AdminDutySettingsPage() {
       setEndTime(existing.end_time || "16:30");
       setNote(existing.note || "");
       setMonthEnabled(existing.enabled ?? true);
+      resolvedDate = existing.duty_date || defaultDate;
     } else {
       setDutyDate(defaultDate);
       setTitle(defaultTitle || "เวรรถยนต์โดยสารส่วนกลาง (รถตู้)");
@@ -135,7 +279,9 @@ export default function AdminDutySettingsPage() {
       setNote("เวรรถยนต์โดยสารส่วนกลาง (รถตู้) - ทุกวันจันทร์สัปดาห์ที่ 3 ของเดือน (งดเลือกรถตู้ในวันดังกล่าว)");
       setMonthEnabled(true);
     }
-  }, [selectedMonthKey, monthlyDuties, defaultTitle]);
+    // โหลดข้อมูลไมล์สำหรับเดือนที่เลือก
+    loadDutyMileage(resolvedDate);
+  }, [selectedMonthKey, monthlyDuties, defaultTitle, loadDutyMileage]);
 
   // Handle Driver Select Dropdown
   const handleSelectDriver = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -514,6 +660,244 @@ export default function AdminDutySettingsPage() {
           </div>
 
         </form>
+
+        {/* ─────────────── MILEAGE SECTION ─────────────── */}
+        <div className="bg-white border border-gray-100 rounded-3xl p-6 md:p-8 shadow-sm space-y-5">
+          <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+            <h2 className="text-lg font-black text-gray-800 flex items-center gap-2">
+              <Gauge className="w-5 h-5 text-blue-600" />
+              บันทึกการใช้รถเวร
+              <span className="text-sm font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200">
+                วันที่ {dutyDate || "(ยังไม่ได้บันทึกวันที่เวร)"}
+              </span>
+            </h2>
+            {mileageLoading && <Loader2 className="w-4 h-4 animate-spin text-gray-400" />}
+          </div>
+
+          {/* แสดงข้อมูลที่บันทึกไว้แล้ว */}
+          {mileageRecord && !mileageLoading && (() => {
+            const isNotUsed = mileageRecord.status === "CANCELLED" || (mileageRecord.status === "COMPLETED" && (mileageRecord.start_mileage === null || mileageRecord.start_mileage === undefined));
+            const isCompletedWithTrip = mileageRecord.status === "COMPLETED" && !isNotUsed;
+
+            return (
+              <div className={`rounded-2xl p-4 border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
+                isNotUsed
+                  ? "bg-emerald-50 border-emerald-200"
+                  : isCompletedWithTrip
+                  ? "bg-green-50 border-green-200"
+                  : "bg-blue-50 border-blue-200"
+              }`}>
+                <div className="flex items-center gap-3">
+                  {isNotUsed ? (
+                    <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                    </div>
+                  ) : (
+                    <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center shrink-0">
+                      <CarFront className="w-5 h-5 text-green-600" />
+                    </div>
+                  )}
+                  <div>
+                    <div className={`text-sm font-black ${
+                      isNotUsed ? "text-emerald-800" :
+                      isCompletedWithTrip ? "text-green-700" : "text-blue-700"
+                    }`}>
+                      {isNotUsed ? "เสร็จสิ้น"
+                        : isCompletedWithTrip ? "เสร็จสิ้น"
+                        : "ออกใช้รถ — กำลังปฏิบัติภารกิจ"}
+                    </div>
+                    {!isNotUsed && (
+                      <div className="text-xs text-gray-600 font-mono mt-0.5">
+                        ไมล์ออก: <strong>{mileageRecord.start_mileage?.toLocaleString() ?? "-"}</strong>
+                        {mileageRecord.end_mileage !== null && (
+                          <> → ไมล์เข้า: <strong>{mileageRecord.end_mileage.toLocaleString()}</strong>
+                            {mileageRecord.distance !== null && (
+                              <span className="ml-2 text-green-700 font-bold">({mileageRecord.distance.toLocaleString()} กม.)</span>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    )}
+                    {mileageRecord.remark && (
+                      <div className="text-xs text-gray-500 mt-0.5">หมายเหตุ: {mileageRecord.remark}</div>
+                    )}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    // Open form in edit mode
+                    setIsEditingMileage(true);
+                    if (isNotUsed) {
+                      setMileageDutyStatus("NOT_USED");
+                    } else {
+                      setMileageDutyStatus("USED");
+                      setMileageStart(mileageRecord.start_mileage !== null ? String(mileageRecord.start_mileage) : "");
+                      setMileageEnd(mileageRecord.end_mileage !== null ? String(mileageRecord.end_mileage) : "");
+                    }
+                    setMileageRemark(mileageRecord.remark || "");
+                  }}
+                  className="flex items-center gap-1.5 text-xs font-bold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 px-3 py-1.5 rounded-xl transition-all shrink-0 shadow-sm"
+                >
+                  <Pencil className="w-3.5 h-3.5" /> แก้ไขข้อมูล
+                </button>
+              </div>
+            );
+          })()}
+
+          {/* ฟอร์มเลือกสถานะและกรอกข้อมูล (แสดงเมื่อยังไม่มีข้อมูล หรือกดแก้ไข) */}
+          {(!mileageRecord || isEditingMileage) && (
+            <div className="space-y-4 pt-1 border-t border-gray-100">
+              {/* ปุ่มเลือกสถานะ */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-extrabold text-gray-700 uppercase tracking-wider">
+                    สถานะการออกรถประจำเวร <span className="text-red-500">*</span>
+                  </label>
+                  {mileageRecord && (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingMileage(false)}
+                      className="text-xs font-bold text-gray-400 hover:text-gray-600 underline"
+                    >
+                      ยกเลิกการแก้ไข
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+
+                  {/* ── ออกใช้รถ ── */}
+                  <button
+                    type="button"
+                    onClick={() => setMileageDutyStatus("USED")}
+                    className={`flex flex-col items-center justify-center gap-2 py-4 rounded-2xl border-2 font-extrabold text-sm transition-all active:scale-95 ${
+                      mileageDutyStatus === "USED"
+                        ? "border-green-500 bg-green-50 text-green-700 shadow-md shadow-green-100"
+                        : "border-gray-200 bg-gray-50 text-gray-500 hover:border-green-300 hover:bg-green-50/50"
+                    }`}
+                  >
+                    <CarFront className={`w-7 h-7 ${ mileageDutyStatus === "USED" ? "text-green-600" : "text-gray-400" }`} />
+                    <span>✅ ออกใช้รถ</span>
+                    <span className="text-[10px] font-normal opacity-70">กรอกเลขไมล์ด้านล่าง</span>
+                  </button>
+
+                  {/* ── ไม่ได้ออก — บันทึกทันที ── */}
+                  <button
+                    type="button"
+                    disabled={savingMileage || !dutyDate}
+                    onClick={handleSaveMileageNotUsed}
+                    className={`flex flex-col items-center justify-center gap-2 py-4 rounded-2xl border-2 font-extrabold text-sm transition-all active:scale-95 disabled:opacity-50 ${
+                      mileageDutyStatus === "NOT_USED"
+                        ? "border-emerald-500 bg-emerald-50 text-emerald-800 shadow-md shadow-emerald-100"
+                        : "border-gray-200 bg-gray-50 text-gray-500 hover:border-emerald-300 hover:bg-emerald-50/50"
+                    }`}
+                  >
+                    {savingMileage && mileageDutyStatus === "NOT_USED"
+                      ? <Loader2 className="w-7 h-7 animate-spin text-emerald-600" />
+                      : <CheckCircle2 className={`w-7 h-7 ${ mileageDutyStatus === "NOT_USED" ? "text-emerald-600" : "text-gray-400" }`} />}
+                    <span>❌ ไม่ได้ออก — เสร็จสิ้น</span>
+                    <span className="text-[10px] font-normal opacity-70">กดเพื่อยืนยัน — จบงานทันที</span>
+                  </button>
+
+                </div>
+              </div>
+
+              {/* Form กรอกเลขไมล์ (แสดงเฉพาะเมื่อเลือก USED) */}
+              {mileageDutyStatus === "USED" && (
+                <div className="space-y-4 pt-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* เลขไมล์ออก */}
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-extrabold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+                        <Gauge className="w-3.5 h-3.5 text-blue-500" />
+                        เลขไมล์ออก (ก่อนออกเดินทาง) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={mileageStart}
+                        onChange={(e) => setMileageStart(e.target.value)}
+                        placeholder="เช่น 45230"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-200 focus:border-blue-500 outline-none transition-all font-mono font-bold text-gray-800 text-lg"
+                      />
+                    </div>
+
+                    {/* เลขไมล์เข้า */}
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-extrabold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+                        <Gauge className="w-3.5 h-3.5 text-green-500" />
+                        เลขไมล์เข้า (หลังกลับถึง) <span className="text-gray-400 font-normal">(ถ้ามี)</span>
+                      </label>
+                      <input
+                        type="number"
+                        min={mileageStart ? Number(mileageStart) : 0}
+                        value={mileageEnd}
+                        onChange={(e) => setMileageEnd(e.target.value)}
+                        placeholder="เช่น 45480"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-green-200 focus:border-green-500 outline-none transition-all font-mono font-bold text-gray-800 text-lg"
+                      />
+                    </div>
+                  </div>
+
+                  {/* คำนวณระยะทาง */}
+                  {mileageStart && mileageEnd && Number(mileageEnd) >= Number(mileageStart) && (
+                    <div className="flex items-center gap-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-4">
+                      <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center shrink-0">
+                        <Gauge className="w-5 h-5 text-green-600" />
+                      </div>
+                      <div>
+                        <div className="text-xs text-green-600 font-bold uppercase tracking-wider">ระยะทางรวม</div>
+                        <div className="text-2xl font-black text-green-700">
+                          {(Number(mileageEnd) - Number(mileageStart)).toLocaleString()}
+                          <span className="text-sm font-bold ml-1 text-green-600">กม.</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* หมายเหตุ */}
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-extrabold text-gray-700 uppercase tracking-wider">
+                      หมายเหตุเพิ่มเติม (ถ้ามี)
+                    </label>
+                    <input
+                      type="text"
+                      value={mileageRemark}
+                      onChange={(e) => setMileageRemark(e.target.value)}
+                      placeholder="เช่น ไปประชุม กทม."
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-gray-200 outline-none transition-all font-semibold text-gray-800"
+                    />
+                  </div>
+
+                  {/* ปุ่มบันทึก */}
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={handleSaveMileage}
+                      disabled={savingMileage || !dutyDate || !mileageStart}
+                      className="w-full flex items-center justify-center gap-2 font-extrabold px-6 py-3.5 rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-50 text-white bg-blue-600 hover:bg-blue-700"
+                    >
+                      {savingMileage
+                        ? <><Loader2 className="w-5 h-5 animate-spin" /> กำลังบันทึก...</>
+                        : <><Save className="w-5 h-5" /> บันทึกเลขไมล์{mileageEnd ? " — ปิดงานเสร็จสิ้น" : " — เปิดงาน"}</>
+                      }
+                    </button>
+                    {!mileageStart && (
+                      <p className="text-xs text-red-500 text-center mt-2 font-semibold">⚠️ กรุณากรอกเลขไมล์ออกก่อนบันทึก</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ข้อความแนะนำ */}
+          {!dutyDate && (
+            <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 font-semibold">
+              ⚠️ กรุณาบันทึกวันที่เวรในฟอร์มด้านบนก่อน แล้วจึงกรอกเลขไมล์ได้
+            </p>
+          )}
+        </div>
 
         {/* Configured Months Overview List */}
         <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm space-y-4">
