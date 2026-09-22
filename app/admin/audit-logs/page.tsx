@@ -25,8 +25,8 @@ export default function AuditLogsPage() {
       .from("system_audit_logs")
       .select(`
         *,
-        actor:profiles!system_audit_logs_actor_id_fkey(full_name, role),
-        target:profiles!system_audit_logs_target_id_fkey(full_name)
+        actor:profiles!actor_id(full_name, role),
+        target:profiles!target_id(full_name)
       `)
       .order("created_at", { ascending: false })
       .limit(100);

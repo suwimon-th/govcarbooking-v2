@@ -160,6 +160,7 @@ export default function UserLayout({
         href: section.href, label: section.label, icon: managementIcons[section.key.split(".")[0]] || Settings,
       })),
       { href: "/admin/permissions", label: "จัดการสิทธิ์", icon: ShieldCheck },
+      { href: "/admin/audit-logs", label: "ประวัติระบบ", icon: FileText },
     ] },
     { id: "account", title: "บัญชีของฉัน", items: [
       { href: "/user/profile", label: "ข้อมูลส่วนตัว / LINE", icon: UserCircle },
