@@ -21,6 +21,7 @@ export const PERMISSION_SECTIONS = [
   { key: "inspections.config", label: "ตั้งค่าหัวข้อการตรวจสภาพ", href: "/admin/inspections/config", group: "งานจัดการ" },
   { key: "reports.fuel", label: "รายงานการใช้น้ำมันรายเดือน", href: "/admin/reports/fuel", group: "งานจัดการ" },
   { key: "reports.annual", label: "รายงานรถยนต์ส่วนกลางรายปี", href: "/admin/reports/annual", group: "งานจัดการ" },
+  { key: "reports.fiscal", label: "สรุปสถิติปีงบประมาณ", href: "/admin/reports/fiscal", group: "งานจัดการ" },
   { key: "profile", label: "ข้อมูลส่วนตัวและเชื่อมบัญชี LINE", href: "/user/profile", group: "บัญชีส่วนตัว" },
   { key: "change_password", label: "เปลี่ยนรหัสผ่านของฉัน", href: "/user/change-password", group: "บัญชีส่วนตัว" },
 ] as const;
@@ -44,7 +45,7 @@ export const PERMISSION_MODULES: { key: string; label: string; group: string; pa
   { key: "maintenance", label: "ปัญหาและซ่อมบำรุง", group: "งานจัดการ", pages: ["maintenance"] },
   { key: "inspections", label: "ตรวจสภาพรถ", group: "งานจัดการ", pages: ["inspections", "inspections.config"] },
   { key: "evaluations", label: "ผลการประเมิน", group: "งานจัดการ", pages: ["evaluations"] },
-  { key: "reports", label: "รายงาน", group: "งานจัดการ", pages: ["reports", "reports.fuel", "reports.annual"] },
+  { key: "reports", label: "รายงาน", group: "งานจัดการ", pages: ["reports", "reports.fuel", "reports.annual", "reports.fiscal"] },
   { key: "fogging", label: "เครื่องพ่นหมอกควัน", group: "งานจัดการ", pages: ["fogging"] },
   { key: "duty", label: "เวรรถตู้", group: "งานจัดการ", pages: ["duty"] },
 ];
@@ -63,7 +64,7 @@ export function expandLegacyPermissions(values: unknown): PermissionKey[] {
   const descendants: [PermissionKey, PermissionKey[]][] = [
     ["my_requests", ["my_requests.evaluate"]], ["dashboard", ["dashboard.trips"]],
     ["requests", ["requests.print"]], ["inspections", ["inspections.config"]],
-    ["reports", ["reports.fuel", "reports.annual"]],
+    ["reports", ["reports.fuel", "reports.annual", "reports.fiscal"]],
   ];
   for (const [parent, children] of descendants) if (keys.has(parent)) children.forEach(key => keys.add(key));
   // These pages were previously available to every signed-in account.

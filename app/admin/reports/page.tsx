@@ -9,8 +9,10 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   const { tab } = await searchParams;
   if (tab === "FUEL" && hasAccess(profile, "reports.fuel")) redirect("/admin/reports/fuel");
   if (tab === "ANNUAL" && hasAccess(profile, "reports.annual")) redirect("/admin/reports/annual");
+  if (tab === "FISCAL" && hasAccess(profile, "reports.fiscal")) redirect("/admin/reports/fiscal");
   if (hasAccess(profile, "reports")) redirect("/admin/reports/monthly");
   if (hasAccess(profile, "reports.fuel")) redirect("/admin/reports/fuel");
   if (hasAccess(profile, "reports.annual")) redirect("/admin/reports/annual");
+  if (hasAccess(profile, "reports.fiscal")) redirect("/admin/reports/fiscal");
   redirect("/access-denied");
 }

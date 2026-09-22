@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useAccess } from "@/lib/use-access";
 import { supabase } from "@/lib/supabaseClient";
-import { Loader2, Download, Printer, Filter, Car, BarChart2, Droplet } from "lucide-react";
+import { Loader2, Download, Printer, Filter, Car, BarChart2, Droplet, TrendingUp } from "lucide-react";
 import * as XLSX from "xlsx";
 
 /* ================= TYPES ================= */
@@ -251,6 +251,12 @@ export default function ReportsClient({ viewMode }: { viewMode: 'MONTHLY' | 'FUE
                         className={`px-5 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap ${viewMode === 'ANNUAL' ? 'bg-blue-600 text-white shadow' : 'text-gray-500 hover:bg-gray-50'}`}
                     >
                         <BarChart2 className="w-4 h-4" /> รายงานรถยนต์ส่วนกลางประจำปี
+                    </Link>)}
+                    {can("reports.fiscal") && (<Link
+                        href="/admin/reports/fiscal"
+                        className="px-5 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap text-gray-500 hover:bg-gray-50"
+                    >
+                        <TrendingUp className="w-4 h-4" /> สรุปสถิติปีงบประมาณ
                     </Link>)}
                 </div>
 
