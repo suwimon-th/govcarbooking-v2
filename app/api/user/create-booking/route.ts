@@ -44,6 +44,7 @@ export async function POST(req: Request) {
       skip_line_notification = false, // Added
       other_vehicle_plate = null,  // อื่นๆ: เลขทะเบียนรถที่ยืมมา
       other_driver_name = null,    // อื่นๆ: ชื่อคนขับภายนอก
+      remark = null,
     } = body;
 
     if (
@@ -280,6 +281,7 @@ export async function POST(req: Request) {
             is_ot: isOT,
             other_vehicle_plate: other_vehicle_plate || null,
             other_driver_name: other_driver_name || null,
+            remark: remark || null,
           },
         ])
         .select()

@@ -29,6 +29,7 @@ export async function PUT(req: Request) {
             status,
             is_ot,
             passengers,
+            remark,
         } = body;
 
         if (!id) {
@@ -76,6 +77,7 @@ export async function PUT(req: Request) {
         if (passengers !== undefined) updateData.passengers = passengers;
         if (vehicle_id !== undefined) updateData.vehicle_id = vehicle_id || null;
         if (body.requester_name !== undefined) updateData.requester_name = body.requester_name;
+        if (remark !== undefined) updateData.remark = remark || null;
 
         // Admin only overrides
         if (userRole === "ADMIN") {
