@@ -45,6 +45,7 @@ export async function GET(req: Request) {
       is_ot,
       is_satisfied,
       evaluation_comment,
+      remark,
       vehicle:vehicles (
         id,
         plate_number,

@@ -60,6 +60,7 @@ export async function GET(req: Request) {
         end_at,
         created_at,
         status,
+        remark,
         request_code,
         vehicle_id,
         requester_name,
