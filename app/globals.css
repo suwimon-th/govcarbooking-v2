@@ -285,10 +285,10 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 }
 @media screen {
  html[data-theme="dark"] input::-webkit-calendar-picker-indicator{opacity:.85}
- html[data-theme="dark"] .swal2-popup{background:#1b2739;color:#e2e8f0}
- html[data-theme="dark"] :is(.swal2-title,.swal2-html-container){color:#e2e8f0}
- html[data-theme="dark"] :is(.swal2-input,.swal2-select,.swal2-textarea){background:#152033;color:#e2e8f0;border-color:#475569}
- html[data-theme="dark"] .swal2-footer{border-color:#36465e;color:#b8c7db}
+  html[data-theme="dark"] .swal2-popup{background:#1b2739 !important;color:#e2e8f0 !important}
+  html[data-theme="dark"] :is(.swal2-title,.swal2-html-container){color:#e2e8f0 !important}
+  html[data-theme="dark"] :is(.swal2-input,.swal2-select,.swal2-textarea){background:#152033 !important;color:#e2e8f0 !important;border-color:#475569 !important}
+  html[data-theme="dark"] .swal2-footer{border-color:#36465e !important;color:#b8c7db !important}
 }
 @media screen {
  html[data-custom-colors] .theme-sidebar{background-color:var(--sidebar-bg)!important;color:var(--sidebar-fg)}
