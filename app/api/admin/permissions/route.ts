@@ -44,8 +44,25 @@ export async function PUT(request: Request) {
     if (!target || !VALID_ROLES.includes(target.role) || target.id === "00000000-0000-0000-0000-000000000000") return NextResponse.json({ error: "ไม่พบผู้ใช้" }, { status: 404 });
     if (target.role === "ADMIN") return NextResponse.json({ error: "ผู้ดูแลระบบเข้าถึงได้ทุกส่วน ไม่สามารถจำกัดสิทธิ์ที่หน้านี้" }, { status: 400 });
     const permissions = [...new Set<string>(body.permissions)];
+    
+    // Fetch old permissions for logging
+    const { data: oldData } = await db.from("user_access_permissions").select("permissions").eq("user_id", target.id).maybeSingle();
+    const oldPermissions = oldData?.permissions || [];
+
     const { error: saveError } = await db.from("user_access_permissions").upsert({ user_id: target.id, permissions, permission_version: PERMISSION_VERSION, updated_by: actor.id, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
     if (saveError) return unavailable();
+
+    // Log the action
+    await db.from("system_audit_logs").insert({
+      actor_id: actor.id,
+      action: "UPDATE_PERMISSIONS",
+      target_id: target.id,
+      details: {
+        old_permissions: oldPermissions,
+        new_permissions: permissions
+      }
+    });
+
     return NextResponse.json({ success: true, permissions });
   } catch { return unavailable(); }
 }
