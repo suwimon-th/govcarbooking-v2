@@ -12,6 +12,7 @@ ALTER TABLE public.user_access_permissions ADD CONSTRAINT valid_permission_keys
     'requests',
     'vehicles',
     'drivers',
+    'drivers.leave',
     'fuel',
     'maintenance',
     'inspections',
