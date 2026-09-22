@@ -104,9 +104,9 @@ export default function FiscalReportClient() {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<FiscalData | null>(null);
 
-  // Generate last 6 fiscal years
+  // Generate only current and previous fiscal year (2 years)
   const currentFY = getCurrentFiscalYear();
-  const FISCAL_YEARS = Array.from({ length: 6 }, (_, i) => currentFY - i);
+  const FISCAL_YEARS = Array.from({ length: 2 }, (_, i) => currentFY - i);
 
   const handleFetch = useCallback(async () => {
     if (!can("reports.fiscal")) return;
