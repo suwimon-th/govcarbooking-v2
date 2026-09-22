@@ -21,6 +21,81 @@ const THAI_MONTHS_SHORT = [
 
 const FISCAL_MONTH_ORDER = [9, 10, 11, 0, 1, 2, 3, 4, 5, 6, 7, 8];
 
+/* ============ FUZZY PURPOSE GROUPING ============ */
+
+/** Remove common Thai leading prefixes and normalize whitespace */
+function normalizePurpose(text: string): string {
+  return text
+    .trim()
+    .replace(/^(เพื่อ|สำหรับ|ไป|ออก|เดินทาง|เดินทางไป)\s*/g, "")
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+}
+
+/** Get character bigrams from a string */
+function getBigrams(str: string): Set<string> {
+  const s = new Set<string>();
+  for (let i = 0; i < str.length - 1; i++) {
+    s.add(str.slice(i, i + 2));
+  }
+  return s;
+}
+
+/** Jaccard similarity on character bigrams (0-1) */
+function jaccardSimilarity(a: string, b: string): number {
+  if (a === b) return 1;
+  const bA = getBigrams(a);
+  const bB = getBigrams(b);
+  if (bA.size === 0 && bB.size === 0) return 1;
+  if (bA.size === 0 || bB.size === 0) return 0;
+  let intersection = 0;
+  bA.forEach(bi => { if (bB.has(bi)) intersection++; });
+  const union = bA.size + bB.size - intersection;
+  return intersection / union;
+}
+
+/**
+ * Merge similar purposes using greedy clustering.
+ * Groups purposes with Jaccard bigram similarity > threshold together.
+ * The representative of each group is the most frequent member.
+ */
+function groupSimilarPurposes(
+  rawMap: Record<string, number>,
+  threshold = 0.75
+): { purpose: string; count: number; variants?: string[] }[] {
+  // Build list sorted by count desc so most common becomes representative
+  const entries = Object.entries(rawMap).sort((a, b) => b[1] - a[1]);
+
+  // Each group: { rep: string (representative), count: number, variants: string[] }
+  const groups: { rep: string; normRep: string; count: number; variants: string[] }[] = [];
+
+  for (const [raw, cnt] of entries) {
+    const norm = normalizePurpose(raw);
+    let matched = false;
+
+    for (const g of groups) {
+      // Check if substring (one contains the other) OR jaccard similarity high enough
+      const isSubstring = g.normRep.includes(norm) || norm.includes(g.normRep);
+      const sim = isSubstring ? 1 : jaccardSimilarity(norm, g.normRep);
+
+      if (sim >= threshold) {
+        g.count += cnt;
+        g.variants.push(raw);
+        matched = true;
+        break;
+      }
+    }
+
+    if (!matched) {
+      groups.push({ rep: raw, normRep: norm, count: cnt, variants: [] });
+    }
+  }
+
+  return groups
+    .sort((a, b) => b.count - a.count)
+    .map(g => ({ purpose: g.rep, count: g.count, variants: g.variants.length > 0 ? g.variants : undefined }));
+}
+
 export async function POST(req: Request) {
   try {
     const cookieStore = await cookies();
@@ -138,10 +213,8 @@ export async function POST(req: Request) {
       const p = (b.purpose || "ไม่ระบุ").trim();
       purposeMap[p] = (purposeMap[p] || 0) + 1;
     }
-    const byPurpose = Object.entries(purposeMap)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
-      .map(([purpose, count]) => ({ purpose, count }));
+    // Group similar purposes together (fuzzy matching)
+    const byPurpose = groupSimilarPurposes(purposeMap).slice(0, 10);
 
     const weekdayMap: Record<number, number> = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
     for (const b of list) {
