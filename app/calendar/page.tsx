@@ -333,7 +333,7 @@ export default function PublicCalendarPage() {
             const res = await fetch("/api/line/login", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ line_user_id: lineUserId })
+                body: JSON.stringify({ access_token: liff.getAccessToken() })
             });
 
             const data = await res.json();
@@ -566,7 +566,7 @@ export default function PublicCalendarPage() {
                 const { data: dutyBookings } = await (await import("@/lib/supabaseClient")).supabase
                     .from("bookings")
                     .select("id, status, start_at, start_mileage, end_mileage, distance")
-                    .eq("request_code", "DUTY-VAN")
+                    .like("request_code", "DUTY-VAN-%")
                     .in("status", ["COMPLETED", "CANCELLED", "IN_PROGRESS"])
                     .order("created_at", { ascending: false });
 
@@ -715,7 +715,7 @@ export default function PublicCalendarPage() {
         <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row font-sans overflow-x-hidden w-full max-w-full">
             
             {/* ===== DESKTOP SIDEBAR ===== */}
-            <aside className={`hidden md:flex flex-col fixed top-0 bottom-0 left-0 bg-[#1e40af] border-r border-blue-800 text-white transition-all duration-300 z-40 ${collapsed ? "w-[80px]" : "w-[260px]"}`}>
+            <aside className={`hidden md:flex flex-col fixed top-0 bottom-0 left-0 theme-sidebar bg-[#1e40af] border-r border-blue-800 text-white transition-all duration-300 z-40 ${collapsed ? "w-[80px]" : "w-[260px]"}`}>
                 {/* Floating Collapse/Expand Toggle Button on Sidebar Border */}
                 <button
                     onClick={toggleSidebar}
@@ -952,7 +952,7 @@ export default function PublicCalendarPage() {
                 )}
 
                 {/* Mobile Sidebar Panel */}
-                <div className={`md:hidden fixed top-0 left-0 bottom-0 w-[280px] bg-[#1e40af] z-[70] flex flex-col shadow-2xl transition-transform duration-300 ease-in-out ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                <div className={`md:hidden fixed top-0 left-0 bottom-0 w-[280px] theme-sidebar bg-[#1e40af] z-[70] flex flex-col shadow-2xl transition-transform duration-300 ease-in-out ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                     {/* Brand + Close */}
                     <div className="flex items-center justify-between px-4 py-4 border-b border-blue-800/60 shrink-0">
                         <Link href={userProfile ? "/user" : "/calendar"} className="flex items-center gap-3" onClick={() => setMobileMenuOpen(false)}>
@@ -1112,7 +1112,7 @@ export default function PublicCalendarPage() {
                 </div>
 
                 {/* Mobile Top Bar (sticky) */}
-                <div className="md:hidden w-full bg-[#1e40af] border-b border-blue-800 py-3 px-4 z-50 sticky top-0 shadow-lg shrink-0">
+                <div className="md:hidden w-full theme-sidebar bg-[#1e40af] border-b border-blue-800 py-3 px-4 z-50 sticky top-0 shadow-lg shrink-0">
                     <div className="flex justify-between items-center text-white">
                         <div className="flex items-center gap-3">
                             <button
@@ -1562,6 +1562,24 @@ export default function PublicCalendarPage() {
                             {/* Form */}
                             <div className="px-8 py-7">
                                 <form onSubmit={handleModalLogin} className="space-y-4">
+                                    {process.env.NODE_ENV === "development" && process.env.NEXT_PUBLIC_SUPABASE_URL === "http://127.0.0.1:54329" && (
+                                        <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+                                            <p className="mb-2 font-bold">ชุดทดลอง local · ข้อมูลจำลอง</p>
+                                            <button
+                                                type="button"
+                                                disabled={loginLoading}
+                                                onClick={() => {
+                                                    setLoginUsername("admin-local");
+                                                    setLoginPassword("local-demo-123");
+                                                    setLoginError("");
+                                                }}
+                                                className="rounded-lg border border-blue-300 bg-white px-3 py-2 font-semibold hover:bg-blue-100 disabled:opacity-50"
+                                            >
+                                                กรอกบัญชีแอดมินทดลอง
+                                            </button>
+                                            <p className="mt-2 text-xs">กดปุ่มนี้ แล้วกดเข้าสู่ระบบด้านล่าง</p>
+                                        </div>
+                                    )}
                                     <div>
                                         <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">
                                             Username

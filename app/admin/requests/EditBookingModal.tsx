@@ -86,6 +86,8 @@ export default function EditBookingModal({
 }: Props) {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [leaveBlocked, setLeaveBlocked] = useState<string[]>([]);
+  const [leaveCheckFailed, setLeaveCheckFailed] = useState(false);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -210,6 +212,16 @@ export default function EditBookingModal({
       .select("id, plate_number, brand, model, name");
     if (vehiclesData) setVehicles(vehiclesData);
   };
+
+  useEffect(() => {
+    let active = true;
+    setLeaveCheckFailed(true);
+    const bangkok = (value: string) => /(?:Z|[+-]\d{2}:\d{2})$/.test(value) ? value : `${value.length === 16 ? value + ':00' : value}+07:00`;
+    fetch('/api/admin/driver-availability', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ start_at: bangkok(formData.start_at), end_at: formData.end_at ? bangkok(formData.end_at) : null }) })
+      .then(async response => { const result = await response.json(); if (!response.ok) throw new Error(result.error); if (active) { setLeaveBlocked(result.unavailable); setLeaveCheckFailed(false); } })
+      .catch(() => { if (active) setLeaveCheckFailed(true); });
+    return () => { active = false; };
+  }, [formData.start_at, formData.end_at]);
 
   useEffect(() => {
     loadLists();
@@ -762,7 +774,7 @@ export default function EditBookingModal({
                     }}
                   >
                     <option value="">-- ยังไม่ระบุ --</option>
-                    {drivers.map((d) => (
+                    {drivers.filter(d => !leaveCheckFailed && !leaveBlocked.includes(d.id)).map((d) => (
                       <option key={d.id} value={d.id}>{d.full_name}</option>
                     ))}
                   </select>

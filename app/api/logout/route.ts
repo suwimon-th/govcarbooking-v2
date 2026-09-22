@@ -1,3 +1,4 @@
+import { SESSION_COOKIE } from "@/lib/session";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
@@ -15,6 +16,7 @@ export async function POST() {
     expires: new Date(0),
   };
 
+  res.cookies.set(SESSION_COOKIE, "", clearOptions);
   res.cookies.set("user_id", "", clearOptions);
   res.cookies.set("role", "", clearOptions);
   res.cookies.set("full_name", "", clearOptions);

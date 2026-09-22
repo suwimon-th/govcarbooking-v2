@@ -42,3 +42,6 @@ next-env.d.ts
 
 # local app settings (auto-generated, do not commit)
 settings.json
+
+# Local driver leave prototype data
+.local/

@@ -27,7 +27,7 @@ export async function GET(req: Request) {
     const { data, error } = await supabase
       .from("bookings")
       .select("id, start_mileage, end_mileage, distance, status, purpose, created_at, completed_at")
-      .eq("request_code", "DUTY-VAN")
+      .eq("request_code", `DUTY-VAN-${dutyDate}`)
       .gte("start_at", dayStart)
       .lte("start_at", dayEnd)
       .order("created_at", { ascending: false })
@@ -85,7 +85,7 @@ export async function POST(req: Request) {
     const { data: existing, error: findErr } = await supabaseAdmin
       .from("bookings")
       .select("id, status")
-      .eq("request_code", "DUTY-VAN")
+      .eq("request_code", `DUTY-VAN-${duty_date}`)
       .gte("start_at", dayStart)
       .lte("start_at", dayEnd)
       .maybeSingle();
@@ -106,7 +106,7 @@ export async function POST(req: Request) {
     if (duty_status === "NOT_USED") {
       // สถานะ: ไม่ได้ออกรถ → บันทึกเป็น COMPLETED (เสร็จสิ้น) พร้อมระบุว่าไม่ได้ออกใช้รถ
       const payload: Record<string, unknown> = {
-        request_code: "DUTY-VAN",
+        request_code: `DUTY-VAN-${duty_date}`,
         status: "COMPLETED",
         purpose: purposeText,
         start_at: `${duty_date}T08:30:00+07:00`,
@@ -152,7 +152,7 @@ export async function POST(req: Request) {
       const bookingStatus = endMileNum !== null ? "COMPLETED" : "IN_PROGRESS";
 
       const payload: Record<string, unknown> = {
-        request_code: "DUTY-VAN",
+        request_code: `DUTY-VAN-${duty_date}`,
         status: bookingStatus,
         purpose: purposeText,
         start_at: `${duty_date}T08:30:00+07:00`,

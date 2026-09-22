@@ -23,6 +23,7 @@ import {
   ChevronsRight
 } from "lucide-react";
 import Link from "next/link";
+import { useAccess } from "@/lib/use-access";
 import { generateBookingDocument } from "@/lib/documentGenerator";
 import EditBookingModal from "./EditBookingModal";
 
@@ -97,6 +98,7 @@ const vehicleFullDisplay = (v: MyRequest['vehicle']) => {
    PAGE
 ========================= */
 export default function MyRequestsPage() {
+  const { can } = useAccess();
   const [items, setItems] = useState<MyRequest[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const [statusSummary, setStatusSummary] = useState<{ status: string; request_code: string }[]>([]);
@@ -472,7 +474,7 @@ export default function MyRequestsPage() {
                     </td>
                     <td className="px-4 py-4 text-center">
                       <div className="flex items-center justify-center gap-1">
-                        {it.status === "COMPLETED" && it.is_satisfied === null && it.evaluation_comment !== "__SKIP__" && isCurrentMonth(it.start_at) && (
+                        {can("my_requests.evaluate") && it.status === "COMPLETED" && it.is_satisfied === null && it.evaluation_comment !== "__SKIP__" && isCurrentMonth(it.start_at) && (
                           <div className="flex flex-col gap-1.5">
                             <Link 
                               href={`/user/evaluate/${it.id}`} 
@@ -499,7 +501,7 @@ export default function MyRequestsPage() {
                             </button>
                           </div>
                         )}
-                        {it.is_satisfied !== null && (
+                        {can("my_requests.evaluate") && it.is_satisfied !== null && (
                           <Link href={`/user/evaluate/${it.id}`} className="flex flex-col items-center gap-1 group/eval hover:opacity-80 transition-opacity">
                             <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border ${it.is_satisfied ? 'bg-green-50 text-green-700 border-green-100' : 'bg-rose-50 text-rose-700 border-rose-100'}`}>
                               {it.is_satisfied ? <ThumbsUp className="w-3 h-3" /> : <ThumbsDown className="w-3 h-3" />}
@@ -603,7 +605,7 @@ export default function MyRequestsPage() {
                   </div>                </div>
 
                 <div className="flex flex-wrap gap-2">
-                  {it.status === "COMPLETED" && it.is_satisfied === null && it.evaluation_comment !== "__SKIP__" && isCurrentMonth(it.start_at) && (
+                  {can("my_requests.evaluate") && it.status === "COMPLETED" && it.is_satisfied === null && it.evaluation_comment !== "__SKIP__" && isCurrentMonth(it.start_at) && (
                     <div className="flex flex-col gap-2 mb-2">
                       <Link
                         href={`/user/evaluate/${it.id}`}
@@ -628,7 +630,7 @@ export default function MyRequestsPage() {
                       </button>
                     </div>
                   )}
-                  {it.is_satisfied !== null && (
+                  {can("my_requests.evaluate") && it.is_satisfied !== null && (
                     <Link href={`/user/evaluate/${it.id}`} className={`w-full p-3 rounded-2xl border mb-3 flex flex-col gap-2 transition-opacity active:opacity-70 ${it.is_satisfied ? 'bg-green-50/50 border-green-100' : 'bg-rose-50/50 border-rose-100'}`}>
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">ผลการประเมิน (แตะเพื่อแก้ไข)</span>

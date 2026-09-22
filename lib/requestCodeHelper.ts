@@ -46,6 +46,40 @@ export async function generateRequestCode(vehicleId: string): Promise<string> {
 }
 
 /**
+ * Generates the next sequential request_code for an "other" vehicle (รถอื่นๆ)
+ * Format: ENV-OT/{seq3} (e.g. ENV-OT/001)
+ * Calculates the true numerical maximum running number for the prefix.
+ */
+export async function generateOtherVehicleRequestCode(otherPlateNumber: string | null): Promise<string> {
+    const digits = (otherPlateNumber || "").replace(/\D/g, "");
+    const plateSuffix = digits.slice(-2) || "OT";
+    const prefix = `ENV-${plateSuffix}/`;
+
+    // Query all bookings matching this prefix to find true numerical maximum
+    const { data } = await supabase
+        .from("bookings")
+        .select("request_code")
+        .like("request_code", `${prefix}%`);
+
+    let maxRunning = 0;
+    if (data && data.length > 0) {
+        for (const row of data) {
+            if (!row.request_code) continue;
+            const parts = row.request_code.split("/");
+            if (parts.length === 2) {
+                const parsed = parseInt(parts[1], 10);
+                if (!isNaN(parsed) && parsed > maxRunning) {
+                    maxRunning = parsed;
+                }
+            }
+        }
+    }
+
+    const nextRunning = maxRunning + 1;
+    return `${prefix}${String(nextRunning).padStart(3, "0")}`;
+}
+
+/**
  * Resequences request_code for all bookings of a vehicle (or all vehicles)
  * ordered strictly by created_at ASC (booking submission time), then start_at ASC.
  * Format: ENV-{plate2digits}/{seq3} (e.g. ENV-05/001, ENV-05/002...)

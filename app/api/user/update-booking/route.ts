@@ -1,3 +1,4 @@
+import { assertDriverAvailable } from "@/lib/driver-leave-store";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { supabase } from "@/lib/supabaseClient";
@@ -82,6 +83,11 @@ export async function PUT(req: Request) {
             if (requester_id !== undefined) updateData.requester_id = requester_id;
         }
 
+        const effectiveDriver = updateData.driver_id === undefined ? oldBooking.driver_id : updateData.driver_id;
+        if (effectiveDriver && (driver_id !== undefined || start_at !== undefined || end_at !== undefined)) {
+            try { await assertDriverAvailable(effectiveDriver, start_at ?? oldBooking.start_at, end_at === undefined ? oldBooking.end_at : end_at); }
+            catch { return NextResponse.json({ error: "คนขับลาตรงกับช่วงเวลางาน กรุณาติดต่อแอดมิน" }, { status: 409 }); }
+        }
         // 4. Handle dynamic request_code generation
         // If it was 'จองล่วงหน้า' and now has a vehicle_id assigned or confirmed, generate sequence
         const effectiveVehicleId = vehicle_id || oldBooking.vehicle_id;

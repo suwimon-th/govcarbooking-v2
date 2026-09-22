@@ -23,6 +23,7 @@ type ViewState = 'LIST' | 'CONFIRM' | 'SUCCESS';
 export default function DriverQueueModal({ bookingIds, onClose, onSuccess }: Props) {
     const [view, setView] = useState<ViewState>('LIST');
     const [drivers, setDrivers] = useState<Driver[]>([]);
+    const [leaveMessage, setLeaveMessage] = useState("");
     const [loading, setLoading] = useState(true);
     const [assigning, setAssigning] = useState(false);
 
@@ -47,7 +48,14 @@ export default function DriverQueueModal({ bookingIds, onClose, onSuccess }: Pro
         if (error) console.error(error);
         else {
             const filtered = (data || []).filter((d: Driver) => d.queue_order < 900);
-            setDrivers(filtered);
+            try {
+                const response = await fetch("/api/admin/driver-availability", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ booking_ids: bookingIds }) });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error);
+                const excluded = filtered.filter(d => result.unavailable.includes(d.id));
+                setLeaveMessage(excluded.length ? `ลาตรงกับเวลางาน: ${excluded.map(d => d.full_name).join(", ")}` : "");
+                setDrivers(filtered.filter(d => !result.unavailable.includes(d.id)));
+            } catch { setDrivers([]); setLeaveMessage("ตรวจสอบวันลาไม่สำเร็จ กรุณาปิดแล้วเปิดใหม่"); }
         }
         setLoading(false);
     };
@@ -117,6 +125,7 @@ export default function DriverQueueModal({ bookingIds, onClose, onSuccess }: Pro
             >
                 {view === 'LIST' && (
                     <>
+                        {leaveMessage && <p role="status" className="p-4 text-amber-800 bg-amber-50">{leaveMessage}</p>}
                         {/* Header */}
                         <div className="relative z-10 flex items-start justify-between p-8 pb-4">
                             <div>

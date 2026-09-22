@@ -3,9 +3,11 @@
 
 import { Suspense, useEffect, useState, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useAccess } from "@/lib/use-access";
 import { supabase } from "@/lib/supabaseClient";
 import EditBookingModal from "./EditBookingModal";
 import DriverQueueModal from "./DriverQueueModal";
+import styles from "./requests.module.css";
 import { getStatusLabel, getStatusColor, isOffHours } from "@/lib/statusHelper";
 import {
   Calendar,
@@ -112,8 +114,11 @@ const vehicleDisplay = (v: VehicleInfo | null): string => {
 /* ================= Component ================= */
 
 function AdminRequestsContent() {
+  const { can } = useAccess();
   const searchParams = useSearchParams();
   const initialStatus = searchParams.get("status") || "ทั้งหมด";
+  const conflictIdsParam = searchParams.get("conflict_ids");
+  const conflictIds = useMemo(() => conflictIdsParam === null ? null : conflictIdsParam.split(',').filter(id => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)), [conflictIdsParam]);
   const openId = searchParams.get("id"); // Get ID from URL
 
   const [rows, setRows] = useState<BookingRow[]>([]);
@@ -138,7 +143,7 @@ function AdminRequestsContent() {
   // Reset to page 1 on filter/search change
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, filterStatus, filterDateFrom, filterDateTo, filterDriver, filterRequester, pageSize]);
+  }, [search, filterStatus, filterDateFrom, filterDateTo, filterDriver, filterRequester, pageSize, conflictIdsParam]);
 
   const activeFilterCount = [filterDateFrom, filterDateTo, filterDriver, filterRequester].filter(Boolean).length;
 
@@ -222,7 +227,7 @@ function AdminRequestsContent() {
     const { data } = await supabase
       .from("bookings")
       .select("status, request_code")
-      .neq("request_code", "DUTY-VAN");
+      .not("request_code", "like", "DUTY-VAN-%");
     if (data) {
       setAllStatusSummary(data);
     }
@@ -318,8 +323,12 @@ function AdminRequestsContent() {
         requester:requester_id(full_name, position),
         driver:driver_id(full_name),
         vehicle:vehicle_id(plate_number, brand, model, photo_urls)
-      `, { count: "exact" })
-      .neq("request_code", "DUTY-VAN");
+      `, { count: "exact" });
+    if (conflictIds) query = query.not("id", "in", `(${conflictIds.join(",")})`);
+    if (conflictIds === null) query = query.not("request_code", "like", "DUTY-VAN-%");
+
+    // Resolve the exact bookings linked from the leave conflicts, across all pages.
+    if (conflictIds !== null) query = query.in("id", conflictIds.length ? conflictIds : ["00000000-0000-0000-0000-000000000000"]);
 
     // Status Filter
     if (filterStatus && filterStatus !== "ทั้งหมด") {
@@ -372,7 +381,7 @@ function AdminRequestsContent() {
 
   useEffect(() => {
     loadData();
-  }, [currentPage, pageSize, filterStatus, search, filterDateFrom, filterDateTo]);
+  }, [currentPage, pageSize, filterStatus, search, filterDateFrom, filterDateTo, conflictIdsParam]);
 
   const loadNextQueue = async () => {
     try {
@@ -522,6 +531,19 @@ function AdminRequestsContent() {
   return (
     <div className="p-4 md:p-8 max-w-[1400px] mx-auto min-h-screen bg-gray-50/50">
 
+      {conflictIds !== null && <aside className={styles.conflictBanner} aria-label="ตัวกรองงานชนวันลา">
+        <div className={styles.context}>
+          <span className={styles.icon}><AlertTriangle size={19} aria-hidden="true" /></span>
+          <div>
+            <h2 className={styles.title}>งานที่ชนวันลา <span className={styles.count}>{conflictIds.length} งาน</span></h2>
+            <p className={styles.description}>แสดงเฉพาะงานที่เลือก · เลือกงานเพื่อมอบหมายคนขับแทน</p>
+          </div>
+        </div>
+        <nav className={styles.actions} aria-label="ทางลัดจากงานชนวันลา">
+          <a href="/admin/drivers/leaves" className={styles.link}><ChevronLeft size={15} aria-hidden="true" />กลับไปวันลา</a>
+          <a href="/admin/requests" className={`${styles.link} ${styles.secondary}`}>ดูคำขอทั้งหมด<ChevronRight size={15} aria-hidden="true" /></a>
+        </nav>
+      </aside>}
       {/* Row 1: Title & Top Primary Actions */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
         <div className="shrink-0">
@@ -884,12 +906,12 @@ function AdminRequestsContent() {
                   >
                     <FileDoc className="w-3.5 h-3.5" /> Word
                   </button>
-                  <button
+                  {can("requests.print") && (<button
                     onClick={() => handlePrintPDF(b.id)}
                     className="py-2 px-3 rounded-lg bg-red-50 border border-red-100 text-red-600 text-xs font-medium flex items-center justify-center gap-1 hover:bg-red-100 shadow-sm transition-colors"
                   >
                     <FileDown className="w-3.5 h-3.5" /> PDF
-                  </button>
+                  </button>)}
 
                   <button
                     onClick={() => setEditItem(b)}

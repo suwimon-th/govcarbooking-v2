@@ -423,7 +423,8 @@ function DriverActiveTasksContent() {
 
           <div className="flex gap-1.5 items-center">
             {/* Monthly Report Link */}
-            <Link 
+            <Link href="/driver/leave" className="inline-block p-3 text-blue-700">แจ้งลา / วันลาของฉัน</Link>
+            <Link
               href={`/driver/car-reports?driver_id=${driverId}`}
               className="shrink-0 text-white text-[10px] font-bold bg-indigo-600/60 hover:bg-indigo-600 border border-white/10 px-3 py-2 rounded-xl backdrop-blur-md transition-all active:scale-95 flex items-center gap-1 cursor-pointer"
             >

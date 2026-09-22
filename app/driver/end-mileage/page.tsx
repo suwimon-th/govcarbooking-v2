@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 
 
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 
 interface BookingInfo {
   request_code: string;
@@ -16,9 +16,9 @@ interface BookingInfo {
 export default function EndMileagePage({
   searchParams,
 }: {
-  searchParams: Record<string, string>;
+  searchParams: Promise<Record<string, string>>;
 }) {
-  const bookingId = searchParams.booking ?? "";
+  const bookingId = use(searchParams).booking ?? "";
 
   const [mileage, setMileage] = useState("");
   const [loading, setLoading] = useState(false);

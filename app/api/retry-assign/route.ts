@@ -1,3 +1,4 @@
+import { unavailableDrivers } from "@/lib/driver-leave-store";
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabaseClient"
 
@@ -9,6 +10,8 @@ const TIMEOUT_MINUTES = 60
 type BookingRow = {
   id: string
   driver_id: string | null
+  start_at: string
+  end_at: string | null
   assigned_at: string | null
   driver_accepted_at: string | null
   status: string
@@ -33,6 +36,8 @@ async function getExpiredAssignments(): Promise<BookingRow[]> {
       `
       id,
       driver_id,
+      start_at,
+      end_at,
       assigned_at,
       driver_accepted_at,
       status
@@ -150,7 +155,8 @@ export async function POST() {
 
   // 3) หมุนคิวทีละ booking
   for (const booking of expiredBookings) {
-    const nextDriver = getNextDriver(drivers, booking.driver_id)
+    const onLeave = await unavailableDrivers(booking.start_at, booking.end_at)
+    const nextDriver = getNextDriver(drivers.filter(d => !onLeave.has(d.id)), booking.driver_id)
 
     if (!nextDriver) {
       // ไม่มีคนให้ assign ข้ามไป

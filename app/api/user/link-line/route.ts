@@ -1,3 +1,4 @@
+import { verifiedLineProfile } from "@/lib/line-identity";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { supabase } from "@/lib/supabaseClient";
@@ -11,30 +12,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    const { line_user_id, line_picture_url: client_picture_url } = await req.json();
-
-    if (!line_user_id) {
-      return NextResponse.json({ error: "Missing line_user_id" }, { status: 400 });
-    }
-
-    // Fetch LINE profile picture
-    let line_picture_url = client_picture_url || null;
-    if (!line_picture_url) {
-      const ACCESS_TOKEN = process.env.LINE_CHANNEL_ACCESS_TOKEN;
-      if (ACCESS_TOKEN) {
-        try {
-          const lineResponse = await fetch(`https://api.line.me/v2/bot/profile/${line_user_id}`, {
-            headers: { Authorization: `Bearer ${ACCESS_TOKEN}` }
-          });
-          if (lineResponse.ok) {
-            const profile = await lineResponse.json();
-            line_picture_url = profile.pictureUrl || null;
-          }
-        } catch (err) {
-          console.error("Error fetching LINE picture:", err);
-        }
-      }
-    }
+    const { access_token } = await req.json();
+    const identity = await verifiedLineProfile(access_token);
+    if (!identity) return NextResponse.json({ error: "กรุณายืนยันบัญชี LINE ใหม่" }, { status: 401 });
+    const line_user_id = identity.userId;
+    const line_picture_url = identity.pictureUrl || null;
 
     const { error } = await supabase
       .from("profiles")

@@ -74,7 +74,7 @@ export async function GET(req: Request) {
           phone
         )
       `)
-      .neq("request_code", "DUTY-VAN");
+      .not("request_code", "like", "DUTY-VAN-%");
 
     const { data, error } = await query
       .order("start_at", { ascending: true })

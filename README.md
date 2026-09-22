@@ -1,3 +1,13 @@
+## Local ที่ใช้ Supabase จริง
+
+รัน `npm run dev:supabase` แล้วเปิด http://localhost:3100 ใช้ค่าจาก `.env.local` และบัญชีผู้ใช้จริง การบันทึกข้อมูลจะเปลี่ยนข้อมูลใน Supabase จริง ต้องหยุดชุดจำลองก่อนเพราะใช้พอร์ตเดียวกัน
+
+## ทดลองหน้าจัดการสิทธิ์บน local
+
+รัน `npm run dev:permissions` เพื่อเปิดเว็บที่ http://localhost:3100 พร้อมข้อมูลจำลอง ไม่เชื่อมฐานข้อมูลจริง ดูบัญชีทดลองและขอบเขตการทำงานใน [คู่มือสิทธิ์](docs/permissions.md)
+
+ทดสอบ: `npm run test:permissions`
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started

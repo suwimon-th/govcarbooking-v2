@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
+@import "./dark-palette.css";
 
 :root {
   --background: #f5f7fb;
@@ -198,4 +199,114 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 .swal2-confirm:active,
 .swal2-cancel:active {
   transform: translateY(0);
+}
+/* Theme preferences are browser-local; print styles keep their original light palette. */
+@media screen {
+  html[data-theme="dark"] {
+    color-scheme: dark;
+    --background:#101827; --foreground:#e2e8f0; --card-bg:#1b2739;
+    --glass:rgba(27,39,57,.95); --theme-border:#36465e;
+    --theme-selected:#233e64; --theme-accent:#93c5fd;
+    --ops-bg:#101827; --ops-panel:#1b2739; --ops-text:#e2e8f0;
+    --ops-muted:#a5b4ca; --ops-border:#36465e; --ops-soft:#223148;
+  }
+  html[data-theme="dark"] body {background:var(--background);color:var(--foreground)}
+  html[data-theme="dark"] :is(.bg-white,.bg-white\/95,.bg-white\/90){background-color:var(--card-bg)}
+  html[data-theme="dark"] :is(.bg-gray-50,.bg-gray-50\/50,.bg-slate-50,.bg-gray-100,.bg-slate-100){background-color:#152033}
+  html[data-theme="dark"] :is(.text-gray-900,.text-gray-800,.text-gray-700,.text-slate-900,.text-slate-800,.text-slate-700){color:#e2e8f0}
+  html[data-theme="dark"] :is(.text-gray-600,.text-gray-500,.text-slate-600,.text-slate-500){color:#a5b4ca}
+  html[data-theme="dark"] :is(.border-gray-100,.border-gray-200,.border-slate-100,.border-slate-200){border-color:#36465e}
+  html[data-theme="dark"] :is(input,select,textarea){background-color:#152033;color:#e2e8f0;border-color:#475569}
+  html[data-theme="dark"] :is(.bg-blue-50,.bg-indigo-50){background-color:#233e64}
+  html[data-theme="dark"] :is(.text-blue-700,.text-blue-800,.text-indigo-700){color:#93c5fd}
+}
+
+/* FullCalendar owns its surfaces independently of Tailwind utilities. */
+@media screen {
+  html[data-theme="dark"] .fc {
+    --fc-page-bg-color: #1b2739;
+    --fc-neutral-bg-color: #223148;
+    --fc-neutral-text-color: #cbd5e1;
+    --fc-border-color: #3b4b62;
+    --fc-today-bg-color: #243d5a;
+    --fc-list-event-hover-bg-color: #2c405b;
+    --fc-more-link-bg-color: #2b405c;
+    --fc-more-link-text-color: #dbeafe;
+    color: #e2e8f0;
+  }
+  html[data-theme="dark"] .fc :is(.fc-col-header, .fc-col-header-cell, .fc-scrollgrid-section-header th) {
+    background: #223148 !important;
+    border-color: #3b4b62;
+  }
+  html[data-theme="dark"] .fc .fc-col-header-cell-cushion {
+    color: #e2e8f0 !important;
+  }
+  html[data-theme="dark"] .fc .fc-daygrid-day-frame {
+    background-color: transparent !important;
+  }
+  html[data-theme="dark"] .fc .fc-day-today {
+    background-color: #243d5a !important;
+  }
+  html[data-theme="dark"] .fc :is(.fc-daygrid-day-number, .fc-toolbar-title, .fc-timegrid-axis-cushion, .fc-timegrid-slot-label-cushion) {
+    color: #e2e8f0 !important;
+  }
+  html[data-theme="dark"] .fc .holiday-day .fc-daygrid-day-number,
+  html[data-theme="dark"] .fc .fc-day-sun .fc-col-header-cell-cushion {
+    color: #fda4af !important;
+  }
+  html[data-theme="dark"] .fc .fc-daygrid-more-link {
+    color: #bfdbfe;
+    border-radius: 5px;
+    padding: 2px 5px;
+  }
+  html[data-theme="dark"] .fc .fc-daygrid-more-link:hover {
+    background: #344e6e;
+  }
+  html[data-theme="dark"] .fc .fc-popover {
+    background: #1b2739;
+    border-color: #475569;
+    color: #e2e8f0;
+    box-shadow: 0 12px 32px #0006;
+  }
+  html[data-theme="dark"] .fc :is(.fc-popover-header, .fc-list-day-cushion) {
+    background: #26374e;
+    color: #e2e8f0;
+  }
+  html[data-theme="dark"] .fc .fc-button {
+    background: #223148 !important;
+    color: #e2e8f0 !important;
+    border-color: #475569 !important;
+  }
+  html[data-theme="dark"] .fc :is(.fc-button:hover, .fc-button-active) {
+    background: #304c70 !important;
+    color: #fff !important;
+    border-color: #7ba4d6 !important;
+  }
+}
+@media screen {
+ html[data-theme="dark"] input::-webkit-calendar-picker-indicator{opacity:.85}
+ html[data-theme="dark"] .swal2-popup{background:#1b2739;color:#e2e8f0}
+ html[data-theme="dark"] :is(.swal2-title,.swal2-html-container){color:#e2e8f0}
+ html[data-theme="dark"] :is(.swal2-input,.swal2-select,.swal2-textarea){background:#152033;color:#e2e8f0;border-color:#475569}
+ html[data-theme="dark"] .swal2-footer{border-color:#36465e;color:#b8c7db}
+}
+@media screen {
+ html[data-custom-colors] .theme-sidebar{background-color:var(--sidebar-bg)!important;color:var(--sidebar-fg)}
+ html[data-custom-colors] .theme-sidebar :is(.text-white,.text-blue-100,.text-blue-200,.text-blue-300){color:var(--sidebar-fg)}
+ html[data-custom-colors] :is(.bg-blue-600,.bg-blue-700,.btn-primary){background-color:var(--action-bg);color:var(--action-fg)}
+ html[data-custom-colors] :is(.hover\:bg-blue-700,.hover\:bg-blue-800):hover{background-color:var(--action-bg);filter:brightness(.92)}
+}
+
+/* Sidebar dividers belong to the selected sidebar palette, not the brand blue. */
+@media screen {
+ html[data-custom-colors] .theme-sidebar {
+   --sidebar-border: color-mix(in srgb, var(--sidebar-fg) 22%, var(--sidebar-bg));
+   --sidebar-soft: color-mix(in srgb, var(--sidebar-fg) 7%, var(--sidebar-bg));
+   border-color: var(--sidebar-border) !important;
+ }
+ html[data-custom-colors] .theme-sidebar :is(
+   .border-blue-100, .border-blue-200, .border-blue-300,
+   .border-blue-800, .border-blue-800\/60, .border-blue-800\/80
+ ) { border-color: var(--sidebar-border) !important; }
+ html[data-custom-colors] .theme-sidebar .bg-blue-900\/20 { background-color: var(--sidebar-soft); }
 }

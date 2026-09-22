@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Loader2, ClipboardCheck, Car, Search, RefreshCw, CheckCircle, XCircle, Minus, Printer, Plus, Settings2 } from "lucide-react";
 import Link from "next/link";
+import { useAccess } from "@/lib/use-access";
 
 const INSPECTION_ITEMS = [
     { key: "item_exterior_damage", label: "ตัวถังรถ", ok: "ปกติ", bad: "มีรอย" },
@@ -47,6 +48,7 @@ interface Inspection {
 }
 
 export default function AdminInspectionsPage() {
+    const { canVisit } = useAccess();
     const [inspections, setInspections] = useState<Inspection[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
@@ -171,12 +173,12 @@ export default function AdminInspectionsPage() {
                     <button onClick={fetchData} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 border border-gray-200 px-3 py-2 rounded-lg hover:bg-gray-50 transition-all">
                         <RefreshCw className="w-4 h-4" /> รีเฟรช
                     </button>
-                    <Link
+                    {canVisit("/admin/inspections/config") && (<Link
                         href="/admin/inspections/config"
                         className="flex items-center gap-2 text-sm text-gray-500 hover:text-blue-600 border border-gray-200 px-3 py-2 rounded-lg hover:bg-blue-50 transition-all font-medium"
                     >
                         <Settings2 className="w-4 h-4" /> ตั้งค่าหัวข้อ
-                    </Link>
+                    </Link>)}
                     <Link
                         href="/vehicle-inspection"
                         className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 shadow-md text-sm font-medium transition-all active:scale-95"

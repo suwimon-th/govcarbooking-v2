@@ -1,3 +1,4 @@
+import { unavailableDrivers } from "@/lib/driver-leave-store";
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseClient";
 import { sendLinePush, flexAssignDriver } from "@/lib/line";
@@ -55,9 +56,10 @@ export async function POST(req: Request) {
       .order("queue_order", { ascending: true });
 
     // Filter out TEST drivers (Should be manual only)
+    const onLeave = await unavailableDrivers(booking.start_at, booking.end_at);
     const validDrivers = (drivers || []).filter(d => {
       const lower = d.full_name.toLowerCase();
-      return !lower.includes("test") && !lower.includes("ทดสอบ");
+      return !onLeave.has(d.id) && !lower.includes("test") && !lower.includes("ทดสอบ");
     });
 
     const driver = validDrivers?.[0];

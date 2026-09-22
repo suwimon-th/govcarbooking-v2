@@ -1,3 +1,4 @@
+import { unavailableDrivers } from "@/lib/driver-leave-store";
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseClient";
 import { sendLinePush, flexAssignDriver } from "@/lib/line";
@@ -15,14 +16,17 @@ export async function POST(req: Request) {
     }
 
     // 1) ดึงคนขับคิวแรก ที่ active + available เท่านั้น
-    const { data: driver, error: driverErr } = await supabase
+    const { data: candidates, error: driverErr } = await supabase
       .from("drivers")
       .select("*")
       .eq("is_active", true)
       .eq("status", "AVAILABLE")
       .order("queue_order", { ascending: true })
-      .limit(1)
-      .single();
+      ;
+    const { data: job } = await supabase.from("bookings").select("start_at,end_at").eq("id", booking_id).single();
+    if (!job) return NextResponse.json({ error: "ไม่พบงาน" }, { status: 404 });
+    const onLeave = await unavailableDrivers(job.start_at, job.end_at);
+    const driver = candidates?.find(d => !onLeave.has(d.id));
 
     if (driverErr || !driver) {
       return NextResponse.json(

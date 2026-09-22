@@ -1,0 +1,48 @@
+/* Unlayered rules override the legacy global input styles without changing other forms. */
+.checkbox {
+  appearance: auto;
+  display: inline-block;
+  box-sizing: border-box;
+  width: 20px;
+  min-width: 20px;
+  max-width: 20px;
+  height: 20px;
+  min-height: 20px;
+  padding: 0;
+  margin: 0;
+  flex: 0 0 20px;
+  accent-color: #1d4ed8;
+  cursor: pointer;
+}
+.checkbox:disabled { cursor: not-allowed; }
+.moduleHeader,
+.pageRow {
+  display: grid;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  margin: 0;
+  line-height: 1.65;
+  text-align: left;
+}
+.moduleHeader {
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  padding: 14px 16px;
+  font-size: 16px;
+  color: #172554;
+}
+.pageRow {
+  grid-template-columns: 20px minmax(0, 1fr);
+  min-height: 52px;
+  padding: 12px 16px;
+  font-size: 16px;
+  font-weight: 500;
+  color: #1f2937;
+}
+.pageRow span,
+.moduleHeader span {
+  min-width: 0;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+.fields { min-inline-size: 0; }

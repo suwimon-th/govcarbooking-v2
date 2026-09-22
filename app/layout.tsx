@@ -1,3 +1,4 @@
+import ThemePicker from "./components/ThemePicker";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Prompt, Sarabun } from "next/font/google";
 import "./globals.css";
@@ -59,11 +60,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="th" className="light">
+    <html lang="th" suppressHydrationWarning>
+      <head><script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('govcar-theme');document.documentElement.dataset.theme=t==='dark'||t==='light'?t:matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}catch(e){}})()` }} /></head>
       <body
         className={`bg-[var(--background)] text-[var(--foreground)] ${prompt.variable} ${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
+        <ThemePicker />
       </body>
     </html>
   );

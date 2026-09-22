@@ -6,7 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:permissions": "node --test tests/permissions.test.cjs",
+    "dev:permissions": "node scripts/dev-permissions-local.cjs",
+    "dev:supabase": "next dev --turbopack --hostname 127.0.0.1 --port 3100",
+    "test:tester-flow": "node --test tests/tester-flow.test.cjs",
+    "test:driver-leaves": "node --test tests/driver-leaves.test.cjs"
   },
   "dependencies": {
     "@fontsource/sarabun": "^5.2.8",

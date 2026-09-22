@@ -1,3 +1,4 @@
+import { assertDriverAvailable } from "@/lib/driver-leave-store";
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseClient";
 import { sendLinePush, flexAssignDriver } from "@/lib/line";
@@ -7,7 +8,7 @@ import {
   generateDriverAssignmentEmailHtml,
 } from "@/lib/email";
 import { getAutoAssignEnabled } from "@/lib/settings";
-import { generateRequestCode } from "@/lib/requestCodeHelper";
+import { generateRequestCode, generateOtherVehicleRequestCode } from "@/lib/requestCodeHelper";
 
 /* ---------------------------
    helper: เติมวินาทีให้เวลา
@@ -114,6 +115,7 @@ export async function POST(req: Request) {
       dbEndAt = `${date}T${padTime(end_time)}+07:00`;
     }
 
+    if (driver_id) await assertDriverAvailable(driver_id, start_at, dbEndAt);
     let checkEndAt = dbEndAt;
     if (!checkEndAt) {
       // ถ้าไม่มีเวลาสิ้นสุด ใช้ start + 60 นาที
@@ -196,25 +198,7 @@ export async function POST(req: Request) {
       request_code = await generateRequestCode(vehicle_id);
     } else {
       // Other vehicle (อื่นๆ): generate code from plate digits
-      const digits = (other_vehicle_plate || "").replace(/\D/g, "");
-      const plateSuffix = digits.slice(-2) || "OT";
-      const prefix = `ENV-${plateSuffix}/`;
-      const { data: existingCodes } = await supabase
-        .from("bookings")
-        .select("request_code")
-        .like("request_code", `${prefix}%`)
-        .order("request_code", { ascending: false })
-        .limit(1);
-      let running = 1;
-      if (existingCodes && existingCodes.length > 0) {
-        const last = existingCodes[0].request_code;
-        const parts = last.split("/");
-        if (parts.length === 2) {
-          const parsed = Number(parts[1]);
-          if (!isNaN(parsed)) running = parsed + 1;
-        }
-      }
-      request_code = `${prefix}${String(running).padStart(3, "0")}`;
+      request_code = await generateOtherVehicleRequestCode(other_vehicle_plate);
     }
 
     // ✅ Calculate is_ot automatically
@@ -267,7 +251,11 @@ export async function POST(req: Request) {
       // Re-generate code on every retry (gets fresh highest value from DB)
       if (attempt > 0 && !no_request_code && requester?.role !== "TESTER") {
         console.warn(`⚠️ [REQUEST_CODE] Duplicate detected, retrying... (attempt ${attempt + 1})`);
-        request_code = await generateRequestCode(vehicle_id);
+        if (vehicle_id) {
+          request_code = await generateRequestCode(vehicle_id);
+        } else {
+          request_code = await generateOtherVehicleRequestCode(other_vehicle_plate);
+        }
       }
 
       const { data: inserted, error: err } = await supabase

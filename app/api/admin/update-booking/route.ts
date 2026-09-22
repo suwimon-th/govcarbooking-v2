@@ -1,3 +1,4 @@
+import { assertDriverAvailable } from "@/lib/driver-leave-store";
 
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseClient";
@@ -69,7 +70,7 @@ export async function POST(req: Request) {
         // 1) ดึงข้อมูลเดิมก่อน update (เพื่อเทียบว่า driver / vehicle เปลี่ยนไหม)
         const { data: oldBooking } = await supabase
             .from("bookings")
-            .select("driver_id, status, vehicle_id, request_code, requester_id")
+            .select("driver_id, status, vehicle_id, request_code, requester_id, start_at, end_at")
             .eq("id", id)
             .single();
 
@@ -136,6 +137,11 @@ export async function POST(req: Request) {
         // อื่นๆ: อัปเดตทะเบียนยืมถ้าส่งมา
         if (other_vehicle_plate !== undefined) updateData.other_vehicle_plate = other_vehicle_plate || null;
 
+        const effectiveDriver = finalDriverId === undefined ? oldBooking?.driver_id : finalDriverId;
+        if (effectiveDriver && (finalDriverId !== undefined || start_at || end_at)) {
+            try { await assertDriverAvailable(effectiveDriver, start_at || oldBooking?.start_at, end_at || oldBooking?.end_at); }
+            catch { return NextResponse.json({ error: "คนขับลาตรงกับช่วงเวลางาน กรุณาเลือกคนอื่น" }, { status: 409 }); }
+        }
         const { error } = await supabase
             .from("bookings")
             .update(updateData)

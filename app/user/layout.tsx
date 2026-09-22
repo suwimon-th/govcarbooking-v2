@@ -1,7 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import SidebarSearch from "@/app/components/SidebarSearch";
+import ModuleNavigation from "@/app/components/ModuleNavigation";
+import { useAccess } from "@/lib/use-access";
+import { PERMISSION_SECTIONS, PERMISSION_MODULES } from "@/lib/permissions";
+import { useRouter, usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import {
@@ -21,7 +25,15 @@ import {
   Star,
   MessageCircle,
   Calendar,
-  ClipboardCheck
+  ClipboardCheck,
+  ChevronDown,
+  LayoutDashboard,
+  Users,
+  Wrench,
+  SprayCan,
+  Settings,
+  ShieldCheck,
+  type LucideIcon
 } from "lucide-react";
 
 export default function UserLayout({
@@ -29,7 +41,10 @@ export default function UserLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const { canVisit } = useAccess();
   const router = useRouter();
+  const pathname = usePathname();
+  const [menuSearch, setMenuSearch] = useState("");
   const [loggingOut, setLoggingOut] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<{ full_name: string; role: string; line_picture_url?: string } | null>(null);
@@ -120,26 +135,75 @@ export default function UserLayout({
     }
   };
 
-  const navItems = [
-    { href: "/user", label: "ขอใช้รถใหม่", icon: Car },
-    { href: "/user/my-requests", label: "ประวัติการขอใช้รถ", icon: FileText, showBadge: pendingEvals > 0 },
-    { href: "/calendar", label: "ปฏิทินการใช้รถ", icon: Calendar },
-    { href: "/fuel", label: "เบิกน้ำมัน", icon: Fuel },
-    { href: "/report", label: "แจ้งปัญหา", icon: AlertTriangle },
-    { href: "/quality", label: "ประเมินความพึงพอใจ", icon: Star },
-    { href: "/vehicle-inspection", label: "ตรวจสภาพรถยนต์", icon: ClipboardCheck },
-    { href: "/vehicle-info", label: "ข้อมูลรถ", icon: Car },
-    { href: "https://line.me/R/ti/p/@420uicrg", label: "ติดต่อเรา", icon: MessageCircle, external: true },
-    { href: "/user/profile", label: "ข้อมูลส่วนตัว / LINE", icon: UserCircle },
-    { href: "/user/change-password", label: "เปลี่ยนรหัสผ่าน", icon: Key },
-    { href: "https://drive.google.com/drive/folders/1iTsmpuzdDFzqHbtO4UStINj82rBxqCTZ", label: "คลังข้อมูล", icon: FolderOpen, external: true },
+  type NavItem = { href: string; label: string; icon: LucideIcon; showBadge?: boolean; external?: boolean };
+  const managementIcons: Record<string, LucideIcon> = {
+    dashboard: LayoutDashboard, requests: FileText, vehicles: Car, drivers: Users,
+    fuel: Fuel, maintenance: Wrench, inspections: ClipboardCheck, evaluations: Star,
+    reports: FileText, fogging: SprayCan, duty: Calendar,
+  };
+  const navGroups: { id: string; title: string; items: NavItem[]; collapsible?: boolean }[] = [
+    { id: "personal", title: "การใช้รถของฉัน", items: [
+      { href: "/user/request", label: "ขอใช้รถใหม่", icon: Car },
+      { href: "/user/evaluations", label: "ประเมินบริการ", icon: Star },
+      { href: "/user/my-requests", label: "ประวัติการขอใช้รถ", icon: FileText, showBadge: pendingEvals > 0 },
+      { href: "/calendar", label: "ปฏิทินการใช้รถ", icon: Calendar },
+    ] },
+    { id: "services", title: "บริการและข้อมูลรถ", collapsible: true, items: [
+      { href: "/fuel", label: "เบิกน้ำมัน", icon: Fuel },
+      { href: "/report", label: "แจ้งปัญหา", icon: AlertTriangle },
+      { href: "/quality", label: "ประเมินความพึงพอใจ", icon: Star },
+      { href: "/vehicle-inspection", label: "ตรวจสภาพรถยนต์", icon: ClipboardCheck },
+      { href: "/vehicle-info", label: "ข้อมูลรถ", icon: Car },
+    ] },
+    { id: "management", title: "ส่วนจัดการที่ได้รับสิทธิ์", collapsible: true, items: [
+      ...PERMISSION_MODULES.filter(module => module.group === "งานจัดการ").flatMap(module => module.pages.map(key => PERMISSION_SECTIONS.find(section => section.key === key)!)).filter(section => !section.href.includes("[")).map(section => ({
+        href: section.href, label: section.label, icon: managementIcons[section.key.split(".")[0]] || Settings,
+      })),
+      { href: "/admin/permissions", label: "จัดการสิทธิ์", icon: ShieldCheck },
+    ] },
+    { id: "account", title: "บัญชีของฉัน", items: [
+      { href: "/user/profile", label: "ข้อมูลส่วนตัว / LINE", icon: UserCircle },
+      { href: "/user/change-password", label: "เปลี่ยนรหัสผ่าน", icon: Key },
+    ] },
+    { id: "help", title: "ช่วยเหลือ", items: [
+      { href: "https://line.me/R/ti/p/@420uicrg", label: "ติดต่อเรา", icon: MessageCircle, external: true },
+      { href: "https://drive.google.com/drive/folders/1iTsmpuzdDFzqHbtO4UStINj82rBxqCTZ", label: "คลังข้อมูล", icon: FolderOpen, external: true },
+    ] },
   ];
+  const activeLink = (href: string) => pathname === href || (href !== "/admin" && pathname.startsWith(`${href}/`));
+  const renderNavigation = (mobile = false) => {
+    const compact = collapsed && !mobile;
+    return <nav aria-label={mobile ? "เมนูผู้ใช้บนมือถือ" : "เมนูผู้ใช้"} className="min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-4">
+      <SidebarSearch value={menuSearch} onChange={setMenuSearch} compact={compact} onExpand={() => { if (collapsed) toggleSidebar(); }} onNavigate={() => mobile && setMobileMenuOpen(false)} extras={navGroups.flatMap(g => g.items).filter(i => !i.external)} />
+      {(compact || !menuSearch.trim()) && navGroups.map(group => {
+        const items = group.items.filter(item => canVisit(item.href));
+        if (!items.length) return null;
+        if (group.id === "management") return <section key={group.id}><p className="px-3 pb-2 text-xs text-blue-300">{!compact && "ส่วนจัดการ"}</p><ModuleNavigation compact={compact} onNavigate={() => mobile && setMobileMenuOpen(false)} /></section>;
+        const links = <div className="space-y-1">{items.map(item => {
+          const active = !item.external && activeLink(item.href);
+          const className = `relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${compact ? "justify-center" : ""} ${active ? "bg-white text-blue-800 shadow-sm" : "text-blue-100 hover:bg-white/10 hover:text-white"}`;
+          const content = <><item.icon className="h-[18px] w-[18px] shrink-0" />{!compact && <span className={`min-w-0 leading-5 ${item.showBadge ? "pr-5" : ""}`}>{item.label}</span>}{item.showBadge && <span aria-label="มีรายการรอประเมิน" className={`absolute flex h-4 w-4 items-center justify-center rounded-full bg-amber-400 text-blue-950 ${compact ? "right-1 top-1" : "right-2"}`}><Bell className="h-2.5 w-2.5" /></span>}</>;
+          return item.external ? <a key={item.href} href={item.href} target="_blank" rel="noopener noreferrer" title={item.label} onClick={() => mobile && setMobileMenuOpen(false)} className={className}>{content}</a>
+            : <Link key={item.href} href={item.href} title={item.label} aria-current={active ? "page" : undefined} onClick={() => mobile && setMobileMenuOpen(false)} className={className}>{content}</Link>;
+        })}</div>;
+        if (group.collapsible && !compact) return <details key={group.id} open={items.some(item => activeLink(item.href))} className="group rounded-xl border border-white/10 bg-blue-950/10">
+          <summary className="flex cursor-pointer list-none items-center gap-2 rounded-xl px-3 py-3 text-[11px] font-semibold text-blue-100 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 [&::-webkit-details-marker]:hidden">
+            {group.id === "management" ? <ShieldCheck className="h-4 w-4 shrink-0 text-amber-300" /> : <Car className="h-4 w-4 shrink-0 text-blue-300" />}
+            <span className="flex-1">{group.title}</span><span className="text-[10px] text-blue-300">{items.length}</span><ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
+          </summary><div className="border-t border-white/10 px-1 pb-2 pt-1">{links}</div>
+        </details>;
+        return <section key={group.id} aria-label={group.title} className={compact ? "border-t border-white/15 pt-3 first:border-0 first:pt-0" : ""}>
+          {!compact && <h2 className="mb-1.5 px-3 text-[10px] font-semibold tracking-wide text-blue-300">{group.title}</h2>}{links}
+        </section>;
+      })}
+    </nav>;
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row font-sans">
       
       {/* ===== DESKTOP SIDEBAR ===== */}
-      <aside className={`hidden md:flex flex-col fixed top-0 bottom-0 left-0 bg-[#1e40af] border-r border-blue-800 text-white transition-all duration-300 z-40 ${collapsed ? "w-[80px]" : "w-[260px]"}`}>
+      <aside className={`hidden md:flex flex-col fixed top-0 bottom-0 left-0 theme-sidebar bg-[#1e40af] border-r border-blue-800 text-white transition-all duration-300 z-40 ${collapsed ? "w-[80px]" : "w-[260px]"}`}>
         {/* Floating Collapse/Expand Toggle Button on Sidebar Border */}
         <button
           onClick={toggleSidebar}
@@ -186,49 +250,7 @@ export default function UserLayout({
         )}
 
         {/* Navigation Menu */}
-        <nav className="flex-1 py-4 px-3 space-y-1.5 overflow-y-auto">
-          {navItems.map((item, idx) => {
-            const className = `relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-black text-blue-100 hover:text-white hover:bg-white/10 transition-all uppercase tracking-wider ${collapsed ? "justify-center" : ""}`;
-            
-            const content = (
-              <>
-                <item.icon className="w-5 h-5 shrink-0 opacity-80" />
-                {!collapsed && (
-                  <span className="animate-[fadeIn_0.2s_ease-out] truncate">{item.label}</span>
-                )}
-                {item.showBadge && (
-                  <span className={`absolute bg-gradient-to-r from-amber-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg ${collapsed ? "-top-1 -right-1 w-4 h-4" : "right-3 w-5 h-5"}`}>
-                    <Bell className={`${collapsed ? "w-2.5 h-2.5" : "w-3 h-3"} text-white fill-white`} />
-                  </span>
-                )}
-              </>
-            );
-
-            if (item.external) {
-              return (
-                <a
-                  key={idx}
-                  href={item.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={className}
-                >
-                  {content}
-                </a>
-              );
-            }
-
-            return (
-              <Link
-                key={idx}
-                href={item.href}
-                className={className}
-              >
-                {content}
-              </Link>
-            );
-          })}
-        </nav>
+        {renderNavigation()}
 
         {/* Sidebar Footer */}
         <div className="p-3 border-t border-blue-800/80 bg-blue-950/20 shrink-0">
@@ -246,7 +268,7 @@ export default function UserLayout({
       </aside>
 
       {/* ===== MOBILE HEADER ===== */}
-      <header className="md:hidden w-full bg-[#1e40af] border-b border-blue-800 h-[72px] flex items-center justify-between px-4 z-50 shadow-md shrink-0">
+      <header className="md:hidden w-full theme-sidebar bg-[#1e40af] border-b border-blue-800 h-[72px] flex items-center justify-between px-4 z-50 shadow-md shrink-0">
         <button
           className="p-2 text-white hover:bg-white/10 rounded-xl transition-colors active:scale-95 border border-white/20"
           onClick={() => setMobileMenuOpen(true)}
@@ -269,7 +291,7 @@ export default function UserLayout({
         className={`fixed inset-0 bg-black/40 backdrop-blur-sm z-50 transition-opacity duration-300 md:hidden ${mobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
         onClick={() => setMobileMenuOpen(false)}
       />
-      <aside className={`fixed left-0 top-0 bottom-0 w-[270px] bg-[#1e40af] border-r border-blue-800 text-white shadow-2xl z-50 transform transition-transform duration-300 ease-out flex flex-col md:hidden ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"}`}>
+      <aside className={`fixed left-0 top-0 bottom-0 w-[270px] theme-sidebar bg-[#1e40af] border-r border-blue-800 text-white shadow-2xl z-50 transform transition-transform duration-300 ease-out flex flex-col md:hidden ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"}`}>
         
         {/* Brand Header */}
         <div className="h-[72px] flex items-center justify-between border-b border-blue-800 shrink-0 px-4">
@@ -311,49 +333,7 @@ export default function UserLayout({
         )}
 
         {/* Navigation Menu */}
-        <nav className="flex-1 py-4 px-3 space-y-1.5 overflow-y-auto">
-          {navItems.map((item, idx) => {
-            const className = "relative flex items-center gap-3 px-3 py-3 rounded-xl text-xs font-black text-blue-100 hover:text-white hover:bg-white/10 transition-all uppercase tracking-wider";
-            
-            const content = (
-              <>
-                <item.icon className="w-5 h-5 shrink-0 opacity-80" />
-                <span className="truncate">{item.label}</span>
-                {item.showBadge && (
-                  <span className="absolute right-3 bg-gradient-to-r from-amber-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg w-5 h-5">
-                    <Bell className="w-3 h-3 text-white fill-white" />
-                  </span>
-                )}
-              </>
-            );
-
-            if (item.external) {
-              return (
-                <a
-                  key={idx}
-                  href={item.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={className}
-                >
-                  {content}
-                </a>
-              );
-            }
-
-            return (
-              <Link
-                key={idx}
-                href={item.href}
-                onClick={() => setMobileMenuOpen(false)}
-                className={className}
-              >
-                {content}
-              </Link>
-            );
-          })}
-        </nav>
+        {renderNavigation(true)}
 
         {/* Sidebar Footer */}
         <div className="p-3 border-t border-blue-800/80 bg-blue-950/20 shrink-0">

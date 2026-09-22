@@ -389,7 +389,7 @@ export default function UserPage() {
                 const { data: dutyBookings } = await (await import("@/lib/supabaseClient")).supabase
                     .from("bookings")
                     .select("id, status, start_at, start_mileage, end_mileage, distance")
-                    .eq("request_code", "DUTY-VAN")
+                    .like("request_code", "DUTY-VAN-%")
                     .in("status", ["COMPLETED", "CANCELLED", "IN_PROGRESS"])
                     .order("created_at", { ascending: false });
 

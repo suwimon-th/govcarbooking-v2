@@ -1,3 +1,4 @@
+import { assertDriverAvailable } from "@/lib/driver-leave-store";
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseClient";
 import { sendLinePush, flexAssignDriver } from "@/lib/line";
@@ -12,6 +13,12 @@ export async function POST(req: Request) {
 
         // 1. Assign Driver to Bookings (if any selected)
         if (booking_ids && booking_ids.length > 0) {
+            const { data: jobs, error: readError } = await supabase.from("bookings").select("id,start_at,end_at").in("id", booking_ids);
+            if (readError || jobs?.length !== booking_ids.length) return NextResponse.json({ error: "อ่านงานไม่สำเร็จ" }, { status: 400 });
+            for (const job of jobs) {
+                try { await assertDriverAvailable(driver_id, job.start_at, job.end_at); }
+                catch { return NextResponse.json({ error: "คนขับลาตรงกับช่วงเวลางาน กรุณาเลือกคนอื่น" }, { status: 409 }); }
+            }
             const { error: updateErr } = await supabase
                 .from("bookings")
                 .update({

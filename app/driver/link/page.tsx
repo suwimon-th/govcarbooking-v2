@@ -95,7 +95,7 @@ function DriverLinkPage() {
           const loginRes = await fetch("/api/line/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ line_user_id: lineUserId, line_picture_url: pictureUrl }),
+            body: JSON.stringify({ access_token: liff.getAccessToken() }),
           });
           const loginJson = await loginRes.json().catch(() => ({}));
 
@@ -118,7 +118,7 @@ function DriverLinkPage() {
             const linkRes = await fetch("/api/user/link-line", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ line_user_id: lineUserId, line_picture_url: pictureUrl }),
+              body: JSON.stringify({ access_token: liff.getAccessToken() }),
             });
             const linkJson = await linkRes.json().catch(() => ({}));
 

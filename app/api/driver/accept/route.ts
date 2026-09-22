@@ -1,3 +1,4 @@
+import { assertDriverAvailable } from "@/lib/driver-leave-store";
 
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseClient";
@@ -60,6 +61,8 @@ export async function POST(req: Request) {
     // ------------------------------
     // อัปเดตสถานะเป็น ACCEPTED
     // ------------------------------
+    try { await assertDriverAvailable(driverId, booking.start_at, booking.end_at); }
+    catch { return NextResponse.json({ error: "คุณมีวันลาตรงกับงานนี้ กรุณาติดต่อแอดมิน" }, { status: 409 }); }
     const { error: updateErr } = await supabase
       .from("bookings")
       .update({
