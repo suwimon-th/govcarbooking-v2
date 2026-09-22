@@ -1,4 +1,5 @@
 "use client";
+import Swal from "sweetalert2";
 
 import { useEffect, useState, useMemo } from "react";
 import { getStatusLabel, getStatusColor, isOffHours } from "@/lib/statusHelper";
@@ -206,22 +207,54 @@ export default function MyRequestsPage() {
   };
 
   const handleCancel = async (id: string) => {
-    const ok = confirm("ยืนยันยกเลิกการขอใช้รถ?");
-    if (!ok) return;
-
-    const res = await fetch("/api/user/cancel-request", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ id }),
+    const result = await Swal.fire({
+      title: "ยืนยันยกเลิกการขอใช้รถ?",
+      text: "คุณต้องการยกเลิกคำขอนี้ใช่หรือไม่?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "ใช่, ยกเลิกเลย",
+      cancelButtonText: "ปิด",
     });
 
-    if (!res.ok) {
-      alert("ยกเลิกไม่สำเร็จ");
-      return;
-    }
+    if (!result.isConfirmed) return;
 
-    location.reload();
+    Swal.fire({
+      title: "กำลังยกเลิก...",
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      },
+    });
+
+    try {
+      const res = await fetch("/api/user/cancel-request", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ id }),
+      });
+
+      if (!res.ok) {
+        throw new Error("ยกเลิกไม่สำเร็จ");
+      }
+
+      await Swal.fire({
+        title: "ยกเลิกสำเร็จ!",
+        icon: "success",
+        timer: 1500,
+        showConfirmButton: false,
+      });
+
+      location.reload();
+    } catch (err: any) {
+      Swal.fire({
+        title: "เกิดข้อผิดพลาด",
+        text: err.message || "ไม่สามารถยกเลิกคำขอได้",
+        icon: "error",
+      });
+    }
   };
 
   const handleDownloadDoc = async (item: MyRequest) => {

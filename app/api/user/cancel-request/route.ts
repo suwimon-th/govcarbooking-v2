@@ -57,15 +57,24 @@ export async function PUT(req: Request) {
     }
 
     // 🔄 อัปเดตสถานะเป็น CANCELLED และลบเลขที่คำขอ (ตามคำขอของผู้ใช้)
-    const { error } = await supabase
+    const { data: updated, error } = await supabase
       .from("bookings")
       .update({ 
         status: "CANCELLED",
         request_code: null 
       })
-      .eq("id", id);
+      .eq("id", id)
+      .select();
 
-    if (error) throw error;
+    if (error) {
+      console.error("Supabase update error:", error);
+      throw error;
+    }
+
+    if (!updated || updated.length === 0) {
+      console.error("No rows were updated. Possible RLS issue.");
+      return NextResponse.json({ error: "ไม่สามารถอัปเดตข้อมูลได้ (RLS/Permissions)" }, { status: 403 });
+    }
 
     return NextResponse.json({ success: true });
   } catch (err) {
