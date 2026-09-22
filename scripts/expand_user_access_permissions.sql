@@ -25,6 +25,7 @@ ALTER TABLE public.user_access_permissions ADD CONSTRAINT valid_permission_keys
     'inspections.config',
     'reports.fuel',
     'reports.annual',
+    'reports.fiscal',
     'profile',
     'change_password'
   ]::TEXT[]);
