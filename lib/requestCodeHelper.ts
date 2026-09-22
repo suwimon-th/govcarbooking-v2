@@ -5,11 +5,25 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 /**
- * Generates the next sequential request_code for a vehicle.
- * Format: ENV-{plate2digits}/{seq3} (e.g. ENV-73/311)
- * Calculates the true numerical maximum running number for the prefix.
+ * คำนวณปีงบประมาณ (BE 2-digit) จากวันที่
+ * ปีงบฯ เริ่ม 1 ต.ค. - 30 ก.ย.
+ * e.g. วันที่ใช้รถ Sep 22, 2026 (AD) → ปีงบฯ 69 (BE 2569)
+ *       วันที่ใช้รถ Oct 1, 2026  (AD) → ปีงบฯ 70 (BE 2570)
  */
-export async function generateRequestCode(vehicleId: string): Promise<string> {
+export function getFiscalYearShort(date: Date = new Date()): string {
+  const m = date.getMonth(); // 0-based
+  const y = date.getFullYear();
+  const beFull = m >= 9 ? (y + 1) + 543 : y + 543;
+  return String(beFull).slice(-2); // e.g. "69" or "70"
+}
+
+/**
+ * Generates the next sequential request_code for a vehicle.
+ * Format: ENV-{plate2}/{fiscalYearShort}/{seq3}
+ * e.g. ENV-73/70/001 (ปีงบ 70, เที่ยวที่ 1)
+ * Sequence resets per fiscal year per vehicle prefix.
+ */
+export async function generateRequestCode(vehicleId: string, startAt?: string): Promise<string> {
     const { data: vehicle } = await supabase
         .from("vehicles")
         .select("plate_number")
@@ -19,9 +33,13 @@ export async function generateRequestCode(vehicleId: string): Promise<string> {
     const plate = vehicle?.plate_number || "";
     const digits = plate.replace(/\D/g, "");
     const plateSuffix = digits.slice(-2) || "00";
-    const prefix = `ENV-${plateSuffix}/`;
 
-    // Query all bookings matching this prefix to find true numerical maximum
+    const refDate = startAt ? new Date(startAt) : new Date();
+    const fiscalYearShort = getFiscalYearShort(refDate);
+
+    const prefix = `ENV-${plateSuffix}/${fiscalYearShort}/`;
+
+    // Query all bookings matching this prefix (same vehicle, same fiscal year) to find true numerical maximum
     const { data } = await supabase
         .from("bookings")
         .select("request_code")
@@ -32,8 +50,9 @@ export async function generateRequestCode(vehicleId: string): Promise<string> {
         for (const row of data) {
             if (!row.request_code) continue;
             const parts = row.request_code.split("/");
-            if (parts.length === 2) {
-                const parsed = parseInt(parts[1], 10);
+            // Format: ENV-XX/YY/NNN → parts[2] is sequence
+            if (parts.length === 3) {
+                const parsed = parseInt(parts[2], 10);
                 if (!isNaN(parsed) && parsed > maxRunning) {
                     maxRunning = parsed;
                 }
@@ -47,13 +66,17 @@ export async function generateRequestCode(vehicleId: string): Promise<string> {
 
 /**
  * Generates the next sequential request_code for an "other" vehicle (รถอื่นๆ)
- * Format: ENV-OT/{seq3} (e.g. ENV-OT/001)
- * Calculates the true numerical maximum running number for the prefix.
+ * Format: ENV-OT/{fiscalYearShort}/{seq3} (e.g. ENV-OT/70/001)
+ * Sequence resets per fiscal year.
  */
-export async function generateOtherVehicleRequestCode(otherPlateNumber: string | null): Promise<string> {
+export async function generateOtherVehicleRequestCode(otherPlateNumber: string | null, startAt?: string): Promise<string> {
     const digits = (otherPlateNumber || "").replace(/\D/g, "");
     const plateSuffix = digits.slice(-2) || "OT";
-    const prefix = `ENV-${plateSuffix}/`;
+
+    const refDate = startAt ? new Date(startAt) : new Date();
+    const fiscalYearShort = getFiscalYearShort(refDate);
+
+    const prefix = `ENV-${plateSuffix}/${fiscalYearShort}/`;
 
     // Query all bookings matching this prefix to find true numerical maximum
     const { data } = await supabase
@@ -66,8 +89,8 @@ export async function generateOtherVehicleRequestCode(otherPlateNumber: string |
         for (const row of data) {
             if (!row.request_code) continue;
             const parts = row.request_code.split("/");
-            if (parts.length === 2) {
-                const parsed = parseInt(parts[1], 10);
+            if (parts.length === 3) {
+                const parsed = parseInt(parts[2], 10);
                 if (!isNaN(parsed) && parsed > maxRunning) {
                     maxRunning = parsed;
                 }
@@ -78,6 +101,7 @@ export async function generateOtherVehicleRequestCode(otherPlateNumber: string |
     const nextRunning = maxRunning + 1;
     return `${prefix}${String(nextRunning).padStart(3, "0")}`;
 }
+
 
 /**
  * Resequences request_code for all bookings of a vehicle (or all vehicles)

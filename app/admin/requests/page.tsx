@@ -139,13 +139,37 @@ function AdminRequestsContent() {
   const [filterDriver, setFilterDriver] = useState("");
   const [filterRequester, setFilterRequester] = useState("");
   const [filterOpen, setFilterOpen] = useState(false);
+  const [filterFiscalYear, setFilterFiscalYear] = useState<string>(""); // "" = all, "69" = ปีงบ 69, etc.
+
+  // Helper: get date range for a fiscal year short code (e.g. "69" → Oct 1, 2025 – Sep 30, 2026)
+  const getFiscalYearDateRange = (fy: string): { from: string; to: string } | null => {
+    if (!fy) return null;
+    const beFull = parseInt(`25${fy}`, 10); // 69 → 2569
+    const endAD = beFull - 543;   // 2569 - 543 = 2026
+    const startAD = endAD - 1;    // 2025
+    return {
+      from: `${startAD}-10-01`, // Oct 1
+      to:   `${endAD}-09-30`,   // Sep 30
+    };
+  };
+
+  // Available fiscal years for the filter (derive from current year)
+  const FISCAL_YEAR_OPTIONS = (() => {
+    const now = new Date();
+    const m = now.getMonth();
+    const y = now.getFullYear();
+    const beFull = m >= 9 ? (y + 1) + 543 : y + 543;
+    const current = String(beFull).slice(-2);
+    const prev = String(beFull - 1).slice(-2);
+    return [{ value: current, label: `ปีงบ ${current}` }, { value: prev, label: `ปีงบ ${prev}` }];
+  })();
 
   // Reset to page 1 on filter/search change
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, filterStatus, filterDateFrom, filterDateTo, filterDriver, filterRequester, pageSize, conflictIdsParam]);
+  }, [search, filterStatus, filterDateFrom, filterDateTo, filterDriver, filterRequester, pageSize, conflictIdsParam, filterFiscalYear]);
 
-  const activeFilterCount = [filterDateFrom, filterDateTo, filterDriver, filterRequester].filter(Boolean).length;
+  const activeFilterCount = [filterDateFrom, filterDateTo, filterDriver, filterRequester, filterFiscalYear].filter(Boolean).length;
 
   // Quick date preset helper
   const applyDatePreset = (preset: 'today' | 'week' | 'month' | 'clear') => {
@@ -346,12 +370,18 @@ function AdminRequestsContent() {
       query = query.or(`request_code.ilike.%${search}%,purpose.ilike.%${search}%`);
     }
 
-    // Date filter
-    if (filterDateFrom) {
-      query = query.gte("start_at", `${filterDateFrom}T00:00:00`);
-    }
-    if (filterDateTo) {
-      query = query.lte("start_at", `${filterDateTo}T23:59:59`);
+    // Date filter — fiscal year overrides manual date range
+    const fiscalRange = getFiscalYearDateRange(filterFiscalYear);
+    if (fiscalRange) {
+      query = query.gte("start_at", `${fiscalRange.from}T00:00:00`);
+      query = query.lte("start_at", `${fiscalRange.to}T23:59:59`);
+    } else {
+      if (filterDateFrom) {
+        query = query.gte("start_at", `${filterDateFrom}T00:00:00`);
+      }
+      if (filterDateTo) {
+        query = query.lte("start_at", `${filterDateTo}T23:59:59`);
+      }
     }
 
     // Range calculation
@@ -381,7 +411,7 @@ function AdminRequestsContent() {
 
   useEffect(() => {
     loadData();
-  }, [currentPage, pageSize, filterStatus, search, filterDateFrom, filterDateTo, conflictIdsParam]);
+  }, [currentPage, pageSize, filterStatus, search, filterDateFrom, filterDateTo, conflictIdsParam, filterFiscalYear]);
 
   const loadNextQueue = async () => {
     try {
@@ -704,6 +734,25 @@ function AdminRequestsContent() {
 
         {/* Right: Filters */}
         <div className="flex flex-wrap items-center gap-3">
+          {/* Fiscal Year Filter Buttons */}
+          <div className="flex items-center gap-1.5 bg-gray-100 rounded-xl p-1">
+            <button
+              onClick={() => setFilterFiscalYear("")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${filterFiscalYear === "" ? "bg-white text-gray-800 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+            >
+              ทุกปีงบ
+            </button>
+            {FISCAL_YEAR_OPTIONS.map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => setFilterFiscalYear(filterFiscalYear === opt.value ? "" : opt.value)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${filterFiscalYear === opt.value ? "bg-indigo-600 text-white shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
           {/* Today Filter Button */}
           <button
             onClick={() => {
@@ -712,6 +761,7 @@ function AdminRequestsContent() {
                 applyDatePreset('clear');
               } else {
                 applyDatePreset('today');
+                setFilterFiscalYear(""); // clear fiscal filter when using today
               }
             }}
             className={`px-4 py-2.5 rounded-xl border text-xs font-extrabold transition-all shadow-xs whitespace-nowrap ${
@@ -743,6 +793,7 @@ function AdminRequestsContent() {
           </div>
         </div>
       </div>
+
 
       {/* Filter Row Removed for simplification */}
       <div className="mb-6 flex justify-end">

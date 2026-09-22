@@ -196,10 +196,10 @@ export async function POST(req: Request) {
       const timestamp = new Date().getTime().toString().slice(-6);
       request_code = `TEST-${timestamp}`;
     } else if (vehicle_id) {
-      request_code = await generateRequestCode(vehicle_id);
+      request_code = await generateRequestCode(vehicle_id, start_at);
     } else {
       // Other vehicle (อื่นๆ): generate code from plate digits
-      request_code = await generateOtherVehicleRequestCode(other_vehicle_plate);
+      request_code = await generateOtherVehicleRequestCode(other_vehicle_plate, start_at);
     }
 
     // ✅ Calculate is_ot automatically
@@ -253,9 +253,9 @@ export async function POST(req: Request) {
       if (attempt > 0 && !no_request_code && requester?.role !== "TESTER") {
         console.warn(`⚠️ [REQUEST_CODE] Duplicate detected, retrying... (attempt ${attempt + 1})`);
         if (vehicle_id) {
-          request_code = await generateRequestCode(vehicle_id);
+          request_code = await generateRequestCode(vehicle_id, start_at);
         } else {
-          request_code = await generateOtherVehicleRequestCode(other_vehicle_plate);
+          request_code = await generateOtherVehicleRequestCode(other_vehicle_plate, start_at);
         }
       }
 

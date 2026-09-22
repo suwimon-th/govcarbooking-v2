@@ -97,7 +97,8 @@ export async function PUT(req: Request) {
         const isPrebooking = currentCode === "จองล่วงหน้า" || !currentCode;
 
         if (isPrebooking && effectiveVehicleId) {
-            updateData.request_code = await generateRequestCode(effectiveVehicleId);
+            const effectiveStartAt = start_at ?? oldBooking.start_at;
+            updateData.request_code = await generateRequestCode(effectiveVehicleId, effectiveStartAt);
         }
 
         // 5. Compare changes to construct diff log
