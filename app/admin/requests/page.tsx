@@ -486,7 +486,23 @@ function AdminRequestsContent() {
 
   const deleteBooking = async (id: string) => {
     if (!confirm("ต้องการลบคำขอนี้หรือไม่?")) return;
-    await supabase.from("bookings").delete().eq("id", id);
+    
+    // Find the booking before deleting to log its details
+    const target = rows.find(r => r.id === id);
+
+    const { error } = await supabase.from("bookings").delete().eq("id", id);
+    if (!error) {
+      // Log action
+      const user = (await supabase.auth.getUser()).data.user;
+      if (user) {
+        await supabase.from("system_audit_logs").insert({
+          actor_id: user.id,
+          action: "ADMIN_DELETE_BOOKING",
+          target_id: target?.requester_id || null,
+          details: { booking_id: id, request_code: target?.request_code }
+        });
+      }
+    }
     loadData();
   };
 
@@ -541,11 +557,26 @@ function AdminRequestsContent() {
     if (!confirm(`ต้องการลบรายการที่เลือก ${selectedIds.size} รายการหรือไม่?`)) return;
 
     const ids = Array.from(selectedIds);
+    const deletedRows = rows.filter(r => ids.includes(r.id));
+    
     const { error } = await supabase.from("bookings").delete().in("id", ids);
 
     if (error) {
       alert("เกิดข้อผิดพลาดในการลบ: " + error.message);
     } else {
+      // Log action
+      const user = (await supabase.auth.getUser()).data.user;
+      if (user) {
+        await supabase.from("system_audit_logs").insert({
+          actor_id: user.id,
+          action: "ADMIN_BULK_DELETE_BOOKINGS",
+          details: { 
+            booking_ids: ids, 
+            request_codes: deletedRows.map(r => r.request_code) 
+          }
+        });
+      }
+
       setSelectedIds(new Set());
       loadData();
     }

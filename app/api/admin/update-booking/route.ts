@@ -1,4 +1,5 @@
 import { assertDriverAvailable } from "@/lib/driver-leave-store";
+import { cookies } from "next/headers";
 
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabaseClient";
@@ -8,6 +9,9 @@ import { generateRequestCode } from "@/lib/requestCodeHelper";
 
 export async function POST(req: Request) {
     try {
+        const cookieStore = await cookies();
+        const actorId = cookieStore.get("user_id")?.value;
+
         const body = await req.json();
         const {
             id,
@@ -150,6 +154,16 @@ export async function POST(req: Request) {
         if (error) {
             console.error("UPDATE ERROR:", error);
             return NextResponse.json({ error: error.message }, { status: 400 });
+        }
+
+        // ✅ LOG THE EDIT ACTION
+        if (actorId && Object.keys(updateData).length > 0) {
+            await supabase.from("system_audit_logs").insert({
+                actor_id: actorId,
+                action: "ADMIN_UPDATE_BOOKING",
+                target_id: requester_id || oldBooking?.requester_id || null,
+                details: { booking_id: id, changes: updateData }
+            });
         }
 
         // ✅ generate request_code ใหม่เมื่อ:

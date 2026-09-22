@@ -77,6 +77,7 @@ export default function AdminShell({
     "/admin/drivers/leaves": "วันลาคนขับ",
     "/admin/users": "จัดการผู้ใช้งาน",
     "/admin/permissions": "จัดการสิทธิ์การเข้าถึง",
+    "/admin/audit-logs": "ประวัติการทำงาน (Audit Logs)",
     "/admin/reports": "รายงานสถิติ",
     "/admin/reports/monthly": "รายงานการใช้รถรายเดือน",
     "/admin/reports/fuel": "รายงานน้ำมันรายเดือน",
@@ -164,6 +165,7 @@ export default function AdminShell({
     { href: "/admin/drivers", label: "ข้อมูลคนขับรถ", icon: Users },
     { href: "/admin/users", label: "จัดการผู้ใช้งาน", icon: Users },
     { href: "/admin/permissions", label: "จัดการสิทธิ์", icon: Settings },
+    { href: "/admin/audit-logs", label: "ประวัติระบบ", icon: FileText },
     { href: "/admin/fogging", label: "เครื่องพ่นหมอกควัน", icon: SprayCan },
     { href: "/admin/duty-settings", label: "ตั้งค่าเวรรถตู้", icon: Settings },
   ];
