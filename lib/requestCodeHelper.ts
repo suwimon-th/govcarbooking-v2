@@ -142,19 +142,17 @@ export async function resequenceRequestCodes(targetVehicleId?: string): Promise<
 
         const targetVehicleIds = Array.from(vehicleMap.keys());
 
-        // 2. Fetch all valid (non-cancelled, non-rejected) bookings for target vehicles
+        // 2. Fetch ALL bookings for target vehicles (including CANCELLED/REJECTED to avoid unique constraint issues)
         const { data: bookings, error: bErr } = await supabase
             .from("bookings")
             .select("id, request_code, vehicle_id, start_at, created_at")
-            .in("vehicle_id", targetVehicleIds)
-            .neq("status", "CANCELLED")
-            .neq("status", "REJECTED");
+            .in("vehicle_id", targetVehicleIds);
 
         if (bErr || !bookings || bookings.length === 0) {
             return { success: true, updatedCount: 0 };
         }
 
-        // GLOBAL PASS 1: Clear ALL existing request_codes to TEMP-{id} to release unique keys across the database
+        // GLOBAL PASS 1: Clear ALL existing request_codes to TEMP-{id}
         await Promise.all(
             bookings.map((b) =>
                 supabase.from("bookings").update({ request_code: `TEMP-${b.id}` }).eq("id", b.id)
@@ -163,11 +161,29 @@ export async function resequenceRequestCodes(targetVehicleId?: string): Promise<
 
         let totalUpdated = 0;
 
-        // GLOBAL PASS 2: Group bookings by prefix and assign sequential codes chronologically by created_at ASC
-        for (const [prefix, vIds] of prefixVehiclesMap.entries()) {
-            const prefixBookings = bookings.filter((b) => b.vehicle_id && vIds.includes(b.vehicle_id));
+        // GLOBAL PASS 2: Group by Vehicle AND Fiscal Year
+        const prefixYearMap = new Map<string, typeof bookings>();
 
-            // Sort chronologically by created_at ASC (whoever booked first gets earlier number), then start_at ASC
+        bookings.forEach(b => {
+            if (!b.vehicle_id) return;
+            const prefixBase = vehicleMap.get(b.vehicle_id);
+            if (!prefixBase) return;
+
+            // Determine fiscal year from start_at or created_at
+            const refDate = b.start_at ? new Date(b.start_at) : (b.created_at ? new Date(b.created_at) : new Date());
+            const fiscalYearShort = getFiscalYearShort(refDate);
+
+            const fullPrefix = `${prefixBase}${fiscalYearShort}/`;
+            
+            if (!prefixYearMap.has(fullPrefix)) {
+                prefixYearMap.set(fullPrefix, []);
+            }
+            prefixYearMap.get(fullPrefix)!.push(b);
+        });
+
+        // Process each group
+        for (const [fullPrefix, prefixBookings] of prefixYearMap.entries()) {
+            // Sort chronologically by created_at ASC
             prefixBookings.sort((a, b) => {
                 const ca = a.created_at ? new Date(a.created_at).getTime() : 0;
                 const cb = b.created_at ? new Date(b.created_at).getTime() : 0;
@@ -179,7 +195,7 @@ export async function resequenceRequestCodes(targetVehicleId?: string): Promise<
 
             const updatePromises = prefixBookings.map((b, idx) => {
                 const seqStr = String(idx + 1).padStart(3, "0");
-                const expectedCode = `${prefix}${seqStr}`;
+                const expectedCode = `${fullPrefix}${seqStr}`;
 
                 if (b.request_code !== expectedCode) {
                     totalUpdated++;
