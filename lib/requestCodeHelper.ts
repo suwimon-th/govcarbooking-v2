@@ -152,12 +152,22 @@ export async function resequenceRequestCodes(targetVehicleId?: string): Promise<
             return { success: true, updatedCount: 0 };
         }
 
+        // Helper function for chunking
+        const chunkArray = <T,>(arr: T[], size: number): T[][] => {
+            return Array.from({ length: Math.ceil(arr.length / size) }, (v, i) =>
+                arr.slice(i * size, i * size + size)
+            );
+        };
+
         // GLOBAL PASS 1: Clear ALL existing request_codes to TEMP-{id}
-        await Promise.all(
-            bookings.map((b) =>
-                supabase.from("bookings").update({ request_code: `TEMP-${b.id}` }).eq("id", b.id)
-            )
-        );
+        const pass1Chunks = chunkArray(bookings, 50);
+        for (const chunk of pass1Chunks) {
+            await Promise.all(
+                chunk.map((b) =>
+                    supabase.from("bookings").update({ request_code: `TEMP-${b.id}` }).eq("id", b.id)
+                )
+            );
+        }
 
         let totalUpdated = 0;
 
@@ -193,24 +203,25 @@ export async function resequenceRequestCodes(targetVehicleId?: string): Promise<
                 return ta - tb;
             });
 
-            const updatePromises = prefixBookings.map((b, idx) => {
+            const updates = prefixBookings.map((b, idx) => {
                 const seqStr = String(idx + 1).padStart(3, "0");
                 const expectedCode = `${fullPrefix}${seqStr}`;
 
                 if (b.request_code !== expectedCode) {
                     totalUpdated++;
                 }
-
-                return supabase
-                    .from("bookings")
-                    .update({ request_code: expectedCode })
-                    .eq("id", b.id);
+                return { id: b.id, code: expectedCode };
             });
 
-            const results = await Promise.all(updatePromises);
-            for (const r of results) {
-                if (r.error) {
-                    console.error("Resequence update error:", r.error);
+            // Run updates in chunks to prevent timeout / pool exhaustion
+            const updateChunks = chunkArray(updates, 50);
+            for (const chunk of updateChunks) {
+                const results = await Promise.all(
+                    chunk.map(u => supabase.from("bookings").update({ request_code: u.code }).eq("id", u.id))
+                );
+                
+                for (const r of results) {
+                    if (r.error) console.error("Resequence update error:", r.error);
                 }
             }
         }
