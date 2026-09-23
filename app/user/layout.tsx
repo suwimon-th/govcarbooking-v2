@@ -33,6 +33,7 @@ import {
   SprayCan,
   Settings,
   ShieldCheck,
+  RefreshCw,
   type LucideIcon
 } from "lucide-react";
 
@@ -160,6 +161,7 @@ export default function UserLayout({
         href: section.href, label: section.label, icon: managementIcons[section.key.split(".")[0]] || Settings,
       })),
       { href: "/admin/permissions", label: "จัดการสิทธิ์", icon: ShieldCheck },
+      { href: "/admin/request-codes", label: "จัดการเลขคำขอ", icon: RefreshCw },
       { href: "/admin/audit-logs", label: "ประวัติระบบ", icon: FileText },
     ] },
     { id: "account", title: "บัญชีของฉัน", items: [

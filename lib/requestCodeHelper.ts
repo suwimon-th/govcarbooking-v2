@@ -11,10 +11,13 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
  *       วันที่ใช้รถ Oct 1, 2026  (AD) → ปีงบฯ 70 (BE 2570)
  */
 export function getFiscalYearShort(date: Date = new Date()): string {
-  const m = date.getMonth(); // 0-based
-  const y = date.getFullYear();
+  // Convert date to Bangkok timezone (UTC+7) to ensure correct fiscal year calculation in production
+  const localeString = date.toLocaleString('en-US', { timeZone: 'Asia/Bangkok' });
+  const thaiDate = new Date(localeString);
+  const m = thaiDate.getMonth(); // 0‑based month in Bangkok time
+  const y = thaiDate.getFullYear();
   const beFull = m >= 9 ? (y + 1) + 543 : y + 543;
-  return String(beFull).slice(-2); // e.g. "69" or "70"
+  return String(beFull).slice(-2);
 }
 
 /**

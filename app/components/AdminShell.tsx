@@ -28,7 +28,8 @@ import {
   Settings,
   UserCircle,
   Bell,
-  FolderOpen
+  FolderOpen,
+  RefreshCw
 } from "lucide-react";
 import ReportIssueModal from "@/app/components/ReportIssueModal";
 
@@ -160,8 +161,9 @@ export default function AdminShell({
     { href: "/calendar", label: "ปฏิทินงาน", icon: Calendar },
   ];
 
-  const manageNav = [
+    const manageNav = [
     { href: "/admin/vehicles", label: "ข้อมูลรถทั้งหมด", icon: Car },
+    { href: "/admin/request-codes", label: "จัดการเลขคำขอ", icon: RefreshCw },
     { href: "/admin/drivers", label: "ข้อมูลคนขับรถ", icon: Users },
     { href: "/admin/users", label: "จัดการผู้ใช้งาน", icon: Users },
     { href: "/admin/permissions", label: "จัดการสิทธิ์", icon: Settings },

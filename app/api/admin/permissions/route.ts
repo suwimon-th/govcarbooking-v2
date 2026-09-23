@@ -53,7 +53,7 @@ export async function PUT(request: Request) {
     if (saveError) return unavailable();
 
     // Log the action
-    await db.from("system_audit_logs").insert({
+    const { error: auditError } = await db.from("system_audit_logs").insert({
       actor_id: actor.id,
       action: "UPDATE_PERMISSIONS",
       target_id: target.id,
@@ -62,6 +62,10 @@ export async function PUT(request: Request) {
         new_permissions: permissions
       }
     });
+    
+    if (auditError) {
+      console.error("Failed to insert system_audit_logs:", auditError);
+    }
 
     return NextResponse.json({ success: true, permissions });
   } catch { return unavailable(); }
