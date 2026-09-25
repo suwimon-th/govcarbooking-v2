@@ -48,13 +48,14 @@ interface BookingItem {
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const startParam = searchParams.get("start");
-    const endParam = searchParams.get("end");
-
-    // คำนวณ date range: 2 ปีย้อนหลัง ถึง 1 ปีข้างหน้า (ครอบคลุมปีงบประมาณ)
+    // คำนวณ date range: 6 เดือนย้อนหลัง ถึง 1 ปีข้างหน้า (ครอบคลุมการใช้งานจริงและไม่เกิน 1000 rows limit)
     const now = new Date();
-    const rangeStart = new Date(now.getFullYear() - 2, 0, 1).toISOString();
-    const rangeEnd = new Date(now.getFullYear() + 1, 11, 31).toISOString();
+    
+    const rangeStart = new Date();
+    rangeStart.setMonth(rangeStart.getMonth() - 6);
+    
+    const rangeEnd = new Date();
+    rangeEnd.setFullYear(rangeEnd.getFullYear() + 1);
 
     let query = supabase
       .from("bookings")
@@ -80,8 +81,8 @@ export async function GET(req: Request) {
           phone
         )
       `)
-      .gte("start_at", rangeStart)
-      .lte("start_at", rangeEnd);
+      .gte("start_at", rangeStart.toISOString())
+      .lte("start_at", rangeEnd.toISOString());
 
     const { data, error } = await query
       .order("start_at", { ascending: true })
