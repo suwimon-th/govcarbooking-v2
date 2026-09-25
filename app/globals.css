@@ -201,17 +201,12 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   transform: translateY(0);
 }
 /* ═══════════════════════════════════════════════════════════════
-   FONT & TEXT OVERRIDES — changed by ThemePicker
+   FONT OVERRIDE — changed by ThemePicker
 ═══════════════════════════════════════════════════════════════ */
 @media screen {
   html[data-font] body,
   html[data-font] * {
     font-family: var(--font-override, var(--font-prompt), 'Sarabun', sans-serif) !important;
-  }
-  
-  html[data-custom-text] body,
-  html[data-custom-text] :is(.text-gray-900, .text-gray-800, .text-gray-700, .text-slate-900, .text-slate-800, .text-slate-700) {
-    color: var(--custom-text-color) !important;
   }
 }
 
@@ -405,5 +400,29 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   html[data-custom-colors] .theme-sidebar .bg-white { background-color: color-mix(in srgb, white 95%, var(--sidebar-bg)) !important; color: var(--sidebar-bg) !important; }
   /* Accent color for buttons/active states */
   html[data-custom-colors] :is(.bg-[#1e40af], .bg-blue-700, .bg-blue-600, .btn-primary) { background-color: var(--action-bg) !important; color: var(--action-fg) !important; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CUSTOM TEXT COLOR — applied via ThemePicker (overrides dark mode)
+═══════════════════════════════════════════════════════════════ */
+@media screen {
+  /* Apply to body and all standard dark neutral classes used for main text */
+  html[data-custom-text] body,
+  html[data-custom-text] :is(
+    .text-black, .text-gray-950, .text-gray-900, .text-gray-800, .text-gray-700, 
+    .text-slate-950, .text-slate-900, .text-slate-800, .text-slate-700,
+    .text-zinc-950, .text-zinc-900, .text-zinc-800, .text-zinc-700
+  ) {
+    color: var(--custom-text-color) !important;
+  }
+  
+  /* Apply to medium neutral classes used for subtitles, keeping them slightly transparent so they still look muted */
+  html[data-custom-text] :is(
+    .text-gray-600, .text-gray-500, .text-gray-400, 
+    .text-slate-600, .text-slate-500, .text-slate-400,
+    .text-zinc-600, .text-zinc-500, .text-zinc-400
+  ) {
+    color: color-mix(in srgb, var(--custom-text-color) 70%, transparent) !important;
+  }
 }
 
