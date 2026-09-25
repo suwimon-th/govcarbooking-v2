@@ -36,70 +36,37 @@ function colorText(hex: string): '#111827' | '#ffffff' {
   return (L + .05) / .05 > 1.05 / (L + .05) ? '#111827' : '#ffffff';
 }
 
-function hexToRgb(hex: string): [number, number, number] {
-  return [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16)) as [number, number, number];
-}
-
-function rgbToHex(r: number, g: number, b: number): string {
-  return '#' + [r, g, b].map(n => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0')).join('');
-}
-
-// Mini inline color picker with R/G/B sliders + hex input
+// Mini inline color picker with native color input + hex input
 function MiniColorPicker({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
-  const [open, setOpen] = useState(false);
   const [hex, setHex] = useState(value.toUpperCase());
-  const rgb = hexToRgb(value);
 
   useEffect(() => { setHex(value.toUpperCase()); }, [value]);
 
   const update = (next: string) => { onChange(next); setHex(next.toUpperCase()); };
-  const channelLabels = ['R', 'G', 'B'];
-  const channelColors = ['#ef4444', '#22c55e', '#3b82f6'];
 
   return (
-    <div>
-      <div className="flex items-center justify-between gap-3 text-sm">
-        <span className="font-medium opacity-80">{label}</span>
-        <button
-          type="button"
-          onClick={() => setOpen(o => !o)}
-          className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-[var(--theme-border,#dbe3ef)] hover:bg-black/5 transition-colors text-xs font-mono"
-        >
-          <span className="w-5 h-5 rounded-md border border-black/20 shrink-0" style={{ background: value }} />
-          {value.toUpperCase()}
-          <ChevronDown className={`w-3 h-3 transition-transform ${open ? 'rotate-180' : ''}`} />
-        </button>
+    <div className="flex items-center justify-between gap-3 text-sm">
+      <span className="font-medium opacity-80">{label}</span>
+      <div className="flex items-center gap-2">
+        <label className="relative flex items-center justify-center w-8 h-8 rounded-lg border shadow-sm cursor-pointer overflow-hidden hover:scale-105 transition-transform shrink-0" style={{ borderColor: 'var(--theme-border, #dbe3ef)' }}>
+          <input
+            type="color"
+            value={value || '#000000'}
+            onChange={e => update(e.target.value)}
+            className="absolute -top-2 -left-2 w-12 h-12 cursor-pointer"
+          />
+        </label>
+        <input 
+          type="text" 
+          value={hex} 
+          maxLength={7} 
+          spellCheck={false}
+          className="w-[72px] px-2 py-1.5 border rounded-lg text-xs font-mono bg-[var(--card-bg)] text-[var(--foreground)] uppercase text-center"
+          style={{ borderColor: 'var(--theme-border, #dbe3ef)' }}
+          onChange={e => { const v = e.target.value; setHex(v); if (/^#[0-9a-fA-F]{6}$/i.test(v)) update(v); }}
+          onBlur={() => setHex((value || '').toUpperCase())} 
+        />
       </div>
-
-      {open && (
-        <div className="mt-2 p-3 rounded-xl border border-[var(--theme-border,#dbe3ef)] bg-[var(--card-bg)] space-y-2">
-          {/* Color preview */}
-          <div className="h-10 rounded-lg flex items-center justify-center text-xs font-bold" style={{ background: value, color: colorText(value) }}>
-            {value.toUpperCase()}
-          </div>
-          {/* RGB sliders */}
-          {channelLabels.map((ch, i) => (
-            <label key={ch} className="flex items-center gap-2 text-xs">
-              <span className="w-4 font-bold" style={{ color: channelColors[i] }}>{ch}</span>
-              <input type="range" min={0} max={255} value={rgb[i]} className="flex-1 h-1.5 rounded-full cursor-pointer accent-current"
-                style={{ accentColor: channelColors[i] }}
-                onChange={e => { const next = [...rgb]; next[i] = Number(e.target.value); update(rgbToHex(next[0], next[1], next[2])); }} />
-              <output className="w-8 text-right tabular-nums opacity-70">{rgb[i]}</output>
-            </label>
-          ))}
-          {/* Hex input */}
-          <label className="block text-xs">
-            <span className="opacity-60">Hex #</span>
-            <input type="text" value={hex} maxLength={7} spellCheck={false}
-              className="mt-1 w-full px-2 py-1.5 border border-[var(--theme-border,#dbe3ef)] rounded-lg text-xs font-mono bg-[var(--card-bg)] text-[var(--foreground)]"
-              onChange={e => { const v = e.target.value; setHex(v); if (/^#[0-9a-f]{6}$/i.test(v)) update(v); }}
-              onBlur={() => setHex(value.toUpperCase())} />
-          </label>
-          <button type="button" onClick={() => setOpen(false)} className="w-full py-1.5 rounded-lg text-xs font-semibold bg-[var(--theme-selected,#e7eeff)] text-[var(--theme-accent,#1d4ed8)]">
-            ✓ เสร็จสิ้น
-          </button>
-        </div>
-      )}
     </div>
   );
 }
