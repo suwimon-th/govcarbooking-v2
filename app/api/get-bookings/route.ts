@@ -51,6 +51,11 @@ export async function GET(req: Request) {
     const startParam = searchParams.get("start");
     const endParam = searchParams.get("end");
 
+    // คำนวณ date range: 2 ปีย้อนหลัง ถึง 1 ปีข้างหน้า (ครอบคลุมปีงบประมาณ)
+    const now = new Date();
+    const rangeStart = new Date(now.getFullYear() - 2, 0, 1).toISOString();
+    const rangeEnd = new Date(now.getFullYear() + 1, 11, 31).toISOString();
+
     let query = supabase
       .from("bookings")
       .select(`
@@ -74,11 +79,14 @@ export async function GET(req: Request) {
           full_name,
           phone
         )
-      `);
+      `)
+      .gte("start_at", rangeStart)
+      .lte("start_at", rangeEnd);
 
     const { data, error } = await query
       .order("start_at", { ascending: true })
-      .order("created_at", { ascending: true });
+      .order("created_at", { ascending: true })
+      .range(0, 9999); // override Supabase default 1000-row limit
 
     if (error) {
       console.error("GET_BOOKINGS_ERROR:", error.message);
