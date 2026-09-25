@@ -291,9 +291,16 @@ export default function DailyBookingList({ events, selectedDate, onItemClick, on
 
                                     {/* Col 3 — Vehicle + Status (fixed 11rem width) */}
                                     <div className="flex flex-col items-end justify-between border-l border-gray-100 px-3 py-4 min-w-0 overflow-hidden">
-                                        <div className="flex items-center gap-1.5 overflow-hidden w-full justify-end">
-                                            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: evt.color || '#9CA3AF' }} />
-                                            <span className="text-xs font-black text-gray-700 truncate text-right">{evt.extendedProps?.vehicle || 'รถส่วนกลาง'}</span>
+                                        <div className="flex flex-col items-end gap-1 w-full">
+                                            <div className="flex items-center gap-1.5 overflow-hidden w-full justify-end">
+                                                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: evt.color || '#9CA3AF' }} />
+                                                <span className="text-xs font-black text-gray-700 truncate text-right">{evt.extendedProps?.vehicle || 'รถส่วนกลาง'}</span>
+                                            </div>
+                                            {evt.extendedProps?.request_code && (
+                                                <span className="text-[9px] font-mono font-bold text-gray-400 bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded truncate max-w-full text-right">
+                                                    {evt.extendedProps.request_code}
+                                                </span>
+                                            )}
                                         </div>
                                         <span className={`inline-flex items-center justify-center px-2 py-1 rounded-xl text-[10.5px] font-black border shadow-sm text-center leading-tight max-w-full mt-auto ${getStatusColor(evt.extendedProps?.status || 'REQUESTED')}`}>{statusLabel}</span>
                                     </div>
@@ -310,8 +317,13 @@ export default function DailyBookingList({ events, selectedDate, onItemClick, on
                                         </div>
                                         <span className={`inline-flex items-center justify-center px-2.5 py-1 rounded-xl text-[10px] font-black border shadow-sm whitespace-nowrap ${getStatusColor(evt.extendedProps?.status || 'REQUESTED')}`}>{statusLabel}</span>
                                     </div>
-                                    <div className="flex items-center gap-1 text-[10px] mb-1.5 overflow-hidden">
+                                    <div className="flex items-center gap-1.5 text-[10px] mb-1.5 overflow-hidden flex-wrap">
                                         <span className="bg-blue-50 border border-blue-100 text-blue-600 px-1.5 py-0.5 rounded font-black uppercase shrink-0">วัตถุประสงค์</span>
+                                        {evt.extendedProps?.request_code && (
+                                            <span className="font-mono font-bold text-gray-400 bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded shrink-0">
+                                                {evt.extendedProps.request_code}
+                                            </span>
+                                        )}
                                         {evt.extendedProps?.requester && (
                                             <span className="flex items-center gap-0.5 font-bold text-gray-400 overflow-hidden">
                                                 <User className="w-3 h-3 shrink-0" /><span className="truncate max-w-[120px]">{evt.extendedProps.requester}</span>
