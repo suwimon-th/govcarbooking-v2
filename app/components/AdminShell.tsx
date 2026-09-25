@@ -16,7 +16,7 @@ import {
 import ReportIssueModal from "@/app/components/ReportIssueModal";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-type NavItem = { href: string; label: string; icon: React.ElementType; badge?: number };
+type NavItem = { href: string; label: string; icon: React.ElementType; badge?: number; target?: string };
 type NavGroup = { id: string; label: string; icon: React.ElementType; items: NavItem[]; defaultOpen?: boolean };
 
 // ─── Collapsible Nav Group (Accordion) ──────────────────────────────────────
@@ -40,7 +40,7 @@ function NavGroup({
           const Icon = item.icon;
           const active = pathname === item.href;
           return (
-            <Link key={item.href} href={item.href} title={item.label} onClick={onNavigate}
+            <Link key={item.href} href={item.href} title={item.label} onClick={onNavigate} target={item.target} rel={item.target === "_blank" ? "noopener noreferrer" : undefined}
               className={`relative flex items-center justify-center w-10 h-10 mx-auto rounded-xl transition-all ${active ? "bg-white text-[#1e40af] shadow-md" : "text-blue-100 hover:text-white hover:bg-white/15"}`}>
               <Icon className="w-5 h-5" />
               {(item.badge ?? 0) > 0 && (
@@ -81,6 +81,8 @@ function NavGroup({
                 key={item.href}
                 href={item.href}
                 onClick={onNavigate}
+                target={item.target}
+                rel={item.target === "_blank" ? "noopener noreferrer" : undefined}
                 className={`relative flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${active ? "bg-white text-[#1e40af] shadow-sm font-black" : "text-blue-100 hover:text-white hover:bg-white/10"}`}
               >
                 <Icon className="w-4 h-4 shrink-0" />
@@ -171,7 +173,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         { href: "/admin", label: "แผงควบคุม", icon: Home },
         { href: "/admin/dashboard", label: "สถานะงาน & เลขไมล์", icon: LayoutDashboard },
         { href: "/admin/requests", label: "คำขอใช้รถ", icon: FileText, badge: pendingCount },
-        { href: "/calendar", label: "ปฏิทินงาน", icon: Calendar },
+        { href: "/calendar", label: "ปฏิทินงาน", icon: Calendar, target: "_blank" },
       ].filter(i => canVisit(i.href)),
     },
     {
@@ -238,7 +240,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
               const Icon = item.icon;
               const active = pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href + "/"));
               return (
-                <Link key={item.href} href={item.href} title={item.label}
+                <Link key={item.href} href={item.href} title={item.label} target={item.target} rel={item.target === "_blank" ? "noopener noreferrer" : undefined}
                   className={`relative flex items-center justify-center w-10 h-10 rounded-xl transition-all ${active ? "bg-white text-[#1e40af] shadow-md" : "text-blue-100 hover:text-white hover:bg-white/15"}`}>
                   <Icon className="w-5 h-5" />
                   {(item.badge ?? 0) > 0 && (
