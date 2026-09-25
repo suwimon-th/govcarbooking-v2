@@ -261,7 +261,7 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   html[data-theme="dark"] :is(.border-amber-100, .border-amber-200) { border-color: #451a03 !important; }
 
   /* Inputs / Forms */
-  html[data-theme="dark"] :is(input, select, textarea) {
+  html[data-theme="dark"] :is(input:not([type="color"]), select, textarea) {
     background-color: #0f172a !important;
     color: #e2e8f0 !important;
     border-color: #475569 !important;
