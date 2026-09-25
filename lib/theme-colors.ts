@@ -1,4 +1,4 @@
-export const DEFAULT_COLORS = { sidebar: '#1e40af', accent: '#2456d9' };
+export const DEFAULT_COLORS = { sidebar: '#1e40af', accent: '#2456d9', text: '' };
 export type ThemeColors = typeof DEFAULT_COLORS;
 export function safeColor(value: unknown, fallback: string) { return typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value) ? value : fallback; }
 export function colorText(hex: string) {
@@ -12,5 +12,14 @@ export function applyColors(colors: ThemeColors) {
   style.setProperty('--sidebar-fg', colorText(colors.sidebar));
   style.setProperty('--action-bg', colors.accent);
   style.setProperty('--action-fg', colorText(colors.accent));
+  
+  if (colors.text) {
+    style.setProperty('--custom-text-color', colors.text);
+    document.documentElement.setAttribute('data-custom-text', 'true');
+  } else {
+    style.removeProperty('--custom-text-color');
+    document.documentElement.removeAttribute('data-custom-text');
+  }
+  
   document.documentElement.setAttribute('data-custom-colors', 'true');
 }

@@ -120,7 +120,7 @@ export default function ThemePicker() {
       let saved = DEFAULT_COLORS;
       try {
         const stored = JSON.parse(localStorage.getItem('govcar-colors') || '{}');
-        saved = { sidebar: safeColor(stored.sidebar, DEFAULT_COLORS.sidebar), accent: safeColor(stored.accent, DEFAULT_COLORS.accent) };
+        saved = { sidebar: safeColor(stored.sidebar, DEFAULT_COLORS.sidebar), accent: safeColor(stored.accent, DEFAULT_COLORS.accent), text: stored.text || '' };
       } catch {}
       let savedFont = 'Prompt';
       try { savedFont = localStorage.getItem('govcar-font') || 'Prompt'; } catch {}
@@ -240,7 +240,7 @@ export default function ThemePicker() {
                     {PRESETS.map(p => {
                       const isSelected = colors.sidebar === p.sidebar && colors.accent === p.accent;
                       return (
-                        <button key={p.name} title={p.name} onClick={() => changeColors({ sidebar: p.sidebar, accent: p.accent })}
+                        <button key={p.name} title={p.name} onClick={() => changeColors({ sidebar: p.sidebar, accent: p.accent, text: colors.text })}
                           className={`relative group flex flex-col items-center gap-1.5 p-2 rounded-xl border transition-all ${isSelected ? 'border-white shadow-lg scale-105' : 'border-transparent hover:scale-105'}`}
                           style={{ background: p.sidebar }}>
                           <div className="w-6 h-6 rounded-full border-2 border-white/40" style={{ background: p.accent }} />
@@ -266,6 +266,11 @@ export default function ThemePicker() {
                     label="สีปุ่มหลัก / Accent"
                     value={colors.accent}
                     onChange={v => changeColors({ ...colors, accent: v })}
+                  />
+                  <MiniColorPicker
+                    label="สีตัวอักษรหลัก"
+                    value={colors.text || '#1f2937'}
+                    onChange={v => changeColors({ ...colors, text: v })}
                   />
                 </div>
 

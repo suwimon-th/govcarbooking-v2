@@ -201,12 +201,17 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   transform: translateY(0);
 }
 /* ═══════════════════════════════════════════════════════════════
-   FONT OVERRIDE — changed by ThemePicker
+   FONT & TEXT OVERRIDES — changed by ThemePicker
 ═══════════════════════════════════════════════════════════════ */
 @media screen {
   html[data-font] body,
   html[data-font] * {
     font-family: var(--font-override, var(--font-prompt), 'Sarabun', sans-serif) !important;
+  }
+  
+  html[data-custom-text] body,
+  html[data-custom-text] :is(.text-gray-900, .text-gray-800, .text-gray-700, .text-slate-900, .text-slate-800, .text-slate-700) {
+    color: var(--custom-text-color) !important;
   }
 }
 
