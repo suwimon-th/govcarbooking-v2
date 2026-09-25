@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { getActiveFiscalYear } from "./settings";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -37,8 +38,15 @@ export async function generateRequestCode(vehicleId: string, startAt?: string): 
     const digits = plate.replace(/\D/g, "");
     const plateSuffix = digits.slice(-2) || "00";
 
-    const refDate = startAt ? new Date(startAt) : new Date();
-    const fiscalYearShort = getFiscalYearShort(refDate);
+    // ใช้ปีงบประมาณที่แอดมินตั้งไว้ ถ้าไม่ได้ตั้ງ คำนวณอัตโนมัติจาก start_at
+    const adminFiscalYear = await getActiveFiscalYear();
+    let fiscalYearShort: string;
+    if (adminFiscalYear) {
+        fiscalYearShort = adminFiscalYear;
+    } else {
+        const refDate = startAt ? new Date(startAt) : new Date();
+        fiscalYearShort = getFiscalYearShort(refDate);
+    }
 
     const prefix = `ENV-${plateSuffix}/${fiscalYearShort}/`;
 
@@ -76,8 +84,15 @@ export async function generateOtherVehicleRequestCode(otherPlateNumber: string |
     const digits = (otherPlateNumber || "").replace(/\D/g, "");
     const plateSuffix = digits.slice(-2) || "OT";
 
-    const refDate = startAt ? new Date(startAt) : new Date();
-    const fiscalYearShort = getFiscalYearShort(refDate);
+    // ใช้ปีงบประมาณที่แอดมินตั้งไว้ ถ้าไม่ได้ตั้ງ คำนวณอัตโนมัติจาก start_at
+    const adminFiscalYear = await getActiveFiscalYear();
+    let fiscalYearShort: string;
+    if (adminFiscalYear) {
+        fiscalYearShort = adminFiscalYear;
+    } else {
+        const refDate = startAt ? new Date(startAt) : new Date();
+        fiscalYearShort = getFiscalYearShort(refDate);
+    }
 
     const prefix = `ENV-${plateSuffix}/${fiscalYearShort}/`;
 

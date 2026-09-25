@@ -88,6 +88,7 @@ export interface SystemVanDutyState {
   global_enabled: boolean;
   default_title: string;
   monthly_duties: Record<string, MonthlyDutyConfig>;
+  active_fiscal_year?: string | null;  // e.g. "69", "70", null = auto
 }
 
 export async function getAllVanDutyState(): Promise<SystemVanDutyState> {
@@ -113,6 +114,7 @@ export async function getAllVanDutyState(): Promise<SystemVanDutyState> {
           global_enabled: typeof parsed.global_enabled === "boolean" ? parsed.global_enabled : (typeof parsed.enabled === "boolean" ? parsed.enabled : true),
           default_title: parsed.default_title || parsed.title || defaultState.default_title,
           monthly_duties: parsed.monthly_duties || {},
+          active_fiscal_year: parsed.active_fiscal_year ?? null,
         };
       } catch {
         return defaultState;
@@ -122,6 +124,35 @@ export async function getAllVanDutyState(): Promise<SystemVanDutyState> {
   } catch (err) {
     console.error("[Settings] Read Van Duty State Error:", err);
     return defaultState;
+  }
+}
+
+/**
+ * อ่านปีงบประมาณที่แอดมินตั้งค่าไว้ (2-digit BE, e.g. "69")
+ * คืนค่า null ถ้ายังไม่ได้ตั้ง (ระบบจะคำนวณอัตโนมัติ)
+ */
+export async function getActiveFiscalYear(): Promise<string | null> {
+  const state = await getAllVanDutyState();
+  return state.active_fiscal_year ?? null;
+}
+
+/**
+ * บันทึกปีงบประมาณที่แอดมินเลือก
+ * @param fiscalYear "69", "70", ... หรือ null เพื่อกลับเป็นอัตโนมัติ
+ */
+export async function setActiveFiscalYear(fiscalYear: string | null): Promise<void> {
+  try {
+    const currentState = await getAllVanDutyState();
+    currentState.active_fiscal_year = fiscalYear;
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({ full_name: JSON.stringify(currentState) })
+      .eq("id", SYSTEM_CONFIG_ID);
+
+    if (error) console.error("[Settings] setActiveFiscalYear Error:", error);
+  } catch (err) {
+    console.error("[Settings] setActiveFiscalYear Exception:", err);
   }
 }
 
