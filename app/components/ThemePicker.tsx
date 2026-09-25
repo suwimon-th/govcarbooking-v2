@@ -48,20 +48,26 @@ function MiniColorPicker({ label, value, onChange }: { label: string; value: str
     <div className="flex items-center justify-between gap-3 text-sm">
       <span className="font-medium opacity-80">{label}</span>
       <div className="flex items-center gap-2">
-        <label className="relative flex items-center justify-center w-8 h-8 rounded-lg border shadow-sm cursor-pointer overflow-hidden hover:scale-105 transition-transform shrink-0" style={{ borderColor: 'var(--theme-border, #dbe3ef)' }}>
+        {/* Custom Color Swatch */}
+        <label 
+          className="relative flex items-center justify-center w-8 h-8 rounded-lg border shadow-sm cursor-pointer overflow-hidden hover:scale-105 transition-transform shrink-0" 
+          style={{ borderColor: 'var(--theme-border, #dbe3ef)', backgroundColor: value || '#000000' }}
+        >
           <input
             type="color"
             value={value || '#000000'}
             onChange={e => update(e.target.value)}
-            className="absolute -top-2 -left-2 w-12 h-12 cursor-pointer"
+            className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
           />
         </label>
+        
+        {/* Hex Text Input */}
         <input 
           type="text" 
           value={hex} 
           maxLength={7} 
           spellCheck={false}
-          className="w-[72px] px-2 py-1.5 border rounded-lg text-xs font-mono bg-[var(--card-bg)] text-[var(--foreground)] uppercase text-center"
+          className="w-[72px] px-2 py-1.5 border rounded-lg text-xs font-mono bg-[var(--card-bg)] text-[var(--foreground)] uppercase text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
           style={{ borderColor: 'var(--theme-border, #dbe3ef)' }}
           onChange={e => { const v = e.target.value; setHex(v); if (/^#[0-9a-fA-F]{6}$/i.test(v)) update(v); }}
           onBlur={() => setHex((value || '').toUpperCase())} 
