@@ -290,7 +290,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row font-sans">
 
       {/* ===== DESKTOP SIDEBAR ===== */}
-      <aside className={`hidden md:flex flex-col fixed top-0 bottom-0 left-0 bg-[#1e40af] border-r border-blue-800 text-white transition-all duration-300 z-40 ${collapsed ? "w-[72px]" : "w-[240px]"}`}>
+      <aside className={`theme-sidebar hidden md:flex flex-col fixed top-0 bottom-0 left-0 bg-[#1e40af] border-r border-blue-800 text-white transition-all duration-300 z-40 ${collapsed ? "w-[72px]" : "w-[240px]"}`}>
 
         {/* Toggle */}
         <button onClick={toggleSidebar} title={collapsed ? "ขยายเมนู" : "หุบเมนู"}
@@ -364,7 +364,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
       {/* ===== MOBILE DRAWER ===== */}
       <div className={`fixed inset-0 bg-black/40 backdrop-blur-sm z-50 transition-opacity duration-300 ${mobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`} onClick={() => setMobileMenuOpen(false)} />
-      <div className={`fixed left-0 top-0 h-full w-[272px] bg-[#1e40af] text-white shadow-2xl z-50 transform transition-transform duration-300 flex flex-col ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"}`}>
+      <div className={`theme-sidebar fixed left-0 top-0 h-full w-[272px] bg-[#1e40af] text-white shadow-2xl z-50 transform transition-transform duration-300 flex flex-col ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"}`}>
 
         {/* Drawer Header */}
         <div className="p-4 flex items-center justify-between border-b border-blue-800 bg-blue-950/40">

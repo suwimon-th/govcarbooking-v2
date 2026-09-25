@@ -359,6 +359,28 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   DARK MODE SIDEBAR OVERRIDES
+═══════════════════════════════════════════════════════════════ */
+@media screen {
+  /* Prevent dark mode background rules from turning active items dark gray against a blue sidebar */
+  html[data-theme="dark"] .theme-sidebar .bg-white {
+    background-color: rgba(255, 255, 255, 0.15) !important;
+    color: #ffffff !important;
+  }
+  
+  /* Prevent global dark mode inputs from making the sidebar search box dark blue */
+  html[data-theme="dark"] .theme-sidebar :is(input, select, textarea) {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    color: #ffffff !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+  }
+  
+  html[data-theme="dark"] .theme-sidebar input::placeholder {
+    color: rgba(255, 255, 255, 0.5) !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
    CUSTOM SIDEBAR COLORS — applied via ThemePicker
 ═══════════════════════════════════════════════════════════════ */
 @media screen {

@@ -282,7 +282,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
     <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row font-sans">
 
       {/* ===== DESKTOP SIDEBAR ===== */}
-      <aside className={`hidden md:flex flex-col fixed top-0 bottom-0 left-0 bg-[#1e40af] border-r border-blue-800 text-white transition-all duration-300 z-40 ${collapsed ? "w-[72px]" : "w-[240px]"}`}>
+      <aside className={`theme-sidebar hidden md:flex flex-col fixed top-0 bottom-0 left-0 bg-[#1e40af] border-r border-blue-800 text-white transition-all duration-300 z-40 ${collapsed ? "w-[72px]" : "w-[240px]"}`}>
         {/* Toggle */}
         <button onClick={toggleSidebar} title={collapsed ? "ขยายเมนู" : "หุบเมนู"}
           className="hidden md:flex items-center justify-center w-6 h-6 rounded-full bg-white text-[#1e40af] hover:bg-blue-50 border border-blue-200 shadow-md absolute -right-3 top-[24px] z-50 transition-transform duration-200 hover:scale-110 active:scale-95 cursor-pointer">
@@ -351,7 +351,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
 
       {/* ===== MOBILE DRAWER ===== */}
       <div className={`fixed inset-0 bg-black/40 backdrop-blur-sm z-50 transition-opacity duration-300 md:hidden ${mobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`} onClick={() => setMobileMenuOpen(false)} />
-      <aside className={`fixed left-0 top-0 bottom-0 w-[268px] bg-[#1e40af] border-r border-blue-800 text-white shadow-2xl z-50 transform transition-transform duration-300 flex flex-col md:hidden ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"}`}>
+      <aside className={`theme-sidebar fixed left-0 top-0 bottom-0 w-[268px] bg-[#1e40af] border-r border-blue-800 text-white shadow-2xl z-50 transform transition-transform duration-300 flex flex-col md:hidden ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"}`}>
 
         {/* Drawer Header */}
         <div className="h-[60px] flex items-center justify-between border-b border-blue-800 shrink-0 px-4">
