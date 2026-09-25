@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import Swal from "sweetalert2";
-import { Car, RefreshCw, AlertTriangle, Play, ShieldAlert, Settings, Check, Calendar, RotateCcw } from "lucide-react";
+import { Car, RefreshCw, AlertTriangle, Play, ShieldAlert, Settings, Check, Calendar, RotateCcw, Edit2 } from "lucide-react";
 
 type VehicleStats = {
     id: string;
@@ -97,6 +97,64 @@ export default function RequestCodesPage() {
     const handleResetToAuto = async () => {
         setFiscalYearInput("");
         await handleSaveFiscalYear();
+    };
+
+    const handleEditCode = async (vehicleId: string, plate: string, oldCode: string) => {
+        const { value: newCode } = await Swal.fire({
+            title: 'แก้ไขเลขล่าสุด',
+            html: `
+                <div class="text-left text-sm text-gray-600 mb-4">
+                    รถทะเบียน: <span class="font-bold text-gray-900">${plate}</span><br/>
+                    เลขปัจจุบัน: <span class="font-bold text-gray-900">${oldCode}</span>
+                </div>
+                <input id="swal-input-code" class="swal2-input font-mono text-center text-blue-700 font-bold" value="${oldCode}" placeholder="ENV-XX/YY/ZZZ" style="width: 80%; font-size: 1.1rem; padding: 1rem;">
+                <p class="text-[11px] text-gray-500 text-left mt-2 px-6">
+                    * รูปแบบที่แนะนำคือ <span class="font-mono bg-gray-100 px-1 rounded">ENV-XX/YY/ZZZ</span><br/>
+                    * เลขคำขอถัดไปของคันนี้จะบวกเพิ่มจากเลขที่คุณระบุ (เช่น แก้เป็น .../099 คิวถัดไปจะเป็น .../100)
+                </p>
+            `,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: 'บันทึกการเปลี่ยนแปลง',
+            cancelButtonText: 'ยกเลิก',
+            confirmButtonColor: "#2563eb",
+            preConfirm: () => {
+                const input = document.getElementById('swal-input-code') as HTMLInputElement;
+                if (!input || !input.value.trim()) {
+                    Swal.showValidationMessage('กรุณาระบุเลขคำขอ');
+                    return false;
+                }
+                const val = input.value.trim().toUpperCase();
+                if (!val.startsWith("ENV-")) {
+                    Swal.showValidationMessage('ต้องขึ้นต้นด้วย ENV-');
+                    return false;
+                }
+                return val;
+            }
+        });
+
+        if (newCode && newCode !== oldCode) {
+            try {
+                const res = await fetch("/api/admin/request-codes/edit", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ vehicle_id: vehicleId, old_code: oldCode, new_code: newCode })
+                });
+                const json = await res.json();
+                if (!res.ok) throw new Error(json.error || "แก้ไขไม่สำเร็จ");
+                
+                Swal.fire({
+                    title: "อัปเดตสำเร็จ",
+                    text: `เปลี่ยนเลขเป็น ${newCode} เรียบร้อยแล้ว`,
+                    icon: "success",
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+                fetchData();
+            } catch (err: any) {
+                Swal.fire("ผิดพลาด", err.message, "error");
+            }
+        }
     };
 
     const fetchData = async () => {
@@ -226,121 +284,114 @@ export default function RequestCodesPage() {
                     </div>
                 </div>
 
-                {/* Current Status */}
-                <div className={`flex items-center gap-3 p-3 rounded-xl mb-5 ${isManualMode ? "bg-amber-50 border border-amber-200" : "bg-green-50 border border-green-200"}`}>
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isManualMode ? "bg-amber-500" : "bg-green-500"}`}>
-                        {isManualMode ? <Settings className="w-4 h-4 text-white" /> : <RotateCcw className="w-4 h-4 text-white" />}
-                    </div>
-                    <div className="min-w-0">
-                        <div className={`text-xs font-black uppercase tracking-wider ${isManualMode ? "text-amber-700" : "text-green-700"}`}>
-                            {isManualMode ? "โหมดกำหนดเอง (Manual)" : "โหมดอัตโนมัติ (Auto)"}
-                        </div>
-                        <div className={`text-sm font-bold ${isManualMode ? "text-amber-900" : "text-green-900"}`}>
-                            {loadingFY ? "กำลังโหลด..." : (
-                                isManualMode
-                                    ? `คำขอใหม่จะใช้ปีงบประมาณ ${activeFiscalYear} เสมอ`
-                                    : `คำนวณจากวันที่ใช้รถ (ปัจจุบัน = ปี ${autoFY})`
-                            )}
-                        </div>
-                    </div>
-                    <div className="ml-auto">
-                        <span className={`font-mono text-2xl font-black ${isManualMode ? "text-amber-600" : "text-green-600"}`}>
-                            {effectiveFY}
-                        </span>
-                    </div>
-                </div>
-
-                {/* Input + Actions */}
-                <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
-                    <div className="flex-1">
-                        <label className="block text-xs font-bold text-gray-600 mb-1.5">
-                            ปีงบประมาณ (2 หลัก, เช่น 69, 70)
-                        </label>
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold text-gray-500 bg-gray-100 px-3 py-2 rounded-lg border border-gray-200 shrink-0">
-                                BE 25
-                            </span>
-                            <input
-                                type="text"
-                                inputMode="numeric"
-                                maxLength={2}
-                                placeholder={`${autoFY} (อัตโนมัติ)`}
-                                value={fiscalYearInput}
-                                onChange={(e) => setFiscalYearInput(e.target.value.replace(/\D/g, "").slice(0, 2))}
-                                className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-300 font-mono"
+                {/* New Grid Layout for FY Setup */}
+                <div className="grid md:grid-cols-2 gap-6 mt-4">
+                    {/* Mode Selection */}
+                    <div className="space-y-3">
+                        <label className="flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all hover:bg-gray-50 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
+                            <input 
+                                type="radio" 
+                                name="fyMode" 
+                                className="mt-1 w-4 h-4 text-blue-600 focus:ring-blue-500" 
+                                checked={fiscalYearInput === ""}
+                                onChange={() => setFiscalYearInput("")}
                             />
-                        </div>
-                        <p className="text-[11px] text-gray-400 mt-1">
-                            เว้นว่างเพื่อใช้โหมดอัตโนมัติ (คำนวณจากวันที่ใช้รถ)
-                        </p>
-                    </div>
-                    <div className="flex gap-2 shrink-0">
-                        <button
-                            onClick={handleSaveFiscalYear}
-                            disabled={savingFY || loadingFY}
-                            className="flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-xl text-sm font-bold shadow-sm transition-all disabled:opacity-50"
-                        >
-                            {savingFY ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                            บันทึก
-                        </button>
-                        {isManualMode && (
-                            <button
-                                onClick={async () => {
-                                    setFiscalYearInput("");
-                                    setSavingFY(true);
-                                    try {
-                                        await fetch("/api/admin/fiscal-year-setting", {
-                                            method: "PUT",
-                                            headers: { "Content-Type": "application/json" },
-                                            body: JSON.stringify({ fiscal_year: null })
-                                        });
-                                        setActiveFiscalYear(null);
-                                        setFiscalYearInput("");
-                                        Swal.fire({ title: "รีเซ็ตแล้ว!", text: "กลับสู่โหมดอัตโนมัติ", icon: "success", timer: 1500, showConfirmButton: false });
-                                    } finally {
-                                        setSavingFY(false);
-                                    }
+                            <div>
+                                <div className="font-bold text-gray-900 text-sm">โหมดอัตโนมัติ (คำนวณจากวันที่ใช้รถ)</div>
+                                <div className="text-xs text-gray-500 mt-1 leading-relaxed">
+                                    ใช้ปีงบประมาณตามวันที่ใช้รถจริง<br/>
+                                    (ปัจจุบันระบบจะใช้ปี <strong className="text-gray-700">{autoFY}</strong>)
+                                </div>
+                            </div>
+                        </label>
+                        
+                        <label className="flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all hover:bg-gray-50 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
+                            <input 
+                                type="radio" 
+                                name="fyMode" 
+                                className="mt-1 w-4 h-4 text-blue-600 focus:ring-blue-500" 
+                                checked={fiscalYearInput !== ""}
+                                onChange={() => {
+                                    if(fiscalYearInput === "") setFiscalYearInput(autoFY);
                                 }}
-                                disabled={savingFY}
-                                className="flex items-center gap-2 bg-gray-100 text-gray-700 hover:bg-gray-200 px-4 py-2 rounded-xl text-sm font-bold transition-all disabled:opacity-50"
-                            >
-                                <RotateCcw className="w-4 h-4" />
-                                รีเซ็ต
-                            </button>
+                            />
+                            <div>
+                                <div className="font-bold text-gray-900 text-sm">กำหนดปีงบประมาณเอง (Manual)</div>
+                                <div className="text-xs text-gray-500 mt-1 leading-relaxed">
+                                    ล็อคปีงบประมาณสำหรับคำขอใหม่ทั้งหมด<br/>
+                                    (เหมาะสำหรับช่วงคาบเกี่ยวปีงบประมาณ)
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+
+                    {/* Manual Input Settings */}
+                    <div className="flex flex-col justify-center">
+                        {fiscalYearInput !== "" ? (
+                            <div className="space-y-4 animate-in fade-in slide-in-from-left-4 bg-gray-50/50 p-6 rounded-xl border border-gray-100 h-full">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-700 mb-2">ระบุปีงบประมาณ (2 หลัก)</label>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm font-bold text-gray-500 bg-white px-3 py-2.5 rounded-lg border border-gray-200 shrink-0 shadow-sm">BE 25</span>
+                                        <input
+                                            type="text"
+                                            inputMode="numeric"
+                                            maxLength={2}
+                                            value={fiscalYearInput}
+                                            onChange={(e) => setFiscalYearInput(e.target.value.replace(/\D/g, "").slice(0, 2))}
+                                            className="w-24 border border-gray-300 rounded-lg px-3 py-2.5 text-base font-black text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-center shadow-inner bg-white"
+                                        />
+                                    </div>
+                                </div>
+                                
+                                <div className="pt-2">
+                                    <p className="text-xs font-bold text-gray-500 mb-2">เลือกด่วน:</p>
+                                    <div className="flex gap-2 flex-wrap">
+                                        {["68", "69", "70", "71"].map((fy) => (
+                                            <button
+                                                key={fy}
+                                                onClick={() => setFiscalYearInput(fy)}
+                                                className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all border shadow-sm ${
+                                                    fiscalYearInput === fy
+                                                        ? "bg-blue-600 text-white border-blue-600"
+                                                        : "bg-white text-gray-600 border-gray-200 hover:bg-gray-100"
+                                                }`}
+                                            >
+                                                {fy}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="text-center p-6 bg-gray-50 rounded-xl border border-dashed border-gray-200 h-full flex flex-col justify-center items-center text-gray-500">
+                                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm mb-3">
+                                    <RotateCcw className="w-5 h-5 text-gray-400" />
+                                </div>
+                                <p className="text-sm font-bold text-gray-700">โหมดอัตโนมัติทำงานอยู่</p>
+                                <p className="text-xs mt-1 max-w-[200px] leading-relaxed">
+                                    ระบบจะจัดการปีงบประมาณให้ตามวันที่ใช้รถอย่างถูกต้อง
+                                </p>
+                            </div>
                         )}
                     </div>
                 </div>
 
-                {/* Fiscal Year Quick Select */}
-                <div className="mt-4 pt-4 border-t border-gray-100">
-                    <p className="text-xs font-bold text-gray-500 mb-2">เลือกปีงบประมาณด่วน:</p>
-                    <div className="flex gap-2 flex-wrap">
-                        {["68", "69", "70", "71"].map((fy) => (
-                            <button
-                                key={fy}
-                                onClick={() => setFiscalYearInput(fy)}
-                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
-                                    fiscalYearInput === fy
-                                        ? "bg-blue-600 text-white border-blue-600"
-                                        : fy === autoFY
-                                        ? "bg-green-50 text-green-700 border-green-300 hover:bg-green-100"
-                                        : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
-                                }`}
-                            >
-                                {fy} {fy === autoFY && "(อัตโนมัติ)"}
-                            </button>
-                        ))}
-                        <button
-                            onClick={() => setFiscalYearInput("")}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
-                                fiscalYearInput === ""
-                                    ? "bg-gray-600 text-white border-gray-600"
-                                    : "bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100"
-                            }`}
-                        >
-                            อัตโนมัติ
-                        </button>
+                <div className="mt-6 pt-5 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="text-sm flex items-center gap-2">
+                        <span className="text-gray-500 font-medium">การตั้งค่าปัจจุบันในระบบ:</span>
+                        <span className={`font-bold px-2.5 py-1 rounded-md text-xs border ${isManualMode ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
+                            {isManualMode ? `ล็อคเป็นปีงบฯ ${activeFiscalYear}` : "คำนวณอัตโนมัติ (AUTO)"}
+                        </span>
                     </div>
+                    <button
+                        onClick={handleSaveFiscalYear}
+                        disabled={savingFY || loadingFY}
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 bg-blue-600 text-white hover:bg-blue-700 px-6 py-2.5 rounded-xl text-sm font-black shadow-md transition-all disabled:opacity-50 active:scale-95"
+                    >
+                        {savingFY ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                        บันทึกการตั้งค่า
+                    </button>
                 </div>
             </div>
 
@@ -409,9 +460,18 @@ export default function RequestCodesPage() {
                                             </td>
                                             <td className="px-4 py-4 text-center">
                                                 {v.latest_code ? (
-                                                    <span className="font-mono text-sm font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-100">
-                                                        {v.latest_code}
-                                                    </span>
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <span className="font-mono text-sm font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-100">
+                                                            {v.latest_code}
+                                                        </span>
+                                                        <button
+                                                            onClick={() => handleEditCode(v.id, v.plate_number, v.latest_code!)}
+                                                            title="แก้ไขเลขล่าสุดของคันนี้"
+                                                            className="text-gray-400 hover:text-blue-600 hover:bg-blue-50 p-1.5 rounded-lg transition-colors border border-transparent hover:border-blue-200"
+                                                        >
+                                                            <Edit2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </div>
                                                 ) : (
                                                     <span className="text-xs text-gray-400">-</span>
                                                 )}
