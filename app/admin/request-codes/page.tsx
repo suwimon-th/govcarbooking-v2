@@ -285,96 +285,89 @@ export default function RequestCodesPage() {
                 </div>
 
                 {/* New Grid Layout for FY Setup */}
-                <div className="grid md:grid-cols-2 gap-6 mt-4">
-                    {/* Mode Selection */}
-                    <div className="space-y-3">
-                        <label className="flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all hover:bg-gray-50 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
-                            <input 
-                                type="radio" 
-                                name="fyMode" 
-                                className="mt-1 w-4 h-4 text-blue-600 focus:ring-blue-500" 
-                                checked={fiscalYearInput === ""}
-                                onChange={() => setFiscalYearInput("")}
-                            />
+                <div className="grid md:grid-cols-2 gap-4 mt-6">
+                    {/* Auto Mode Card */}
+                    <label className={`relative cursor-pointer rounded-2xl border-2 p-5 transition-all ${fiscalYearInput === "" ? "border-blue-500 bg-blue-50/50 ring-4 ring-blue-500/10" : "border-gray-200 hover:border-blue-300 hover:bg-gray-50"}`}>
+                        <input 
+                            type="radio" 
+                            name="fyMode" 
+                            className="sr-only" 
+                            checked={fiscalYearInput === ""}
+                            onChange={() => setFiscalYearInput("")}
+                        />
+                        <div className="flex items-start gap-4">
+                            <div className={`mt-1 shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${fiscalYearInput === "" ? "border-blue-600 bg-blue-600" : "border-gray-300 bg-white"}`}>
+                                {fiscalYearInput === "" && <div className="w-2 h-2 bg-white rounded-full" />}
+                            </div>
                             <div>
-                                <div className="font-bold text-gray-900 text-sm">โหมดอัตโนมัติ (คำนวณจากวันที่ใช้รถ)</div>
-                                <div className="text-xs text-gray-500 mt-1 leading-relaxed">
-                                    ใช้ปีงบประมาณตามวันที่ใช้รถจริง<br/>
-                                    (ปัจจุบันระบบจะใช้ปี <strong className="text-gray-700">{autoFY}</strong>)
+                                <div className={`font-bold text-base ${fiscalYearInput === "" ? "text-blue-900" : "text-gray-900"}`}>โหมดอัตโนมัติ (AUTO)</div>
+                                <div className="text-sm text-gray-500 mt-1.5 leading-relaxed">
+                                    ใช้ปีงบประมาณตามวันที่ใช้รถจริง <br/>
+                                    (ปัจจุบันระบบจะใช้ปี <strong className="text-gray-700 font-mono bg-white px-1 py-0.5 rounded border shadow-sm">{autoFY}</strong>)
                                 </div>
                             </div>
-                        </label>
-                        
-                        <label className="flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all hover:bg-gray-50 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
-                            <input 
-                                type="radio" 
-                                name="fyMode" 
-                                className="mt-1 w-4 h-4 text-blue-600 focus:ring-blue-500" 
-                                checked={fiscalYearInput !== ""}
-                                onChange={() => {
-                                    if(fiscalYearInput === "") setFiscalYearInput(autoFY);
-                                }}
-                            />
-                            <div>
-                                <div className="font-bold text-gray-900 text-sm">กำหนดปีงบประมาณเอง (Manual)</div>
-                                <div className="text-xs text-gray-500 mt-1 leading-relaxed">
+                        </div>
+                    </label>
+
+                    {/* Manual Mode Card */}
+                    <label className={`relative cursor-pointer rounded-2xl border-2 p-5 transition-all ${fiscalYearInput !== "" ? "border-blue-500 bg-blue-50/50 ring-4 ring-blue-500/10" : "border-gray-200 hover:border-blue-300 hover:bg-gray-50"}`}>
+                        <input 
+                            type="radio" 
+                            name="fyMode" 
+                            className="sr-only" 
+                            checked={fiscalYearInput !== ""}
+                            onChange={() => {
+                                if(fiscalYearInput === "") setFiscalYearInput(autoFY);
+                            }}
+                        />
+                        <div className="flex items-start gap-4">
+                            <div className={`mt-1 shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${fiscalYearInput !== "" ? "border-blue-600 bg-blue-600" : "border-gray-300 bg-white"}`}>
+                                {fiscalYearInput !== "" && <div className="w-2 h-2 bg-white rounded-full" />}
+                            </div>
+                            <div className="w-full">
+                                <div className={`font-bold text-base ${fiscalYearInput !== "" ? "text-blue-900" : "text-gray-900"}`}>กำหนดปีงบประมาณเอง (Manual)</div>
+                                <div className={`text-sm text-gray-500 mt-1.5 leading-relaxed ${fiscalYearInput !== "" ? "mb-4" : ""}`}>
                                     ล็อคปีงบประมาณสำหรับคำขอใหม่ทั้งหมด<br/>
                                     (เหมาะสำหรับช่วงคาบเกี่ยวปีงบประมาณ)
                                 </div>
-                            </div>
-                        </label>
-                    </div>
-
-                    {/* Manual Input Settings */}
-                    <div className="flex flex-col justify-center">
-                        {fiscalYearInput !== "" ? (
-                            <div className="space-y-4 animate-in fade-in slide-in-from-left-4 bg-gray-50/50 p-6 rounded-xl border border-gray-100 h-full">
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-700 mb-2">ระบุปีงบประมาณ (2 หลัก)</label>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-sm font-bold text-gray-500 bg-white px-3 py-2.5 rounded-lg border border-gray-200 shrink-0 shadow-sm">BE 25</span>
-                                        <input
-                                            type="text"
-                                            inputMode="numeric"
-                                            maxLength={2}
-                                            value={fiscalYearInput}
-                                            onChange={(e) => setFiscalYearInput(e.target.value.replace(/\D/g, "").slice(0, 2))}
-                                            className="w-24 border border-gray-300 rounded-lg px-3 py-2.5 text-base font-black text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-center shadow-inner bg-white"
-                                        />
-                                    </div>
-                                </div>
                                 
-                                <div className="pt-2">
-                                    <p className="text-xs font-bold text-gray-500 mb-2">เลือกด่วน:</p>
-                                    <div className="flex gap-2 flex-wrap">
-                                        {["68", "69", "70", "71"].map((fy) => (
-                                            <button
-                                                key={fy}
-                                                onClick={() => setFiscalYearInput(fy)}
-                                                className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all border shadow-sm ${
-                                                    fiscalYearInput === fy
-                                                        ? "bg-blue-600 text-white border-blue-600"
-                                                        : "bg-white text-gray-600 border-gray-200 hover:bg-gray-100"
-                                                }`}
-                                            >
-                                                {fy}
-                                            </button>
-                                        ))}
+                                {/* Manual Input - Shows only if selected */}
+                                {fiscalYearInput !== "" && (
+                                    <div className="animate-in fade-in slide-in-from-top-2 pt-4 border-t border-blue-200/50">
+                                        <label className="block text-xs font-bold text-gray-700 mb-2">ระบุปีงบประมาณ (2 หลัก)</label>
+                                        <div className="flex flex-wrap items-center gap-3">
+                                            <div className="flex items-center gap-2 bg-white rounded-xl border border-blue-200 p-1.5 shadow-sm shrink-0">
+                                                <span className="text-sm font-bold text-gray-500 bg-gray-50 px-2 py-1.5 rounded-lg">BE 25</span>
+                                                <input
+                                                    type="text"
+                                                    inputMode="numeric"
+                                                    maxLength={2}
+                                                    value={fiscalYearInput}
+                                                    onChange={(e) => setFiscalYearInput(e.target.value.replace(/\D/g, "").slice(0, 2))}
+                                                    className="w-12 text-base font-black text-gray-900 focus:outline-none focus:ring-0 text-center bg-transparent"
+                                                />
+                                            </div>
+                                            <div className="flex gap-2 flex-wrap">
+                                                {["68", "69", "70", "71"].map((fy) => (
+                                                    <button
+                                                        key={fy}
+                                                        onClick={(e) => { e.preventDefault(); setFiscalYearInput(fy); }}
+                                                        className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all border shadow-sm ${
+                                                            fiscalYearInput === fy
+                                                                ? "bg-blue-600 text-white border-blue-600"
+                                                                : "bg-white text-gray-600 border-gray-200 hover:bg-gray-100"
+                                                        }`}
+                                                    >
+                                                        {fy}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
+                                )}
                             </div>
-                        ) : (
-                            <div className="text-center p-6 bg-gray-50 rounded-xl border border-dashed border-gray-200 h-full flex flex-col justify-center items-center text-gray-500">
-                                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm mb-3">
-                                    <RotateCcw className="w-5 h-5 text-gray-400" />
-                                </div>
-                                <p className="text-sm font-bold text-gray-700">โหมดอัตโนมัติทำงานอยู่</p>
-                                <p className="text-xs mt-1 max-w-[200px] leading-relaxed">
-                                    ระบบจะจัดการปีงบประมาณให้ตามวันที่ใช้รถอย่างถูกต้อง
-                                </p>
-                            </div>
-                        )}
-                    </div>
+                        </div>
+                    </label>
                 </div>
 
                 <div className="mt-6 pt-5 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
