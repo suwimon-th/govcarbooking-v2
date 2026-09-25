@@ -41,7 +41,8 @@ export async function POST(req: Request) {
             .lte('start_at', endDate.toISOString())
             .neq('status', 'CANCELLED')
             .neq('status', 'REJECTED')
-            .not('distance', 'is', null);
+            .not('distance', 'is', null)
+            .range(0, 999999);
 
         if (vehicleId) {
             bookingsQuery = bookingsQuery.eq('vehicle_id', vehicleId);
@@ -60,7 +61,8 @@ export async function POST(req: Request) {
             .gte('request_date', `${yearAD}-01-01`)
             .lte('request_date', `${yearAD}-12-31`)
             .not('actual_amount', 'is', null)
-            .eq('status', 'COMPLETED');
+            .eq('status', 'COMPLETED')
+            .range(0, 999999);
 
         if (fuelErr) {
             console.warn("Fuel query warning:", fuelErr.message);

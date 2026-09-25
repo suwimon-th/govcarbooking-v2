@@ -6,21 +6,21 @@ export async function POST(req: Request) {
     try {
         const { month, yearBE, vehicleId } = await req.json();
 
-        if (!month || !yearBE) {
-            return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
+        if (!yearBE) {
+            return NextResponse.json({ error: "Missing year parameter" }, { status: 400 });
         }
 
         const yearAD = yearBE - 543;
-
-        // Calculate Start and End Date for query
-        // "YYYY-MM-01" to "YYYY-MM-LastDay"
-        const startDate = new Date(yearAD, month - 1, 1); // Month is 0-indexed in JS Date
-        const endDate = new Date(yearAD, month, 0); // Day 0 of next month = last day of current month
-        endDate.setHours(23, 59, 59, 999);
-
-        // adjust format to ISO string for Supabase comparison
-        // toISOString might convert to UTC, we want local date comparison carefully
-        // Standard approach: use >= startDate AND <= endDate
+        
+        let startDate, endDate;
+        if (month) {
+            startDate = new Date(yearAD, month - 1, 1);
+            endDate = new Date(yearAD, month, 0); 
+            endDate.setHours(23, 59, 59, 999);
+        } else {
+            startDate = new Date(yearAD, 0, 1);
+            endDate = new Date(yearAD, 11, 31, 23, 59, 59, 999);
+        }
 
         // Supabase query
         let query = supabase
@@ -50,7 +50,8 @@ export async function POST(req: Request) {
             .neq('status', 'CANCELLED')
             .neq('status', 'REJECTED')
             .not('status', 'is', null) // ensure status exists
-            .order('start_at', { ascending: true });
+            .order('start_at', { ascending: true })
+            .range(0, 999999); // Override Supabase 1000-row limit
 
         if (vehicleId) {
             query = query.eq('vehicle_id', vehicleId);
