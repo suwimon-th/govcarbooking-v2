@@ -443,7 +443,7 @@ export default function EditBookingModal({ booking, onClose, onUpdated }: Props)
                                                     : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-gray-300"
                                             }`}
                                         >
-                                            <span>🌙 นอกเวลา (ไม่เบิก OT)</span>
+                                            <span>🌙 นอกเวลา (ไม่มีค่าตอบแทน)</span>
                                         </button>
                                     </div>
 
@@ -458,7 +458,7 @@ export default function EditBookingModal({ booking, onClose, onUpdated }: Props)
                                         {otMode === "OFF_HOURS_NO_OT" && (
                                             <div className="p-3 bg-indigo-50 border border-indigo-200 text-indigo-900 rounded-xl flex items-center gap-2 shadow-xs">
                                                 <CheckCircle2 className="w-4 h-4 text-indigo-600 shrink-0" />
-                                                <span>งานนอกเวลาราชการแบบไม่เบิก OT ➔ เอกสารพิมพ์แบบ OT (แอดมินจัดสรรคนขับให้)</span>
+                                                <span>งานนอกเวลาราชการแบบไม่มีค่าตอบแทน ➔ เอกสารพิมพ์แบบ OT (แอดมินจัดสรรคนขับให้)</span>
                                             </div>
                                         )}
                                         {otMode === "IN_HOURS" && (

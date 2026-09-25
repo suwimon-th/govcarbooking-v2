@@ -1124,7 +1124,7 @@ export default function RequestForm({
                       : otMode === "OT"
                         ? "ผู้ขอต้องเลือกคนขับรถเพื่อแจ้งเตือนผ่าน LINE และปฏิบัติงาน OT"
                         : otMode === "OFF_HOURS_NO_OT"
-                          ? "ปฏิบัติงานนอกเวลาแบบไม่เบิก OT ➔ แอดมินหรือระบบจะเป็นผู้จัดสรรคนขับรถให้"
+                          ? "ปฏิบัติงานนอกเวลาแบบไม่มีค่าตอบแทน ➔ แอดมินหรือระบบจะเป็นผู้จัดสรรคนขับรถให้"
                           : "ในเวลาราชการปกติ ➔ แอดมินหรือระบบจะเป็นผู้จัดสรรและมอบหมายคนขับรถให้"}
                   </p>
                 </div>
@@ -1181,14 +1181,14 @@ export default function RequestForm({
                           : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
                       }`}
                     >
-                      <span>🌙 นอกเวลา (ไม่เบิก OT)</span>
+                      <span>🌙 นอกเวลา (ไม่มีค่าตอบแทน)</span>
                     </button>
                   </div>
                 </div>
               )}
 
               {/* Driver Selection: Required if otMode === "OT" OR isRetroactive */}
-              {(isRetroactive || otMode === "OT" || canSelectRequester) && (
+              {(isRetroactive || otMode === "OT" || (canSelectRequester && otMode !== "OFF_HOURS_NO_OT")) && (
                 <div className="relative mt-4 animate-in fade-in duration-200">
                   <User className={`absolute left-3.5 top-3.5 w-5 h-5 ${isRetroactive || otMode === "OT" ? 'text-amber-500' : 'text-blue-500'}`} />
                   <select
@@ -1221,7 +1221,7 @@ export default function RequestForm({
                   <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
                   <span>
                     {otMode === "OFF_HOURS_NO_OT"
-                      ? "คำขอใช้นอกเวลาราชการแบบไม่เบิก OT ➔ เอกสารจะใช้แบบนอกเวลาราชการ (OT) และแอดมินหรือระบบจะเป็นผู้จัดสรรคนขับรถให้"
+                      ? "คำขอใช้นอกเวลาราชการแบบไม่มีค่าตอบแทน ➔ เอกสารจะใช้แบบนอกเวลาราชการ (OT) และแอดมินหรือระบบจะเป็นผู้จัดสรรคนขับรถให้"
                       : "คำขอใช้ในเวลาราชการ ➔ แอดมินหรือระบบจะเป็นผู้จัดสรรและมอบหมายคนขับรถให้"}
                   </span>
                 </div>

@@ -687,7 +687,7 @@ export default function EditBookingModal({
                         : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
                     }`}
                   >
-                    <span>🌙 นอกเวลา (ไม่เบิก OT)</span>
+                    <span>🌙 นอกเวลา (ไม่มีค่าตอบแทน)</span>
                   </button>
                 </div>
               </div>
