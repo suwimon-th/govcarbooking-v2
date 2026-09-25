@@ -74,8 +74,7 @@ export async function GET(req: Request) {
           full_name,
           phone
         )
-      `)
-      .or("request_code.is.null,request_code.not.like.DUTY-VAN-%");
+      `);
 
     const { data, error } = await query
       .order("start_at", { ascending: true })
@@ -91,7 +90,12 @@ export async function GET(req: Request) {
     }
 
     const events = data
-      .filter((item: any) => item && item.start_at)
+      // กรอง DUTY-VAN ออกด้วย JS (ไม่ใช้ Supabase filter เพื่อหลีกเลี่ยงปัญหา OR + NOT LIKE syntax)
+      .filter((item: any) => {
+        if (!item || !item.start_at) return false;
+        if (item.request_code && String(item.request_code).startsWith("DUTY-VAN-")) return false;
+        return true;
+      })
       .map((item: any) => {
         const start = normalizeThaiTime(item.start_at);
 
