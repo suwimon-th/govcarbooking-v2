@@ -9,15 +9,16 @@ export function colorText(hex: string) {
 export function applyColors(colors: ThemeColors) {
   const style = document.documentElement.style;
   style.setProperty('--sidebar-bg', colors.sidebar);
-  style.setProperty('--sidebar-fg', colorText(colors.sidebar));
   style.setProperty('--action-bg', colors.accent);
   style.setProperty('--action-fg', colorText(colors.accent));
   
   if (colors.text) {
     style.setProperty('--custom-text-color', colors.text);
+    style.setProperty('--sidebar-fg', colors.text);
     document.documentElement.setAttribute('data-custom-text', 'true');
   } else {
     style.removeProperty('--custom-text-color');
+    style.setProperty('--sidebar-fg', colorText(colors.sidebar));
     document.documentElement.removeAttribute('data-custom-text');
   }
   

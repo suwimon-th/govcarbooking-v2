@@ -396,8 +396,9 @@ input[type="time"]::-webkit-calendar-picker-indicator {
     .border-blue-800, .border-blue-800\/60, .border-blue-800\/80
   ) { border-color: var(--sidebar-border) !important; }
   html[data-custom-colors] .theme-sidebar .bg-blue-900\/20 { background-color: var(--sidebar-soft) !important; }
-  html[data-custom-colors] .theme-sidebar :is(.text-white, .text-blue-100, .text-blue-200, .text-blue-300) { color: var(--sidebar-fg); }
+  html[data-custom-colors] .theme-sidebar :is(.text-white, .text-blue-100, .text-blue-200, .text-blue-300):not(.bg-red-500) { color: var(--sidebar-fg); }
   html[data-custom-colors] .theme-sidebar .bg-white { background-color: color-mix(in srgb, white 95%, var(--sidebar-bg)) !important; color: var(--sidebar-bg) !important; }
+  html[data-custom-colors][data-custom-text] .theme-sidebar .bg-white { color: var(--custom-text-color) !important; }
   /* Accent color for buttons/active states */
   html[data-custom-colors] :is(.bg-[#1e40af], .bg-blue-700, .bg-blue-600, .btn-primary) { background-color: var(--action-bg) !important; color: var(--action-fg) !important; }
 }
