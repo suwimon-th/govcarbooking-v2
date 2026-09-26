@@ -693,7 +693,7 @@ export default function UserPage() {
                 html[data-theme="dark"] .fc-button-active { background: #3B82F6 !important; color: white !important; border-color: #2563EB !important; }
                 html[data-theme="dark"] .fc-daygrid-day-frame { background-color: transparent !important; }
                 html[data-theme="dark"] .fc-daygrid-day-number { color: #E2E8F0 !important; }
-                html[data-theme="dark"] .fc-col-header-cell { background-color: #1e293b !important; border-color: #334155 !important; }
+                html[data-theme="dark"] .fc-col-header-cell { background-color: transparent !important; border-color: #334155 !important; }
                 html[data-theme="dark"] .fc-col-header-cell-cushion { color: #E2E8F0 !important; }
                 html[data-theme="dark"] .fc-theme-standard td, 
                 html[data-theme="dark"] .fc-theme-standard th { border-color: #334155 !important; }
