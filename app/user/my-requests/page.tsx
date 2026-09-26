@@ -467,7 +467,6 @@ export default function MyRequestsPage() {
                           <Clock className="w-3.5 h-3.5" />
                           <span className="flex items-center gap-1">
                             {formatThaiTime(it.start_at)}
-                            {it.is_ot && <span className="text-amber-600 font-bold ml-1" title="นอกเวลาราชการ">OT</span>}
                           </span>
                           {it.end_at && (
                             <>
@@ -603,7 +602,6 @@ export default function MyRequestsPage() {
                     <p className="text-xs font-black text-gray-700">{formatThaiDate(it.start_at)}</p>
                     <p className="text-[10px] text-gray-500 mt-1 font-bold flex items-center gap-1">
                       {formatThaiTime(it.start_at)} {it.end_at ? `ถึง ${formatThaiTime(it.end_at)}` : ''}
-                      {it.start_at && isOffHours(it.start_at) && <span className="text-amber-600">OT</span>}
                     </p>
                   </div>
                   <div className="bg-gray-50 rounded-2xl p-3 flex gap-3">

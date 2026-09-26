@@ -959,7 +959,6 @@ function AdminRequestsContent() {
                     <div className="flex flex-col text-xs text-gray-600">
                       <span className="flex items-center gap-1">
                         เริ่ม: {formatThaiDateTime(b.start_at)}
-                        {b.is_ot && <span className="text-white bg-amber-500 px-1.5 py-0.5 rounded text-[10px] font-bold shadow-sm">OT</span>}
                       </span>
                       {b.end_at && <span>ถึง: {formatThaiDateTime(b.end_at)}</span>}
                     </div>
@@ -1121,11 +1120,6 @@ function AdminRequestsContent() {
                               </div>
                               <div className="flex items-center gap-2 pl-[22px] text-xs font-medium text-gray-500">
                                 <span>{formatThaiDateTime(b.start_at).split(" | ")[1]}</span>
-                                {b.is_ot && (
-                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-200">
-                                    OT
-                                  </span>
-                                )}
                               </div>
                             </div>
 
