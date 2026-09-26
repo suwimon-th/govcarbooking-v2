@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import Swal from "sweetalert2";
 import type { BookingRow } from "./page";
-import { bookingStatusMap, getStatusLabel, getStatusColor } from "@/lib/statusHelper";
+import { bookingStatusMap, getStatusLabel, getStatusColor, isOffHours } from "@/lib/statusHelper";
 import {
   X,
   User,
@@ -162,7 +162,9 @@ export default function EditBookingModal({
   };
 
   const [otMode, setOtMode] = useState<"IN_HOURS" | "OT" | "OFF_HOURS_NO_OT">(
-    booking.is_ot ? (booking.driver_id || booking.other_driver_name ? "OT" : "OFF_HOURS_NO_OT") : "IN_HOURS"
+    booking.is_ot 
+      ? "OT" // if is_ot is true, it's paid OT
+      : (booking.start_at && isOffHours(booking.start_at) ? "OFF_HOURS_NO_OT" : "IN_HOURS")
   );
 
   const [isManualDriver, setIsManualDriver] = useState(!!booking.other_driver_name);
@@ -679,7 +681,7 @@ export default function EditBookingModal({
                     type="button"
                     onClick={() => {
                       setOtMode("OFF_HOURS_NO_OT");
-                      setFormData(p => ({ ...p, is_ot: true })); // ✅ ใช้พิมพ์เอกสารแบบ OT
+                      setFormData(p => ({ ...p, is_ot: false })); // Changed: we use isOffHours in print layout instead
                     }}
                     className={`px-3 py-2.5 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                       otMode === "OFF_HOURS_NO_OT"

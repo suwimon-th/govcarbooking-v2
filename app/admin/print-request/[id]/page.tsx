@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
+import { isOffHours } from "@/lib/statusHelper";
 
 /* ================= TYPES ================= */
 interface BookingDetail {
@@ -203,7 +204,7 @@ export default function PrintRequestPage() {
                         <div className="border border-black px-3 py-0.5 mb-1 inline-block text-center min-w-[80px]">
                             <div className="text-[14px]">ลำดับที่ <b>{seqNoThai}</b></div>
                         </div>
-                        {booking.is_ot && <div className="text-[14px] font-bold mb-1">นอกเวลาราชการ</div>}
+                        {(booking.is_ot || (booking.start_at && isOffHours(booking.start_at))) && <div className="text-[14px] font-bold mb-1">นอกเวลาราชการ</div>}
                         <div className="text-[14px] pr-1">แบบ ๓</div>
                     </div>
                 </div>

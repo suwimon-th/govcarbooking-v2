@@ -5,6 +5,7 @@ import { X, Save, Pencil, MapPin, Clock, Calendar, Users, Building, Car, CheckCi
 import TimePicker24 from "@/app/components/TimePicker24";
 import { supabase } from "@/lib/supabaseClient";
 import Swal from "sweetalert2";
+import { isOffHours } from "@/lib/statusHelper";
 
 interface Passenger {
     type: "profile" | "external";
@@ -114,7 +115,9 @@ export default function EditBookingModal({ booking, onClose, onUpdated }: Props)
     const [remark, setRemark] = useState(booking.remark || "");
     const [isOt, setIsOt] = useState(booking.is_ot || false);
     const [otMode, setOtMode] = useState<"IN_HOURS" | "OT" | "OFF_HOURS_NO_OT">(
-        booking.is_ot ? "OT" : "IN_HOURS"
+        booking.is_ot 
+          ? "OT" 
+          : (booking.start_at && isOffHours(booking.start_at) ? "OFF_HOURS_NO_OT" : "IN_HOURS")
     );
 
     const [vehicleId, setVehicleId] = useState<string>(
@@ -435,7 +438,7 @@ export default function EditBookingModal({ booking, onClose, onUpdated }: Props)
                                             type="button"
                                             onClick={() => {
                                                 setOtMode("OFF_HOURS_NO_OT");
-                                                setIsOt(true);
+                                                setIsOt(false);
                                             }}
                                             className={`px-3 py-2.5 rounded-xl border text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs ${
                                                 otMode === "OFF_HOURS_NO_OT"

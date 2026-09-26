@@ -1172,7 +1172,7 @@ export default function RequestForm({
                       type="button"
                       onClick={() => {
                         setOtMode("OFF_HOURS_NO_OT");
-                        setIsOt(true); // ✅ กำหนดเป็น true เพื่อให้เอกสารพิมพ์ใช้รูปแบบนอกเวลาราชการ (OT)
+                        setIsOt(false); // changed so OT badge won't show. Print document will use isOffHours helper instead.
                         setDriverId("");
                       }}
                       className={`px-3 py-2.5 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
