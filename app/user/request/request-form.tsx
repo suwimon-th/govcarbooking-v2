@@ -529,12 +529,12 @@ export default function RequestForm({
       }
     }
 
-    if (isOt && !driverId && !(isOtherVehicle && isOtherDriver && otherDriverName.trim())) {
+    if (otMode === "OT" && !driverId && !(isOtherVehicle && isOtherDriver && otherDriverName.trim())) {
       setSubmitState("error");
       Swal.fire({
         icon: 'warning',
         title: 'กรุณาเลือกคนขับ',
-        text: 'การขอใช้รถนอกเวลาราชการแบบ OT จำเป็นต้องระบุคนขับรถ',
+        text: 'การขอใช้รถนอกเวลาราชการแบบมีค่าตอบแทน (OT) จำเป็นต้องระบุคนขับรถ',
         confirmButtonText: 'ตกลง'
       });
       return;
