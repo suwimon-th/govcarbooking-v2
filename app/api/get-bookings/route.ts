@@ -103,6 +103,12 @@ export async function GET(req: Request) {
       .filter((item: any) => {
         if (!item || !item.start_at) return false;
         if (item.request_code && String(item.request_code).startsWith("DUTY-VAN-")) return false;
+        if (item.status === "CANCELLED") return false;
+        
+        // Filter out tester/admin dummy bookings
+        const reqName = (item.requester_name || "").toLowerCase();
+        if (reqName.includes("test") || reqName.includes("demo") || reqName.includes("tester") || reqName === "a" || reqName === "1" || reqName === "asd" || reqName === "asdasd" || reqName === "หก") return false;
+
         return true;
       })
       .map((item: any) => {
