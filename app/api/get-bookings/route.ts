@@ -14,7 +14,16 @@ const supabase = createClient(
 ---------------------------------------- */
 function normalizeThaiTime(v: string | null | undefined) {
   if (!v) return "";
-  return v.replace(" ", "T").slice(0, 19);
+  let timeStr = v.replace(" ", "T").slice(0, 19);
+  const match = timeStr.match(/^(\d{4})-(.*)/);
+  if (match) {
+    let year = parseInt(match[1], 10);
+    if (year > 2500) {
+      year -= 543;
+      timeStr = `${year}-${match[2]}`;
+    }
+  }
+  return timeStr;
 }
 
 /* ----------------------------------------
