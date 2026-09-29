@@ -81,8 +81,7 @@ export async function GET(req: Request) {
           phone
         )
       `)
-      .gte("start_at", rangeStart.toISOString())
-      .lte("start_at", rangeEnd.toISOString());
+      .gte("start_at", rangeStart.toISOString());
 
     const { data, error } = await query
       .order("start_at", { ascending: true })

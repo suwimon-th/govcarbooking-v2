@@ -100,7 +100,9 @@ const formatThaiDateTime = (value: string | null): string => {
     "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
     "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."
   ];
-  return `${date.getDate()} ${thaiMonths[date.getMonth()]} ${date.getFullYear() + 543} | ${date.getHours().toString().padStart(2, "0")}:${date
+  const year = date.getFullYear();
+  const displayYear = year > 2500 ? year : year + 543;
+  return `${date.getDate()} ${thaiMonths[date.getMonth()]} ${displayYear} | ${date.getHours().toString().padStart(2, "0")}:${date
     .getMinutes()
     .toString()
     .padStart(2, "0")}`;
@@ -386,15 +388,12 @@ function AdminRequestsContent() {
       if (filterDateTo) {
         query = query.lte("start_at", `${filterDateTo}T23:59:59`);
       }
-      // หากไม่ได้เลือกวันที่ หรือ ปีงบประมาณเลย ให้จำกัดข้อมูลเริ่มต้นที่ 6 เดือนย้อนหลัง ถึง 1 ปีข้างหน้า
+      // หากไม่ได้เลือกวันที่ หรือ ปีงบประมาณเลย ให้จำกัดข้อมูลเริ่มต้นที่ 6 เดือนย้อนหลัง
       if (!filterDateFrom && !filterDateTo) {
         const rangeStart = new Date();
         rangeStart.setMonth(rangeStart.getMonth() - 6);
-        const rangeEnd = new Date();
-        rangeEnd.setFullYear(rangeEnd.getFullYear() + 1);
         
-        query = query.gte("start_at", rangeStart.toISOString())
-                     .lte("start_at", rangeEnd.toISOString());
+        query = query.gte("start_at", rangeStart.toISOString());
       }
     }
 
