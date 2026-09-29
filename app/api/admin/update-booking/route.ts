@@ -83,21 +83,6 @@ export async function POST(req: Request) {
 
         // Check if admin manually edited request_code
         if (trimmedRequestCode && trimmedRequestCode !== oldBooking?.request_code) {
-            // ตรวจสอบว่ามีเลขคำขอนี้ในระบบกับงานอื่นแล้วหรือยัง (ซ้ำหรือไม่)
-            const { data: existingBooking } = await supabase
-                .from("bookings")
-                .select("id")
-                .eq("request_code", trimmedRequestCode)
-                .neq("id", id)
-                .maybeSingle();
-
-            if (existingBooking) {
-                return NextResponse.json(
-                    { error: `เลขคำขอใช้รถ "${trimmedRequestCode}" มีในระบบอยู่แล้ว กรุณาระบุเลขอื่น` },
-                    { status: 400 }
-                );
-            }
-
             isManualRequestCode = true;
         }
 
