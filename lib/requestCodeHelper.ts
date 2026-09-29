@@ -38,25 +38,43 @@ export async function generateRequestCode(vehicleId: string, startAt?: string): 
     const digits = plate.replace(/\D/g, "");
     const plateSuffix = digits.slice(-2) || "00";
 
+    // ใช้ปีงบประมาณที่แอดมินตั้งไว้ ถ้าไม่ได้ตั้ງ คำนวณอัตโนมัติจาก start_at
+    const adminFiscalYear = await getActiveFiscalYear();
+    let targetFiscalYear: string;
+    if (adminFiscalYear) {
+        targetFiscalYear = adminFiscalYear;
+    } else {
+        const refDate = startAt ? new Date(startAt) : new Date();
+        targetFiscalYear = getFiscalYearShort(refDate);
+    }
+
     const prefix = `ENV-${plateSuffix}/`;
 
     // Query all bookings matching this prefix (same vehicle) to find true numerical maximum
+    // Fetch start_at and created_at to determine their fiscal year
     const { data } = await supabase
         .from("bookings")
-        .select("request_code")
+        .select("request_code, start_at, created_at")
         .like("request_code", `${prefix}%`);
 
     let maxRunning = 0;
     if (data && data.length > 0) {
         for (const row of data) {
             if (!row.request_code) continue;
-            const parts = row.request_code.split("/");
-            // Format: ENV-XX/NNN → parts is [ENV-XX, NNN]
-            if (parts.length >= 2) {
-                const seqStr = parts[parts.length - 1];
-                const parsed = parseInt(seqStr, 10);
-                if (!isNaN(parsed) && parsed > maxRunning) {
-                    maxRunning = parsed;
+            
+            // Determine fiscal year of THIS booking to see if it belongs to the target fiscal year
+            const bDate = row.start_at ? new Date(row.start_at) : (row.created_at ? new Date(row.created_at) : new Date());
+            const bFiscalYear = getFiscalYearShort(bDate);
+
+            if (bFiscalYear === targetFiscalYear) {
+                const parts = row.request_code.split("/");
+                // Format: ENV-XX/NNN → parts is [ENV-XX, NNN]
+                if (parts.length >= 2) {
+                    const seqStr = parts[parts.length - 1];
+                    const parsed = parseInt(seqStr, 10);
+                    if (!isNaN(parsed) && parsed > maxRunning) {
+                        maxRunning = parsed;
+                    }
                 }
             }
         }
@@ -75,24 +93,40 @@ export async function generateOtherVehicleRequestCode(otherPlateNumber: string |
     const digits = (otherPlateNumber || "").replace(/\D/g, "");
     const plateSuffix = digits.slice(-2) || "OT";
 
+    // ใช้ปีงบประมาณที่แอดมินตั้งไว้ ถ้าไม่ได้ตั้ງ คำนวณอัตโนมัติจาก start_at
+    const adminFiscalYear = await getActiveFiscalYear();
+    let targetFiscalYear: string;
+    if (adminFiscalYear) {
+        targetFiscalYear = adminFiscalYear;
+    } else {
+        const refDate = startAt ? new Date(startAt) : new Date();
+        targetFiscalYear = getFiscalYearShort(refDate);
+    }
+
     const prefix = `ENV-${plateSuffix}/`;
 
     // Query all bookings matching this prefix to find true numerical maximum
     const { data } = await supabase
         .from("bookings")
-        .select("request_code")
+        .select("request_code, start_at, created_at")
         .like("request_code", `${prefix}%`);
 
     let maxRunning = 0;
     if (data && data.length > 0) {
         for (const row of data) {
             if (!row.request_code) continue;
-            const parts = row.request_code.split("/");
-            if (parts.length >= 2) {
-                const seqStr = parts[parts.length - 1];
-                const parsed = parseInt(seqStr, 10);
-                if (!isNaN(parsed) && parsed > maxRunning) {
-                    maxRunning = parsed;
+
+            const bDate = row.start_at ? new Date(row.start_at) : (row.created_at ? new Date(row.created_at) : new Date());
+            const bFiscalYear = getFiscalYearShort(bDate);
+
+            if (bFiscalYear === targetFiscalYear) {
+                const parts = row.request_code.split("/");
+                if (parts.length >= 2) {
+                    const seqStr = parts[parts.length - 1];
+                    const parsed = parseInt(seqStr, 10);
+                    if (!isNaN(parsed) && parsed > maxRunning) {
+                        maxRunning = parsed;
+                    }
                 }
             }
         }
@@ -168,24 +202,32 @@ export async function resequenceRequestCodes(targetVehicleId?: string): Promise<
 
         let totalUpdated = 0;
 
-        // GLOBAL PASS 2: Group by Vehicle Prefix
-        const prefixMap = new Map<string, typeof bookings>();
+        // GLOBAL PASS 2: Group by Vehicle AND Fiscal Year
+        const prefixYearMap = new Map<string, typeof bookings>();
 
         bookings.forEach(b => {
             if (!b.vehicle_id) return;
             const prefixBase = vehicleMap.get(b.vehicle_id);
             if (!prefixBase) return;
 
-            const fullPrefix = `${prefixBase}`;
+            // Determine fiscal year from start_at or created_at
+            const refDate = b.start_at ? new Date(b.start_at) : (b.created_at ? new Date(b.created_at) : new Date());
+            const fiscalYearShort = getFiscalYearShort(refDate);
+
+            // Group by both prefix and fiscal year to restart sequence per year
+            const groupKey = `${prefixBase}-${fiscalYearShort}`;
             
-            if (!prefixMap.has(fullPrefix)) {
-                prefixMap.set(fullPrefix, []);
+            if (!prefixYearMap.has(groupKey)) {
+                prefixYearMap.set(groupKey, []);
             }
-            prefixMap.get(fullPrefix)!.push(b);
+            prefixYearMap.get(groupKey)!.push(b);
         });
 
         // Process each group
-        for (const [fullPrefix, prefixBookings] of prefixMap.entries()) {
+        for (const [groupKey, prefixBookings] of prefixYearMap.entries()) {
+            // Re-extract prefixBase to build the code without fiscal year
+            const prefixBase = groupKey.split("-")[0] + "-" + groupKey.split("-")[1]; // e.g. "ENV-05/"
+
             // Sort chronologically by created_at ASC
             prefixBookings.sort((a, b) => {
                 const ca = a.created_at ? new Date(a.created_at).getTime() : 0;
@@ -198,7 +240,7 @@ export async function resequenceRequestCodes(targetVehicleId?: string): Promise<
 
             const updates = prefixBookings.map((b, idx) => {
                 const seqStr = String(idx + 1).padStart(3, "0");
-                const expectedCode = `${fullPrefix}${seqStr}`;
+                const expectedCode = `${prefixBase}${seqStr}`;
 
                 if (b.request_code !== expectedCode) {
                     totalUpdated++;
