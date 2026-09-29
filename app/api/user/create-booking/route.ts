@@ -270,6 +270,22 @@ export async function POST(req: Request) {
         }
       }
 
+      // Manual duplicate check (since we removed the DB unique constraint for admin overrides)
+      if (request_code !== "จองล่วงหน้า" && !request_code.startsWith("TEST-")) {
+        const { data: existing } = await supabase
+          .from("bookings")
+          .select("id")
+          .eq("request_code", request_code)
+          .maybeSingle();
+          
+        if (existing) {
+           insertError = { code: "23505", message: "duplicate request_code" };
+           // Small delay before retry
+           await new Promise((r) => setTimeout(r, 50 + Math.random() * 100));
+           continue;
+        }
+      }
+
       const { data: inserted, error: err } = await supabase
         .from("bookings")
         .insert([
