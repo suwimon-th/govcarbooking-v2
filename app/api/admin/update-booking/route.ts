@@ -136,8 +136,30 @@ export async function POST(req: Request) {
 
         if (finalDriverId !== undefined) updateData.driver_id = finalDriverId || null;
         if (vehicle_id !== undefined) updateData.vehicle_id = vehicle_id || null;
-        if (start_at) updateData.start_at = start_at;
-        if (end_at) updateData.end_at = end_at;
+        if (start_at) {
+            let safeStart = start_at;
+            const match = safeStart.match(/^(\d{4})-(.*)/);
+            if (match) {
+                let year = parseInt(match[1], 10);
+                if (year > 2500) {
+                    year -= 543;
+                    safeStart = `${year}-${match[2]}`;
+                }
+            }
+            updateData.start_at = safeStart;
+        }
+        if (end_at) {
+            let safeEnd = end_at;
+            const match = safeEnd.match(/^(\d{4})-(.*)/);
+            if (match) {
+                let year = parseInt(match[1], 10);
+                if (year > 2500) {
+                    year -= 543;
+                    safeEnd = `${year}-${match[2]}`;
+                }
+            }
+            updateData.end_at = safeEnd;
+        }
         // อื่นๆ: อัปเดตทะเบียนยืมถ้าส่งมา
         if (other_vehicle_plate !== undefined) updateData.other_vehicle_plate = other_vehicle_plate || null;
 

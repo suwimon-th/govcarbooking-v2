@@ -70,8 +70,32 @@ export async function PUT(req: Request) {
         if (purpose !== undefined) updateData.purpose = purpose;
         if (destination !== undefined) updateData.destination = destination;
         if (passenger_count !== undefined) updateData.passenger_count = passenger_count;
-        if (start_at !== undefined) updateData.start_at = start_at;
-        if (end_at !== undefined) updateData.end_at = end_at;
+        if (start_at !== undefined) {
+            let safeStart = start_at;
+            const match = safeStart.match(/^(\d{4})-(.*)/);
+            if (match) {
+                let year = parseInt(match[1], 10);
+                if (year > 2500) {
+                    year -= 543;
+                    safeStart = `${year}-${match[2]}`;
+                }
+            }
+            updateData.start_at = safeStart;
+        }
+        if (end_at !== undefined && end_at !== null) {
+            let safeEnd = end_at;
+            const match = safeEnd.match(/^(\d{4})-(.*)/);
+            if (match) {
+                let year = parseInt(match[1], 10);
+                if (year > 2500) {
+                    year -= 543;
+                    safeEnd = `${year}-${match[2]}`;
+                }
+            }
+            updateData.end_at = safeEnd;
+        } else if (end_at === null) {
+            updateData.end_at = null;
+        }
         if (status !== undefined) updateData.status = status;
         if (is_ot !== undefined) updateData.is_ot = is_ot;
         if (passengers !== undefined) updateData.passengers = passengers;

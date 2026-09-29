@@ -109,11 +109,22 @@ export async function POST(req: Request) {
       safeDeptId = 1;
     }
 
-    const start_at = `${date}T${padTime(start_time)}+07:00`;
+    // ✅ Convert Buddhist Era (BE) to AD if necessary
+    let safeDate = date;
+    const dateMatch = safeDate.match(/^(\d{4})-(.*)/);
+    if (dateMatch) {
+      let year = parseInt(dateMatch[1], 10);
+      if (year > 2500) {
+        year -= 543;
+        safeDate = `${year}-${dateMatch[2]}`;
+      }
+    }
+
+    const start_at = `${safeDate}T${padTime(start_time)}+07:00`;
 
     let dbEndAt: string | null = null;
     if (end_time) {
-      dbEndAt = `${date}T${padTime(end_time)}+07:00`;
+      dbEndAt = `${safeDate}T${padTime(end_time)}+07:00`;
     }
 
     if (driver_id) await assertDriverAvailable(driver_id, start_at, dbEndAt);
