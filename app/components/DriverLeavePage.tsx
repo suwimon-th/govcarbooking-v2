@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { CalendarDays, AlertTriangle, ArrowRight, Plus, UserRound, RefreshCw } from 'lucide-react';
 import s from './Operations.module.css';
+import { formatRequestCodeForDisplay } from '@/lib/requestCodeHelper';
 type Leave = { full_day?: boolean; id: string; driver_id: string; start_at: string; end_at: string; remark: string; cancelled_at: string | null };
 type Data = { local?: boolean; leaves: Leave[]; drivers: { id: string; full_name: string }[]; conflicts: { id: string; request_code: string }[] };
 export default function DriverLeavePage({ admin = false, demo = false }: { admin?: boolean; demo?: boolean }) {
@@ -72,9 +73,9 @@ export default function DriverLeavePage({ admin = false, demo = false }: { admin
         </div>
       </div>
       <div className={s.conflictActions}>
-        {data.conflicts.map(b => admin ? <a key={b.id} className={s.button} href={`/admin/requests?conflict_ids=${encodeURIComponent(b.id)}`} aria-label={`จัดการคำขอ ${b.request_code || 'ไม่มีเลขคำขอ'}`}>
-          {data.conflicts.length === 1 ? 'จัดการ ' : ''}{b.request_code || 'ไม่มีเลขคำขอ'}<ArrowRight size={14} aria-hidden="true" />
-        </a> : <span key={b.id} className={s.badge}>{b.request_code || 'ไม่มีเลขคำขอ'}</span>)}
+        {data.conflicts.map(b => admin ? <a key={b.id} className={s.button} href={`/admin/requests?conflict_ids=${encodeURIComponent(b.id)}`} aria-label={`จัดการคำขอ ${b.request_code ? formatRequestCodeForDisplay(b.request_code) : 'ไม่มีเลขคำขอ'}`}>
+          {data.conflicts.length === 1 ? 'จัดการ ' : ''}{b.request_code ? formatRequestCodeForDisplay(b.request_code) : 'ไม่มีเลขคำขอ'}<ArrowRight size={14} aria-hidden="true" />
+        </a> : <span key={b.id} className={s.badge}>{b.request_code ? formatRequestCodeForDisplay(b.request_code) : 'ไม่มีเลขคำขอ'}</span>)}
         {admin && data.conflicts.length > 1 && <a className={s.primary} href={`/admin/requests?conflict_ids=${encodeURIComponent(data.conflicts.map(b => b.id).join(','))}`}>จัดการทุกงาน<ArrowRight size={15} aria-hidden="true" /></a>}
       </div>
     </aside>}

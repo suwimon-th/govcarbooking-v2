@@ -1,6 +1,7 @@
 import React from 'react';
 import { Calendar as CalendarIcon, Clock, MapPin, User, ChevronLeft, ChevronRight, Phone, UserCheck } from 'lucide-react';
 import { getStatusColor, getStatusLabel } from "@/lib/statusHelper";
+import { formatRequestCodeForDisplay } from "@/lib/requestCodeHelper";
 
 interface CalendarEvent {
     id: string;
@@ -298,7 +299,7 @@ export default function DailyBookingList({ events, selectedDate, onItemClick, on
                                             </div>
                                             {evt.extendedProps?.request_code && (
                                                 <span className="text-[9px] font-mono font-bold text-gray-400 bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded truncate max-w-full text-right">
-                                                    {evt.extendedProps.request_code}
+                                                    {formatRequestCodeForDisplay(evt.extendedProps.request_code)}
                                                 </span>
                                             )}
                                         </div>
@@ -321,7 +322,7 @@ export default function DailyBookingList({ events, selectedDate, onItemClick, on
                                         <span className="bg-blue-50 border border-blue-100 text-blue-600 px-1.5 py-0.5 rounded font-black uppercase shrink-0">วัตถุประสงค์</span>
                                         {evt.extendedProps?.request_code && (
                                             <span className="font-mono font-bold text-gray-400 bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded shrink-0">
-                                                {evt.extendedProps.request_code}
+                                                {formatRequestCodeForDisplay(evt.extendedProps.request_code)}
                                             </span>
                                         )}
                                         {evt.extendedProps?.requester && (

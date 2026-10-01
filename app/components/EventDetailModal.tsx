@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
 import { getStatusLabel, getStatusColor } from "@/lib/statusHelper";
+import { formatRequestCodeForDisplay } from "@/lib/requestCodeHelper";
 import {
   X,
   User,
@@ -85,7 +86,7 @@ export default function EventDetailModal({ open, detail, onClose }: Props) {
               <FileText className="w-6 h-6 text-blue-600" />
               รายละเอียดการขอใช้รถ
             </h2>
-            <p className="text-xs text-gray-500 mt-1">รหัสงาน: <span className="font-mono text-gray-700 font-medium">{detail?.request_code || '...'}</span></p>
+            <p className="text-xs text-gray-500 mt-1">รหัสงาน: <span className="font-mono text-gray-700 font-medium">{formatRequestCodeForDisplay(detail?.request_code)}</span></p>
           </div>
 
           <button

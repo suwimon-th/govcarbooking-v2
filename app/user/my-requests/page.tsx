@@ -3,6 +3,7 @@ import Swal from "sweetalert2";
 
 import { useEffect, useState, useMemo } from "react";
 import { getStatusLabel, getStatusColor, isOffHours } from "@/lib/statusHelper";
+import { formatRequestCodeForDisplay } from "@/lib/requestCodeHelper";
 import {
   Calendar,
   Car,
@@ -445,7 +446,7 @@ export default function MyRequestsPage() {
                           )}
                         </div>
                         <div>
-                          <p className="text-base font-black text-gray-900 mb-1">{it.request_code}</p>
+                          <p className="text-base font-black text-gray-900 mb-1">{formatRequestCodeForDisplay(it.request_code)}</p>
                           <p className="text-base font-semibold text-gray-800 line-clamp-2 max-w-[280px] leading-relaxed" title={it.purpose}>
                             {it.purpose}
                           </p>
@@ -587,7 +588,7 @@ export default function MyRequestsPage() {
               <div key={it.id} className="p-5 active:bg-gray-50 transition-all">
                 <div className="flex justify-between items-start gap-3 mb-4">
                   <div className="min-w-0 flex-1">
-                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">{it.request_code}</span>
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">{formatRequestCodeForDisplay(it.request_code)}</span>
                     <h3 className="text-xl font-black text-gray-900 leading-tight border-l-4 border-blue-600 pl-3 break-words">
                       {it.purpose}
                     </h3>

@@ -9,6 +9,7 @@ import EditBookingModal from "./EditBookingModal";
 import DriverQueueModal from "./DriverQueueModal";
 import styles from "./requests.module.css";
 import { getStatusLabel, getStatusColor, isOffHours } from "@/lib/statusHelper";
+import { formatRequestCodeForDisplay } from "@/lib/requestCodeHelper";
 import {
   Calendar,
   Car,
@@ -934,7 +935,7 @@ function AdminRequestsContent() {
                   </div>
                   <div className="flex flex-col items-start">
                     <span className="text-blue-900 font-bold text-base leading-tight">
-                      {b.request_code}
+                      {formatRequestCodeForDisplay(b.request_code)}
                     </span>
                     <span className={`mt-1 inline-flex px-2.5 py-0.5 rounded-md text-[10px] font-bold border ${getStatusColor(b.status, b.request_code)}`}>
                       {getStatusLabel(b.status, b.request_code)}
@@ -1094,7 +1095,7 @@ function AdminRequestsContent() {
                               )}
                             </div>
                             <div>
-                              <div className="font-bold text-gray-900 text-sm whitespace-nowrap">{b.request_code}</div>
+                              <div className="font-bold text-gray-900 text-sm whitespace-nowrap">{formatRequestCodeForDisplay(b.request_code)}</div>
                               <div className="flex items-center gap-1.5 text-gray-500 text-xs mt-1 whitespace-nowrap">
                                 <User className="w-3 h-3 shrink-0" />
                                 {b.requester?.full_name || "-"}

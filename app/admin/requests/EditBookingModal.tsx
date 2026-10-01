@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabaseClient";
 import Swal from "sweetalert2";
 import type { BookingRow } from "./page";
 import { bookingStatusMap, getStatusLabel, getStatusColor, isOffHours } from "@/lib/statusHelper";
+import { formatRequestCodeForDisplay } from "@/lib/requestCodeHelper";
 import {
   X,
   User,
@@ -433,7 +434,7 @@ export default function EditBookingModal({
             </h2>
             <p className="text-sm text-slate-500 mt-2 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>
-              รหัสงาน: <span className="font-mono font-bold text-slate-700">{booking.request_code}</span>
+              รหัสงาน: <span className="font-mono font-bold text-slate-700">{formatRequestCodeForDisplay(booking.request_code)}</span>
             </p>
           </div>
           <button

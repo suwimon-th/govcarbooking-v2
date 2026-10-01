@@ -81,7 +81,7 @@ export async function generateRequestCode(vehicleId: string, startAt?: string): 
     }
 
     const nextRunning = maxRunning + 1;
-    return `${prefix}${String(nextRunning).padStart(3, "0")}`;
+    return `${prefix}${targetFiscalYear}/${String(nextRunning).padStart(3, "0")}`;
 }
 
 /**
@@ -133,7 +133,7 @@ export async function generateOtherVehicleRequestCode(otherPlateNumber: string |
     }
 
     const nextRunning = maxRunning + 1;
-    return `${prefix}${String(nextRunning).padStart(3, "0")}`;
+    return `${prefix}${targetFiscalYear}/${String(nextRunning).padStart(3, "0")}`;
 }
 
 
@@ -225,8 +225,13 @@ export async function resequenceRequestCodes(targetVehicleId?: string): Promise<
 
         // Process each group
         for (const [groupKey, prefixBookings] of prefixYearMap.entries()) {
-            // Re-extract prefixBase to build the code without fiscal year
-            const prefixBase = groupKey.split("-")[0] + "-" + groupKey.split("-")[1]; // e.g. "ENV-05/"
+            // groupKey format: "ENV-XX/-70" or "ENV-OT/-70"
+            // Wait, groupKey was created by `${prefixBase}-${fiscalYearShort}` 
+            // e.g. "ENV-73/-70"
+            const parts = groupKey.split("-");
+            // prefixBase is everything up to the last part (excluding the dash we added)
+            const fiscalYearShort = parts[parts.length - 1]; // "70"
+            const prefixBase = groupKey.slice(0, groupKey.lastIndexOf('-')); // "ENV-73/"
 
             // Sort chronologically by created_at ASC
             prefixBookings.sort((a, b) => {
@@ -240,7 +245,7 @@ export async function resequenceRequestCodes(targetVehicleId?: string): Promise<
 
             const updates = prefixBookings.map((b, idx) => {
                 const seqStr = String(idx + 1).padStart(3, "0");
-                const expectedCode = `${prefixBase}${seqStr}`;
+                const expectedCode = `${prefixBase}${fiscalYearShort}/${seqStr}`;
 
                 if (b.request_code !== expectedCode) {
                     totalUpdated++;
@@ -265,4 +270,18 @@ export async function resequenceRequestCodes(targetVehicleId?: string): Promise<
     } catch (err: any) {
         return { success: false, updatedCount: 0, error: err.message };
     }
+}
+
+/**
+ * Formats a request_code for display in the UI.
+ * If the code contains a fiscal year (e.g. ENV-73/70/001), 
+ * it strips the fiscal year and returns just ENV-73/001.
+ */
+export function formatRequestCodeForDisplay(code?: string | null): string {
+    if (!code) return "-";
+    const parts = code.split("/");
+    if (parts.length === 3) {
+        return `${parts[0]}/${parts[2]}`;
+    }
+    return code;
 }
