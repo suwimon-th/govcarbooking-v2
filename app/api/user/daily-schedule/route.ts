@@ -22,8 +22,8 @@ export async function GET(req: Request) {
       .from("bookings")
       .select(`
         id, request_code, start_at, end_at, status, purpose, destination, other_vehicle_plate, other_driver_name,
-        vehicle:vehicles ( plate_number, brand ),
-        driver:profiles!bookings_driver_id_fkey ( full_name )
+        vehicles ( plate_number, brand ),
+        drivers ( full_name )
       `)
       .gte("start_at", startOfDay)
       .lte("start_at", endOfDay)

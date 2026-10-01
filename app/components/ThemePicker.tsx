@@ -84,8 +84,10 @@ export default function ThemePicker() {
   const [font, setFont] = useState('Prompt');
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<'theme' | 'color' | 'font'>('theme');
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const media = window.matchMedia('(prefers-color-scheme: dark)');
     const apply = () => {
       let value: Theme = 'system';
@@ -139,6 +141,8 @@ export default function ThemePicker() {
 
   const isDark = theme === 'dark' || (theme === 'system' &&
     (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches));
+
+  if (!mounted) return null;
 
   return (
     <div

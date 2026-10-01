@@ -10,8 +10,8 @@ interface BookingInfo {
   status: string;
   purpose: string;
   destination: string;
-  vehicle: { plate_number: string; brand: string } | null;
-  driver: { full_name: string } | null;
+  vehicles: { plate_number: string; brand: string } | null;
+  drivers: { full_name: string } | null;
   other_vehicle_plate: string | null;
   other_driver_name: string | null;
 }
@@ -93,8 +93,8 @@ export default function DailySchedulePanel({ date }: { date: string }) {
               };
               const startTime = formatTime(b.start_at);
               const endTime = b.end_at ? formatTime(b.end_at) : 'เป็นต้นไป';
-              const plate = b.vehicle?.plate_number || b.other_vehicle_plate || 'ยังไม่ระบุรถ';
-              const driver = b.driver?.full_name || b.other_driver_name || 'ยังไม่ระบุคนขับ';
+              const plate = b.vehicles?.plate_number || b.other_vehicle_plate || 'ยังไม่ระบุรถ';
+              const driver = b.drivers?.full_name || b.other_driver_name || 'ยังไม่ระบุคนขับ';
               const isApproved = b.status === 'APPROVED' || b.status === 'COMPLETED';
               
               return (
