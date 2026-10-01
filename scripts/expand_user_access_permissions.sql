@@ -28,7 +28,9 @@ ALTER TABLE public.user_access_permissions ADD CONSTRAINT valid_permission_keys
     'reports.annual',
     'reports.fiscal',
     'profile',
-    'change_password'
+    'change_password',
+    'announcement',
+    'audit_logs'
   ]::TEXT[]);
 UPDATE public.user_access_permissions
 SET permissions = ARRAY(

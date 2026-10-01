@@ -251,14 +251,30 @@ function AdminRequestsContent() {
 
   // Fetch status summary once for dropdown badges
   const loadStatusSummary = async () => {
-    const rangeStart = new Date();
-    rangeStart.setMonth(rangeStart.getMonth() - 6);
-    
-    const { data } = await supabase
+    let query = supabase
       .from("bookings")
       .select("status, request_code")
-      .gte("start_at", rangeStart.toISOString())
-      .not("request_code", "like", "DUTY-VAN-%");
+      .or("request_code.is.null,request_code.not.like.DUTY-VAN-%");
+
+    const fiscalRange = getFiscalYearDateRange(filterFiscalYear);
+    if (fiscalRange) {
+      query = query.gte("start_at", `${fiscalRange.from}T00:00:00`);
+      query = query.lte("start_at", `${fiscalRange.to}T23:59:59`);
+    } else {
+      if (filterDateFrom) {
+        query = query.gte("start_at", `${filterDateFrom}T00:00:00`);
+      }
+      if (filterDateTo) {
+        query = query.lte("start_at", `${filterDateTo}T23:59:59`);
+      }
+      if (!filterDateFrom && !filterDateTo) {
+        const rangeStart = new Date();
+        rangeStart.setMonth(rangeStart.getMonth() - 6);
+        query = query.gte("start_at", rangeStart.toISOString());
+      }
+    }
+      
+    const { data } = await query;
     if (data) {
       setAllStatusSummary(data);
     }
@@ -266,7 +282,7 @@ function AdminRequestsContent() {
 
   useEffect(() => {
     loadStatusSummary();
-  }, []);
+  }, [filterFiscalYear, filterDateFrom, filterDateTo]);
 
   // Dynamically compute existing statuses present in all rows
   const availableStatuses = useMemo(() => {
@@ -356,7 +372,7 @@ function AdminRequestsContent() {
         vehicle:vehicle_id(plate_number, brand, model, photo_urls)
       `, { count: "exact" });
     if (conflictIds) query = query.not("id", "in", `(${conflictIds.join(",")})`);
-    if (conflictIds === null) query = query.not("request_code", "like", "DUTY-VAN-%");
+    if (conflictIds === null) query = query.or("request_code.is.null,request_code.not.like.DUTY-VAN-%");
 
     // Resolve the exact bookings linked from the leave conflicts, across all pages.
     if (conflictIds !== null) query = query.in("id", conflictIds.length ? conflictIds : ["00000000-0000-0000-0000-000000000000"]);
@@ -825,7 +841,7 @@ function AdminRequestsContent() {
               onChange={(e) => setFilterStatus(e.target.value)}
               className="pl-4 pr-8 py-2.5 border border-gray-200 rounded-xl text-xs font-bold w-full focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-gray-800 shadow-xs appearance-none cursor-pointer hover:bg-gray-100 transition-colors"
             >
-              <option value="ทั้งหมด">สถานะ: ทั้งหมด ({rows.length})</option>
+              <option value="ทั้งหมด">สถานะ: ทั้งหมด ({allStatusSummary.length})</option>
               {availableStatuses.map((st) => (
                 <option key={st.value} value={st.value}>
                   {st.label} ({st.count})

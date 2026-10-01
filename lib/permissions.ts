@@ -15,6 +15,8 @@ export const PERMISSION_SECTIONS = [
   { key: "reports", label: "รายงานการใช้รถรายเดือน", href: "/admin/reports/monthly", group: "งานจัดการ" },
   { key: "fogging", label: "จัดการเครื่องพ่นหมอกควัน", href: "/admin/fogging", group: "งานจัดการ" },
   { key: "duty", label: "ตั้งค่าเวรรถตู้", href: "/admin/duty-settings", group: "งานจัดการ" },
+  { key: "announcement", label: "ตั้งค่าหมายเหตุรายวัน", href: "/admin/announcement", group: "งานจัดการ" },
+  { key: "audit_logs", label: "ประวัติการทำงานของระบบ", href: "/admin/audit-logs", group: "งานจัดการ" },
   { key: "my_requests.evaluate", label: "แบบประเมินบริการรายคำขอ", href: "/user/evaluations", group: "งานส่วนตัว" },
   { key: "dashboard.trips", label: "สรุปสถานะงานและเลขไมล์", href: "/admin/dashboard", group: "งานจัดการ" },
   { key: "requests.print", label: "หน้าพิมพ์ใบขอใช้รถ", href: "/admin/print-request/[id]", group: "งานจัดการ" },
@@ -48,6 +50,8 @@ export const PERMISSION_MODULES: { key: string; label: string; group: string; pa
   { key: "reports", label: "รายงาน", group: "งานจัดการ", pages: ["reports", "reports.fuel", "reports.annual", "reports.fiscal"] },
   { key: "fogging", label: "เครื่องพ่นหมอกควัน", group: "งานจัดการ", pages: ["fogging"] },
   { key: "duty", label: "เวรรถตู้", group: "งานจัดการ", pages: ["duty"] },
+  { key: "announcement", label: "หมายเหตุรายวัน", group: "งานจัดการ", pages: ["announcement"] },
+  { key: "audit_logs", label: "ประวัติระบบ", group: "งานจัดการ", pages: ["audit_logs"] },
 ];
 
 export const FIXED_ACCESS_MODULES = [
@@ -111,6 +115,8 @@ export function pageRequirement(href: string): Requirement | null {
 }
 // Unknown admin APIs remain admin-only.
 export function apiRequirement(path: string, method = "GET"): Requirement | null {
+  if (path === "/api/admin/announcement") return "announcement";
+  if (path === "/api/admin/audit-logs") return "audit_logs";
   if (path === "/api/admin/driver-leaves") return "drivers.leave";
   if (path === "/api/admin/driver-availability") return ["requests", "booking"];
   if (path === "/api/admin/reports/fuel") return "reports.fuel";

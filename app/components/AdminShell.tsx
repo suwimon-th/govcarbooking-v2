@@ -193,6 +193,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         { href: "/admin/inspections", label: "แบบรายงานสภาพรถ", icon: ClipboardCheck },
         { href: "/admin/inspections/config", label: "ตั้งค่าหัวข้อตรวจสภาพ", icon: Settings },
         { href: "/admin/evaluations", label: "ผลการประเมิน", icon: Star },
+        { href: "/admin/announcement", label: "ตั้งค่าหมายเหตุรายวัน", icon: MessageCircle },
       ].filter(i => canVisit(i.href)),
     },
     {
@@ -338,7 +339,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
         {/* Nav Content */}
         <div className="flex-1 flex flex-col min-h-0">
-          <SidebarContent />
+          {SidebarContent({})}
         </div>
 
         {/* Logout */}
@@ -390,7 +391,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
         {/* Drawer Nav */}
         <div className="flex-1 flex flex-col min-h-0">
-          <SidebarContent mobile />
+          {SidebarContent({ mobile: true })}
         </div>
 
         {/* Drawer Footer */}

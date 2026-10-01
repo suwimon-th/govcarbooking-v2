@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { getDailyAnnouncement } from "@/lib/settings";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -36,7 +37,9 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ bookings: data });
+    const announcement = await getDailyAnnouncement();
+
+    return NextResponse.json({ bookings: data, announcement: announcement || "" });
   } catch (error: any) {
     console.error("Daily schedule error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });

@@ -46,3 +46,10 @@
   overflow-wrap: break-word;
 }
 .fields { min-inline-size: 0; }
+
+:global(.dark) .moduleHeader {
+  color: #e2e8f0;
+}
+:global(.dark) .pageRow {
+  color: #f8fafc;
+}

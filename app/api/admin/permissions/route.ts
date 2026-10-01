@@ -26,7 +26,7 @@ export async function GET() {
       return { ...user, permissions: user.role === "ADMIN" ? defaultPermissions("ADMIN") : grant ? storedPermissions(grant.permissions, grant.permission_version) : defaultPermissions(user.role), custom: !!grant, updated_at: grant?.updated_at ?? null };
     });
     return NextResponse.json({ users, storage_ready: storageReady }, { headers: { "Cache-Control": "private, no-store" } });
-  } catch { return unavailable(); }
+  } catch (err) { console.error("Catch error:", err); return unavailable(); }
 }
 export async function PUT(request: Request) {
   try {
@@ -49,8 +49,8 @@ export async function PUT(request: Request) {
     const { data: oldData } = await db.from("user_access_permissions").select("permissions").eq("user_id", target.id).maybeSingle();
     const oldPermissions = oldData?.permissions || [];
 
-    const { error: saveError } = await db.from("user_access_permissions").upsert({ user_id: target.id, permissions, permission_version: PERMISSION_VERSION, updated_by: actor.id, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
-    if (saveError) return unavailable();
+    const { error: saveError } = await db.from("user_access_permissions").upsert({ user_id: target.id, permissions, permission_version: PERMISSION_VERSION, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
+    if (saveError) { console.error("saveError:", saveError); return unavailable(); }
 
     // Log the action
     const { error: auditError } = await db.from("system_audit_logs").insert({
@@ -68,5 +68,5 @@ export async function PUT(request: Request) {
     }
 
     return NextResponse.json({ success: true, permissions });
-  } catch { return unavailable(); }
+  } catch (err) { console.error("Catch error:", err); return unavailable(); }
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { supabase } from "@/lib/supabaseClient";
+import { accessDatabase } from "@/lib/access-server";
 
 export async function PUT(req: Request) {
   try {
@@ -74,6 +75,17 @@ export async function PUT(req: Request) {
     if (!updated || updated.length === 0) {
       console.error("No rows were updated. Possible RLS issue.");
       return NextResponse.json({ error: "ไม่สามารถอัปเดตข้อมูลได้ (RLS/Permissions)" }, { status: 403 });
+    }
+
+    try {
+      const db = accessDatabase();
+      await db.from("system_audit_logs").insert({
+        actor_id: userId,
+        action: "USER_CANCEL_BOOKING",
+        details: { booking_id: id }
+      });
+    } catch (e) {
+      console.error("Audit log error:", e);
     }
 
     return NextResponse.json({ success: true });

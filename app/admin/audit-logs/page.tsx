@@ -21,22 +21,18 @@ export default function AuditLogsPage() {
 
   const loadData = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("system_audit_logs")
-      .select(`
-        *,
-        actor:profiles!actor_id(full_name, role),
-        target:profiles!target_id(full_name)
-      `)
-      .order("created_at", { ascending: false })
-      .limit(100);
-
-    if (error) {
+    try {
+      const res = await fetch("/api/admin/audit-logs");
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || "เกิดข้อผิดพลาดในการโหลดข้อมูล");
+      }
+      setLogs(json.logs || []);
+    } catch (error) {
       console.error(error);
-    } else {
-      setLogs(data as any);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -46,9 +42,12 @@ export default function AuditLogsPage() {
   const translateAction = (action: string) => {
     switch (action) {
       case "UPDATE_PERMISSIONS": return "แก้ไขสิทธิ์การเข้าถึง";
-      case "ADMIN_UPDATE_BOOKING": return "แก้ไขคำขอใช้รถ";
-      case "ADMIN_DELETE_BOOKING": return "ลบคำขอใช้รถ";
-      case "ADMIN_BULK_DELETE_BOOKINGS": return "ลบคำขอใช้รถ (หลายรายการ)";
+      case "ADMIN_UPDATE_BOOKING": return "แอดมินแก้ไขคำขอใช้รถ";
+      case "ADMIN_DELETE_BOOKING": return "แอดมินลบคำขอใช้รถ";
+      case "ADMIN_BULK_DELETE_BOOKINGS": return "แอดมินลบคำขอใช้รถ (หลายรายการ)";
+      case "USER_CREATE_BOOKING": return "ผู้ใช้สร้างคำขอใช้รถใหม่";
+      case "USER_CANCEL_BOOKING": return "ผู้ใช้ยกเลิกคำขอใช้รถ";
+      case "USER_UPDATE_BOOKING": return "ผู้ใช้แก้ไขคำขอใช้รถ";
       default: return action;
     }
   };

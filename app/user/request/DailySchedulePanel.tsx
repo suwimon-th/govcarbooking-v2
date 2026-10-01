@@ -18,6 +18,7 @@ interface BookingInfo {
 
 export default function DailySchedulePanel({ date }: { date: string }) {
   const [bookings, setBookings] = useState<BookingInfo[]>([]);
+  const [announcement, setAnnouncement] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -32,15 +33,18 @@ export default function DailySchedulePanel({ date }: { date: string }) {
         const res = await fetch(`/api/user/daily-schedule?date=${date}`);
         const json = await res.json();
         
-        if (res.ok && json.bookings) {
-          setBookings(json.bookings);
+        if (res.ok) {
+          setBookings(json.bookings || []);
+          setAnnouncement(json.announcement || null);
         } else {
           console.error("Error fetching daily schedule:", json.error);
           setBookings([]);
+          setAnnouncement(null);
         }
       } catch (error) {
         console.error("Fetch exception:", error);
         setBookings([]);
+        setAnnouncement(null);
       } finally {
         setLoading(false);
       }
@@ -129,10 +133,12 @@ export default function DailySchedulePanel({ date }: { date: string }) {
         )}
       </div>
       
-      {bookings.length > 0 && (
+      {(bookings.length > 0 || announcement) && (
         <div className="mt-6 pt-4 border-t border-gray-100 flex items-start gap-2 text-xs text-gray-500 bg-blue-50/50 p-3 rounded-xl">
           <Info className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
-          <p>เวลาที่แสดงคือช่วงเวลาที่รถคันดังกล่าวถูกจองแล้ว กรุณาหลีกเลี่ยงการจองรถคันเดียวกันในช่วงเวลานี้</p>
+          <p className="whitespace-pre-wrap">
+            {announcement || "เวลาที่แสดงคือช่วงเวลาที่รถคันดังกล่าวถูกจองแล้ว กรุณาหลีกเลี่ยงการจองรถคันเดียวกันในช่วงเวลานี้"}
+          </p>
         </div>
       )}
     </div>

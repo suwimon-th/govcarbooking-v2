@@ -137,7 +137,7 @@ export default function AdminDashboardPage() {
         requester:requester_id(full_name),
         status
       `)
-      .not("request_code", "like", "DUTY-VAN-%")
+      .or("request_code.is.null,request_code.not.like.DUTY-VAN-%")
       .order("created_at", { ascending: false })
       .limit(5);
 

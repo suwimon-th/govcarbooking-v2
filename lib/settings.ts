@@ -89,6 +89,7 @@ export interface SystemVanDutyState {
   default_title: string;
   monthly_duties: Record<string, MonthlyDutyConfig>;
   active_fiscal_year?: string | null;  // e.g. "69", "70", null = auto
+  daily_announcement?: string | null;  // ข้อความประกาศประจำวัน
 }
 
 export async function getAllVanDutyState(): Promise<SystemVanDutyState> {
@@ -115,6 +116,7 @@ export async function getAllVanDutyState(): Promise<SystemVanDutyState> {
           default_title: parsed.default_title || parsed.title || defaultState.default_title,
           monthly_duties: parsed.monthly_duties || {},
           active_fiscal_year: parsed.active_fiscal_year ?? null,
+          daily_announcement: parsed.daily_announcement ?? null,
         };
       } catch {
         return defaultState;
@@ -153,6 +155,27 @@ export async function setActiveFiscalYear(fiscalYear: string | null): Promise<vo
     if (error) console.error("[Settings] setActiveFiscalYear Error:", error);
   } catch (err) {
     console.error("[Settings] setActiveFiscalYear Exception:", err);
+  }
+}
+
+export async function getDailyAnnouncement(): Promise<string | null> {
+  const state = await getAllVanDutyState();
+  return state.daily_announcement ?? null;
+}
+
+export async function setDailyAnnouncement(announcement: string | null): Promise<void> {
+  try {
+    const currentState = await getAllVanDutyState();
+    currentState.daily_announcement = announcement;
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({ full_name: JSON.stringify(currentState) })
+      .eq("id", SYSTEM_CONFIG_ID);
+
+    if (error) console.error("[Settings] setDailyAnnouncement Error:", error);
+  } catch (err) {
+    console.error("[Settings] setDailyAnnouncement Exception:", err);
   }
 }
 

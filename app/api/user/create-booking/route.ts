@@ -9,6 +9,7 @@ import {
 } from "@/lib/email";
 import { getAutoAssignEnabled } from "@/lib/settings";
 import { generateRequestCode, generateOtherVehicleRequestCode } from "@/lib/requestCodeHelper";
+import { accessDatabase } from "@/lib/access-server";
 
 /* ---------------------------
    helper: เติมวินาทีให้เวลา
@@ -465,6 +466,17 @@ export async function POST(req: Request) {
       console.log(`⏳ [NOTIFY] Waiting for ${notifications.length} notification(s)...`);
       await Promise.allSettled(notifications);
       console.log("✅ [NOTIFY] All notifications processed.");
+    }
+
+    try {
+      const db = accessDatabase();
+      await db.from("system_audit_logs").insert({
+        actor_id: requester_id,
+        action: "USER_CREATE_BOOKING",
+        details: { booking_id: data.id, request_code: data.request_code }
+      });
+    } catch (e) {
+      console.error("Audit log error:", e);
     }
 
     return NextResponse.json(

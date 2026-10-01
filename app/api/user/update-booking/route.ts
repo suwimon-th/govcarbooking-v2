@@ -2,7 +2,7 @@ import { assertDriverAvailable } from "@/lib/driver-leave-store";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { supabase } from "@/lib/supabaseClient";
-
+import { accessDatabase } from "@/lib/access-server";
 import { generateRequestCode } from "@/lib/requestCodeHelper";
 
 export async function PUT(req: Request) {
@@ -175,6 +175,17 @@ export async function PUT(req: Request) {
         if (auditError) {
             console.error("Audit log insertion failed:", auditError);
             // Non-blocking for the user, but log it
+        }
+
+        try {
+            const db = accessDatabase();
+            await db.from("system_audit_logs").insert({
+                actor_id: userId,
+                action: userRole === "ADMIN" ? "ADMIN_UPDATE_BOOKING" : "USER_UPDATE_BOOKING",
+                details: { booking_id: id, changes }
+            });
+        } catch (e) {
+            console.error("System audit log error:", e);
         }
 
         return NextResponse.json({

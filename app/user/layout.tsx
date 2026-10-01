@@ -170,21 +170,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
     try { await fetch("/api/logout", { method: "POST" }); router.push("/login"); } finally { setLoggingOut(false); }
   };
 
-  // ─── Build managed nav items from permissions ───────────────────────────────
-  const managementIcons: Record<string, LucideIcon> = {
-    dashboard: LayoutDashboard, requests: FileText, vehicles: Car, drivers: Users,
-    fuel: Fuel, maintenance: Wrench, inspections: ClipboardCheck, evaluations: Star,
-    reports: FileText, fogging: SprayCan, duty: Calendar,
-  };
-  const managedItems: NavItem[] = [
-    ...PERMISSION_MODULES.filter(m => m.group === "งานจัดการ")
-      .flatMap(m => m.pages.map(k => PERMISSION_SECTIONS.find(s => s.key === k)!))
-      .filter(s => s && !s.href.includes("["))
-      .map(s => ({ href: s.href, label: s.label, icon: managementIcons[s.key.split(".")[0]] || Settings })),
-    { href: "/admin/permissions", label: "จัดการสิทธิ์", icon: ShieldCheck },
-    { href: "/admin/request-codes", label: "จัดการเลขคำขอ", icon: RefreshCw },
-    { href: "/admin/audit-logs", label: "ประวัติระบบ", icon: FileText },
-  ];
+
 
   // ─── Nav Groups ──────────────────────────────────────────────────────────────
   const navGroups: NavGroup[] = [
@@ -207,10 +193,51 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
         { href: "/vehicle-info", label: "ข้อมูลรถ", icon: Car },
       ].filter(i => canVisit(i.href)),
     },
-    ...(managedItems.filter(i => canVisit(i.href)).length > 0 ? [{
-      id: "management", label: "สิทธิ์จัดการระบบ", icon: ShieldCheck,
-      items: managedItems.filter(i => canVisit(i.href)),
-    }] : []),
+    {
+      id: "admin-main", label: "แผงควบคุม (ผู้ดูแล)", icon: LayoutDashboard,
+      items: [
+        { href: "/admin", label: "หน้าแรกผู้ดูแล", icon: LayoutDashboard },
+        { href: "/admin/requests", label: "คำขอใช้รถ", icon: FileText },
+        { href: "/admin/dashboard", label: "สถานะงาน & เลขไมล์", icon: LayoutDashboard },
+      ].filter(i => canVisit(i.href)),
+    },
+    {
+      id: "admin-vehicles", label: "ยานพาหนะ & คนขับ (จัดการ)", icon: Car,
+      items: [
+        { href: "/admin/vehicles", label: "ข้อมูลรถทั้งหมด", icon: Car },
+        { href: "/admin/drivers", label: "ข้อมูลคนขับรถ", icon: Users },
+        { href: "/admin/fogging", label: "เครื่องพ่นหมอกควัน", icon: SprayCan },
+        { href: "/admin/duty-settings", label: "ตั้งค่าเวรรถตู้", icon: Calendar },
+      ].filter(i => canVisit(i.href)),
+    },
+    {
+      id: "admin-operations", label: "ระบบงาน (จัดการ)", icon: Wrench,
+      items: [
+        { href: "/admin/fuel", label: "จัดการเบิกน้ำมัน", icon: Fuel },
+        { href: "/admin/maintenance", label: "แจ้งปัญหา/ซ่อมบำรุง", icon: Wrench },
+        { href: "/admin/inspections", label: "แบบรายงานสภาพรถ", icon: ClipboardCheck },
+        { href: "/admin/inspections/config", label: "ตั้งค่าหัวข้อตรวจสภาพ", icon: Settings },
+        { href: "/admin/evaluations", label: "ผลการประเมิน", icon: Star },
+        { href: "/admin/announcement", label: "ตั้งค่าหมายเหตุรายวัน", icon: MessageCircle },
+      ].filter(i => canVisit(i.href)),
+    },
+    {
+      id: "admin-reports", label: "รายงาน", icon: FileText,
+      items: [
+        { href: "/admin/reports/monthly", label: "รายงานรายเดือน", icon: FileText },
+        { href: "/admin/reports/fuel", label: "รายงานน้ำมัน", icon: Fuel },
+        { href: "/admin/reports/annual", label: "รายงานรายปี", icon: FileText },
+      ].filter(i => canVisit(i.href)),
+    },
+    {
+      id: "admin-system", label: "ระบบ & สิทธิ์", icon: ShieldCheck,
+      items: [
+        { href: "/admin/users", label: "จัดการผู้ใช้งาน", icon: Users },
+        { href: "/admin/permissions", label: "จัดการสิทธิ์", icon: ShieldCheck },
+        { href: "/admin/request-codes", label: "จัดการเลขคำขอ", icon: RefreshCw },
+        { href: "/admin/audit-logs", label: "ประวัติระบบ", icon: FileText },
+      ].filter(i => canVisit(i.href)),
+    },
     {
       id: "account", label: "บัญชีของฉัน", icon: UserCircle,
       items: [
@@ -323,7 +350,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
 
         {/* Nav */}
         <div className="flex-1 flex flex-col min-h-0">
-          <SidebarContent />
+          {SidebarContent({})}
         </div>
 
         {/* Logout */}
@@ -383,7 +410,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
 
         {/* Nav */}
         <div className="flex-1 flex flex-col min-h-0">
-          <SidebarContent mobile />
+          {SidebarContent({ mobile: true })}
         </div>
 
         {/* Logout */}
