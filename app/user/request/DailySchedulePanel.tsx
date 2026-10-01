@@ -28,6 +28,10 @@ export default function DailySchedulePanel({ date }: { date: string }) {
         return;
       }
       setLoading(true);
+      
+      const startOfDay = `${date}T00:00:00+07:00`;
+      const endOfDay = `${date}T23:59:59+07:00`;
+
       const { data, error } = await supabase
         .from("bookings")
         .select(`
@@ -35,7 +39,8 @@ export default function DailySchedulePanel({ date }: { date: string }) {
           vehicle:vehicles ( plate_number, brand ),
           driver:profiles!bookings_driver_id_fkey ( full_name )
         `)
-        .eq("date", date)
+        .gte("start_at", startOfDay)
+        .lte("start_at", endOfDay)
         .neq("status", "REJECTED")
         .neq("status", "CANCELLED")
         .order("start_at", { ascending: true });
