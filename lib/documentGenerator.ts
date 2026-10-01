@@ -1,5 +1,6 @@
 import { Document, Packer, Paragraph, TextRun, AlignmentType, HeadingLevel, patchDocument, PatchType, LineRuleType, Table, TableRow, TableCell, WidthType, BorderStyle, TabStopType, LeaderType, UnderlineType } from "docx";
 import { saveAs } from "file-saver";
+import { formatRequestCodeForDisplay } from "./requestCodeHelper";
 
 interface BookingData {
     request_code: string;
@@ -83,8 +84,9 @@ const generateFromCode = async (booking: BookingData) => {
 
     // Sequence & Form logic
     let sequenceNo = ".........";
-    if (booking.request_code.includes("-")) {
-        const parts = booking.request_code.split("-");
+    const displayCode = formatRequestCodeForDisplay(booking.request_code);
+    if (displayCode.includes("-")) {
+        const parts = displayCode.split("-");
         if (parts.length > 1) {
             sequenceNo = parts[1].replace("_", "/");
         }
@@ -702,5 +704,6 @@ const generateFromCode = async (booking: BookingData) => {
     });
 
     const blob = await Packer.toBlob(doc);
-    saveAs(blob, `ใบขออนุญาตใช้รถ_${booking.request_code}.docx`);
+    const filenameCode = formatRequestCodeForDisplay(booking.request_code).replace(/\//g, "_");
+    saveAs(blob, `ใบขออนุญาตใช้รถ_${filenameCode}.docx`);
 }
