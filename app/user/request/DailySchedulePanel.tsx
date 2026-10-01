@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
 import { Clock, MapPin, Car, User, Calendar as CalendarIcon, Loader2, Info } from "lucide-react";
 import { formatRequestCodeForDisplay } from "@/lib/requestCodeHelper";
 
@@ -29,26 +28,22 @@ export default function DailySchedulePanel({ date }: { date: string }) {
       }
       setLoading(true);
       
-      const startOfDay = `${date}T00:00:00+07:00`;
-      const endOfDay = `${date}T23:59:59+07:00`;
-
-      const { data, error } = await supabase
-        .from("bookings")
-        .select(`
-          id, request_code, start_at, end_at, status, purpose, destination, other_vehicle_plate, other_driver_name,
-          vehicle:vehicles ( plate_number, brand ),
-          driver:profiles!bookings_driver_id_fkey ( full_name )
-        `)
-        .gte("start_at", startOfDay)
-        .lte("start_at", endOfDay)
-        .neq("status", "REJECTED")
-        .neq("status", "CANCELLED")
-        .order("start_at", { ascending: true });
+      try {
+        const res = await fetch(`/api/user/daily-schedule?date=${date}`);
+        const json = await res.json();
         
-      if (!error && data) {
-        setBookings(data as any);
+        if (res.ok && json.bookings) {
+          setBookings(json.bookings);
+        } else {
+          console.error("Error fetching daily schedule:", json.error);
+          setBookings([]);
+        }
+      } catch (error) {
+        console.error("Fetch exception:", error);
+        setBookings([]);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
     fetchBookings();
   }, [date]);
