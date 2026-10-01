@@ -7,6 +7,7 @@ import { Calendar, Clock, MapPin, User, Building, Car, AlertTriangle, CheckCircl
 import { generateBookingDocument } from "@/lib/documentGenerator";
 import Swal from 'sweetalert2';
 import TimePicker24 from "@/app/components/TimePicker24";
+import DailySchedulePanel from "./DailySchedulePanel";
 
 interface Vehicle {
   id: string;
@@ -709,10 +710,11 @@ export default function RequestForm({
 
   const containerClasses = isRetroactive
     ? "p-2" // Minimal padding for modal
-    : "bg-white shadow-[0_8px_30px_rgb(0,0,0,0.08)] rounded-3xl p-6 md:p-10 max-w-2xl mx-auto border-t-4 border-blue-600 relative overflow-hidden";
+    : "bg-white shadow-[0_8px_30px_rgb(0,0,0,0.08)] rounded-3xl p-6 md:p-10 border-t-4 border-blue-600 relative overflow-hidden w-full lg:max-w-2xl mx-auto";
 
   return (
-    <div className={containerClasses}>
+    <div className={!isRetroactive ? "flex flex-col xl:flex-row gap-6 w-full items-start justify-center" : ""}>
+      <div className={containerClasses}>
 
       {/* ... Header ... */}
       {!isRetroactive && (
@@ -1541,6 +1543,12 @@ export default function RequestForm({
           </div>
         )}
       </form>
+      </div>
+      {!isRetroactive && (
+        <div className="w-full xl:w-[450px] shrink-0 sticky top-6 self-stretch max-h-[calc(100vh-3rem)]">
+          <DailySchedulePanel date={date} />
+        </div>
+      )}
     </div>
   );
 }

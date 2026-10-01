@@ -24,7 +24,7 @@ export default async function RequestPage(props: any) {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-[1400px] mx-auto">
         <RequestForm
           requesterId={requesterId}
           requesterName={requesterName}
