@@ -5,6 +5,7 @@ import { formatRequestCodeForDisplay } from "@/lib/requestCodeHelper";
 interface BookingInfo {
   id: string;
   request_code: string;
+  requester_name: string | null;
   start_at: string;
   end_at: string | null;
   status: string;
@@ -118,8 +119,12 @@ export default function DailySchedulePanel({ date }: { date: string }) {
                       <span className="font-medium text-gray-800">{plate}</span>
                     </div>
                     <div className="flex items-start gap-2">
+                      <User className="w-4 h-4 mt-0.5 text-indigo-500 shrink-0" />
+                      <span className="break-words"><span className="text-gray-500">ผู้ขอใช้รถ: </span>{b.requester_name?.trim() || 'ไม่ระบุชื่อผู้ขอ'}</span>
+                    </div>
+                    <div className="flex items-start gap-2">
                       <User className="w-4 h-4 mt-0.5 text-blue-500 shrink-0" />
-                      <span>{driver}</span>
+                      <span className="break-words"><span className="text-gray-500">คนขับ: </span>{driver}</span>
                     </div>
                     <div className="flex items-start gap-2">
                       <MapPin className="w-4 h-4 mt-0.5 text-red-400 shrink-0" />

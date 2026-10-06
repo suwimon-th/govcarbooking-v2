@@ -22,7 +22,7 @@ export async function GET(req: Request) {
     const { data, error } = await supabase
       .from("bookings")
       .select(`
-        id, request_code, start_at, end_at, status, purpose, destination, other_vehicle_plate, other_driver_name,
+        id, request_code, requester_name, start_at, end_at, status, purpose, destination, other_vehicle_plate, other_driver_name,
         vehicles ( plate_number, brand ),
         drivers ( full_name )
       `)
