@@ -1,5 +1,7 @@
 "use client";
 
+import OfficialReportMenuLink from "./OfficialReportMenuLink";
+
 import SidebarSearch from "./SidebarSearch";
 import ModuleNavigation from "./ModuleNavigation";
 import Link from "next/link";
@@ -75,7 +77,8 @@ function NavGroup({
         <div className="border-t border-white/10 bg-blue-950/20 px-1.5 py-1.5 space-y-0.5">
           {group.items.map((item) => {
             const Icon = item.icon;
-            const active = pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href + "/"));
+            const active = (pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href + "/"))) && !(item.href === "/admin/reports/fuel" && pathname.startsWith("/admin/reports/fuel/official"));
+            if (item.href === "/admin/reports/fuel/official") return <OfficialReportMenuLink key={item.href} active={active} onNavigate={onNavigate} />;
             return (
               <Link
                 key={item.href}
@@ -199,6 +202,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     {
       id: "reports", label: "รายงาน", icon: FileText,
       items: [
+        { href: "/admin/reports/fuel/official", label: "รายงานน้ำมันตามแบบราชการ", icon: FileText },
         { href: "/admin/reports/monthly", label: "รายงานรายเดือน", icon: FileText },
         { href: "/admin/reports/fuel", label: "รายงานน้ำมัน", icon: Fuel },
         { href: "/admin/reports/annual", label: "รายงานรายปี", icon: FileText },
@@ -239,7 +243,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           <div className="flex flex-col gap-1 items-center">
             {allItems.map(item => {
               const Icon = item.icon;
-              const active = pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href + "/"));
+              const active = (pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href + "/"))) && !(item.href === "/admin/reports/fuel" && pathname.startsWith("/admin/reports/fuel/official"));
               return (
                 <Link key={item.href} href={item.href} title={item.label} target={item.target} rel={item.target === "_blank" ? "noopener noreferrer" : undefined}
                   className={`relative flex items-center justify-center w-10 h-10 rounded-xl transition-all ${active ? "bg-white text-[#1e40af] shadow-md" : "text-blue-100 hover:text-white hover:bg-white/15"}`}>

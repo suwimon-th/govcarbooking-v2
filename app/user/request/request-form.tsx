@@ -8,6 +8,7 @@ import { generateBookingDocument } from "@/lib/documentGenerator";
 import Swal from 'sweetalert2';
 import TimePicker24 from "@/app/components/TimePicker24";
 import DailySchedulePanel from "./DailySchedulePanel";
+import styles from "./request-form.module.css";
 
 interface Vehicle {
   id: string;
@@ -31,6 +32,7 @@ interface RequestFormProps {
   departmentName: string;
   selectedDate: string; // YYYY-MM-DD
   isRetroactive?: boolean;
+  embedded?: boolean;
   canSelectRequester?: boolean;
   onSuccess?: () => void;
   initialNoRequestCode?: boolean; // Added
@@ -57,6 +59,7 @@ export default function RequestForm({
   departmentName,
   selectedDate,
   isRetroactive = false,
+  embedded = false,
   canSelectRequester = false,
   onSuccess,
   initialNoRequestCode = false, // Added
@@ -708,12 +711,14 @@ export default function RequestForm({
   const textInputClasses = "w-full !pl-16 pr-4 py-3 rounded-xl border border-gray-200 bg-gray-50/50 focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all placeholder:text-gray-400";
   const labelClasses = "block text-sm font-semibold text-gray-700 mb-2";
 
-  const containerClasses = isRetroactive
+  const containerClasses = embedded
+    ? `${styles.embeddedForm} bg-white border border-gray-200`
+    : isRetroactive
     ? "p-2" // Minimal padding for modal
     : "bg-white shadow-[0_8px_30px_rgb(0,0,0,0.08)] rounded-3xl p-6 md:p-10 border-t-4 border-blue-600 relative overflow-hidden w-full lg:max-w-2xl mx-auto";
 
   return (
-    <div className={!isRetroactive ? "flex flex-col xl:flex-row gap-6 w-full items-start justify-center" : ""}>
+    <div className={embedded ? styles.embeddedLayout : !isRetroactive ? "flex flex-col xl:flex-row gap-6 w-full items-start justify-center" : ""}>
       <div className={containerClasses}>
 
       {/* ... Header ... */}
@@ -721,8 +726,8 @@ export default function RequestForm({
         <div className="absolute -top-20 -right-20 w-60 h-60 bg-blue-50 rounded-full blur-3xl opacity-50 pointer-events-none"></div>
       )}
 
-      <div className="text-center mb-8 relative z-10">
-        {!isRetroactive && (
+      <div className={embedded ? styles.formHeading : "text-center mb-8 relative z-10"}>
+        {!isRetroactive && !embedded && (
           <div className="inline-flex items-center justify-center p-3 bg-blue-50 rounded-2xl mb-4 text-blue-600">
             <Car className="w-8 h-8" />
           </div>
@@ -757,13 +762,13 @@ export default function RequestForm({
 
         {/* Advanced Booking options (Only inside 'จองล่วงหน้า' tab) */}
         {initialNoRequestCode && (
-          <div className="bg-blue-50/70 border border-blue-100 rounded-3xl p-5 space-y-3">
+          <div className={styles.bookingOptions}>
             <h4 className="text-sm font-bold text-blue-900 flex items-center gap-2 mb-1">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
               ตัวเลือกการจองล่วงหน้า
             </h4>
-            <div className="flex flex-col sm:flex-row gap-6">
-              <div className="flex items-center gap-2.5">
+            <div className={styles.optionGrid}>
+              <div className={styles.optionItem}>
                 <input
                   type="checkbox"
                   id="noRequestCode"
@@ -771,11 +776,11 @@ export default function RequestForm({
                   checked={noRequestCode}
                   onChange={(e) => setNoRequestCode(e.target.checked)}
                 />
-                <label htmlFor="noRequestCode" className="text-sm font-semibold text-blue-850 cursor-pointer select-none">
-                  ไม่ส่งเลขคำขอ (จองคิวชั่วคราว)
+                <label htmlFor="noRequestCode" className={styles.optionLabel}>
+                  <strong>ไม่ออกเลขคำขอ</strong><span>จองคิวชั่วคราว</span>
                 </label>
               </div>
-              <div className="flex items-center gap-2.5">
+              <div className={styles.optionItem}>
                 <input
                   type="checkbox"
                   id="skipLineNotification"
@@ -783,8 +788,8 @@ export default function RequestForm({
                   checked={skipLineNotification}
                   onChange={(e) => setSkipLineNotification(e.target.checked)}
                 />
-                <label htmlFor="skipLineNotification" className="text-sm font-semibold text-blue-850 cursor-pointer select-none">
-                  ไม่ส่งไลน์ (ข้ามแจ้งเตือนคนขับ)
+                <label htmlFor="skipLineNotification" className={styles.optionLabel}>
+                  <strong>ไม่ส่งแจ้งเตือน LINE</strong><span>ข้ามการแจ้งเตือนคนขับ</span>
                 </label>
               </div>
             </div>
@@ -1545,7 +1550,7 @@ export default function RequestForm({
       </form>
       </div>
       {!isRetroactive && (
-        <div className="w-full xl:w-[450px] shrink-0 sticky top-6 self-stretch max-h-[calc(100vh-3rem)]">
+        <div className={embedded ? styles.embeddedSchedule : "w-full xl:w-[450px] shrink-0 sticky top-6 self-stretch max-h-[calc(100vh-3rem)]"}>
           <DailySchedulePanel date={date} />
         </div>
       )}

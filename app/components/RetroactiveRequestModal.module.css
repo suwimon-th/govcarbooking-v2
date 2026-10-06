@@ -1,0 +1,11 @@
+.dialog { width:100%; max-width:1240px; max-height:92dvh; display:flex; flex-direction:column; overflow:hidden; border:1px solid var(--border-color, #dbe3ef); box-shadow:0 32px 100px #0005; }
+.header,.tabs { flex-shrink:0; }
+.header { padding:22px 28px; }
+.header h3 { font-size:22px; letter-spacing:-.4px; }
+.header p { margin-top:4px; line-height:1.6; }
+.header button { width:40px; height:40px; display:grid; place-items:center; }
+.tabs { padding:12px 28px; gap:8px; }
+.tabs button { flex:initial; min-width:180px; box-shadow:none; border-radius:12px; }
+.tabs button:focus-visible,.header button:focus-visible { outline:3px solid #60a5fa; outline-offset:3px; }
+.body { min-height:0; overflow-y:auto; padding:24px 28px; container-type:inline-size; container-name:bookingDialog; background:var(--background, #f4f7fb); scrollbar-gutter:stable; }
+@media(max-width:640px) { .header { padding:16px; } .header h3 { font-size:19px; } .tabs { padding:10px 16px; } .tabs button { flex:1; min-width:0; padding:10px 8px; } .body { padding:12px; } .dialog { max-height:95dvh; border-radius:18px; } }

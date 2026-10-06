@@ -1,0 +1,8 @@
+.git
+node_modules
+.next
+.env*
+.vercel
+.local
+settings.json
+บัญชีการใช้น้ำมันเชื้อเพลิงรายปี2569.xlsx

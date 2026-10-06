@@ -119,7 +119,7 @@ export function apiRequirement(path: string, method = "GET"): Requirement | null
   if (path === "/api/admin/audit-logs") return "audit_logs";
   if (path === "/api/admin/driver-leaves") return "drivers.leave";
   if (path === "/api/admin/driver-availability") return ["requests", "booking"];
-  if (path === "/api/admin/reports/fuel") return "reports.fuel";
+  if (under(path, "/api/admin/reports/fuel")) return "reports.fuel";
   if (path === "/api/admin/reports/annual") return "reports.annual";
   if (path === "/api/user/evaluation-requests") return "my_requests.evaluate";
   if (path === "/api/user/evaluate" || under(path, "/api/user/get-evaluation")) return "my_requests.evaluate";

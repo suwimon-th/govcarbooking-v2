@@ -1,0 +1,34 @@
+.embeddedLayout { display:grid; grid-template-columns:minmax(0,1fr); gap:24px; width:100%; align-items:start; }
+.embeddedForm { position:relative; min-width:0; width:100%; padding:28px; border-radius:20px; box-shadow:0 4px 20px #00000005; }
+.formHeading { position:relative; padding-bottom:22px; margin-bottom:24px; border-bottom:1px solid var(--border-color, #e5eaf2); }
+.formHeading h1 { font-size:21px; line-height:1.5; letter-spacing:0; }
+.formHeading p { font-size:13px; line-height:1.7; margin-top:4px; }
+.embeddedForm > form { gap:24px; }
+.embeddedForm > form > :global(.space-y-4) { padding-bottom:24px; border-bottom:1px solid var(--border-color, #e5eaf2); }
+.embeddedForm input:not([type=checkbox]):not([type=radio]),.embeddedForm select,.embeddedForm textarea { border-radius:12px; transition:border-color .15s, box-shadow .15s; }
+.embeddedForm input:focus-visible,.embeddedForm select:focus-visible,.embeddedForm textarea:focus-visible { outline:2px solid #60a5fa; outline-offset:2px; }
+.embeddedSchedule { min-width:0; width:100%; }
+.embeddedSchedule > div { border-radius:20px; border-top-width:0; border:1px solid var(--border-color, #e1e7f0); box-shadow:0 4px 20px #00000005; padding:22px; }
+@container bookingDialog (min-width:1050px) {
+ .embeddedLayout { grid-template-columns:minmax(0,1fr) 340px; }
+ .embeddedSchedule { position:sticky; top:0; }
+}
+@container bookingDialog (max-width:600px) {
+ .embeddedForm { padding:18px; }
+ .embeddedForm :global(.md\:grid-cols-2) { grid-template-columns:minmax(0,1fr); }
+ .embeddedForm :global(.sm\:flex-row) { flex-direction:column; gap:12px; }
+ .embeddedForm :global(.justify-between) { flex-wrap:wrap; gap:10px; }
+ .formHeading h1 { font-size:18px; }
+}
+.bookingOptions { padding:18px; border:1px solid #bfdbfe; border-radius:16px; background:#eff6ff; }
+.bookingOptions h4 { margin-bottom:14px; }
+.optionGrid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.optionItem { display:flex; align-items:flex-start; gap:12px; min-width:0; padding:14px; background:var(--card-bg, #fff); border:1px solid var(--border-color, #dbe3ef); border-radius:12px; }
+.optionItem input[type=checkbox] { flex:0 0 20px; width:20px; height:20px; margin:2px 0 0; cursor:pointer; }
+.optionItem .optionLabel { display:flex; flex:1; flex-direction:column; gap:4px; width:auto; min-width:0; margin:0; padding:0; cursor:pointer; text-align:left; line-height:1.6; }
+.optionLabel strong { font-size:14px; font-weight:600; color:var(--foreground, #1e293b); }
+.optionLabel span { font-size:12px; font-weight:400; color:#64748b; }
+:global(html[data-theme="dark"]) .bookingOptions { background:#172c47; border-color:#294567; }
+:global(html[data-theme="dark"]) .optionLabel span { color:#94a3b8; }
+@container bookingDialog (max-width:650px) { .optionGrid { grid-template-columns:minmax(0,1fr); } }
+@media(max-width:640px) { .optionGrid { grid-template-columns:minmax(0,1fr); } }

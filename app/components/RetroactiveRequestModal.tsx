@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { X, History, Calendar } from "lucide-react";
 import RequestForm from "@/app/user/request/request-form";
+import styles from "./RetroactiveRequestModal.module.css";
 
 interface RetroactiveRequestModalProps {
     open: boolean;
@@ -25,10 +26,10 @@ export default function RetroactiveRequestModal({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200 relative">
+            <div role="dialog" aria-modal="true" aria-labelledby="booking-dialog-title" className={`${styles.dialog} bg-white rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200 relative`}>
 
                 {/* Header */}
-                <div className="sticky top-0 z-20 bg-white/90 backdrop-blur-md border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+                <div className={`${styles.header} z-20 bg-white/90 backdrop-blur-md border-b border-gray-100 px-6 py-4 flex items-center justify-between`}>
                     <div className="flex items-center gap-3">
                         {activeTab === "advanced" ? (
                             <>
@@ -36,7 +37,7 @@ export default function RetroactiveRequestModal({
                                     <Calendar className="w-5 h-5" />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-lg text-gray-800">จองล่วงหน้า</h3>
+                                    <h3 id="booking-dialog-title" className="font-bold text-lg text-gray-800">จองล่วงหน้า</h3>
                                     <p className="text-xs text-gray-500">สำหรับจองคิวใช้รถยนต์ราชการล่วงหน้า</p>
                                 </div>
                             </>
@@ -46,7 +47,7 @@ export default function RetroactiveRequestModal({
                                     <History className="w-5 h-5" />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-lg text-gray-800">ขอใช้รถย้อนหลัง</h3>
+                                    <h3 id="booking-dialog-title" className="font-bold text-lg text-gray-800">ขอใช้รถย้อนหลัง</h3>
                                     <p className="text-xs text-gray-500">สำหรับบันทึกข้อมูลการใช้รถที่เกิดขึ้นแล้ว</p>
                                 </div>
                             </>
@@ -54,6 +55,7 @@ export default function RetroactiveRequestModal({
                     </div>
                     <button
                         onClick={onClose}
+                        aria-label="ปิดหน้าต่างจองรถ"
                         className="p-2 hover:bg-gray-100 rounded-full text-gray-500 transition-colors"
                     >
                         <X className="w-6 h-6" />
@@ -61,8 +63,9 @@ export default function RetroactiveRequestModal({
                 </div>
 
                 {/* Tab Switcher */}
-                <div className="px-6 pt-4 pb-2 border-b border-gray-100 flex gap-2 bg-gray-50/50">
+                <div role="group" aria-label="ประเภทการขอใช้รถ" className={`${styles.tabs} px-6 pt-4 pb-4 border-b border-gray-100 flex gap-2 bg-gray-50/50`}>
                     <button
+                        aria-pressed={activeTab === "advanced"}
                         onClick={() => setActiveTab("advanced")}
                         className={`flex-1 py-2.5 px-4 rounded-xl font-bold text-sm transition-all duration-200 flex items-center justify-center gap-2 ${
                             activeTab === "advanced"
@@ -74,6 +77,7 @@ export default function RetroactiveRequestModal({
                         จองล่วงหน้า
                     </button>
                     <button
+                        aria-pressed={activeTab === "retroactive"}
                         onClick={() => setActiveTab("retroactive")}
                         className={`flex-1 py-2.5 px-4 rounded-xl font-bold text-sm transition-all duration-200 flex items-center justify-center gap-2 ${
                             activeTab === "retroactive"
@@ -87,10 +91,11 @@ export default function RetroactiveRequestModal({
                 </div>
 
                 {/* Content */}
-                <div className="p-2">
+                <div className={styles.body}>
                     {/* Render standard request form with key=activeTab to completely reset state on tab switch */}
                     <RequestForm
                         key={activeTab}
+                        embedded
                         requesterId={requesterId}
                         requesterName={requesterName}
                         departmentName="ฝ่ายสิ่งแวดล้อมและสุขาภิบาล"
