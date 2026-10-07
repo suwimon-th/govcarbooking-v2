@@ -21,7 +21,7 @@ import {
 // ─── Types ───────────────────────────────────────────────────────────────────
 type NavItem = {
   href: string; label: string; icon: LucideIcon;
-  showBadge?: boolean; external?: boolean;
+  showBadge?: boolean; badge?: number; external?: boolean;
 };
 type NavGroup = {
   id: string; label: string; icon: LucideIcon;
@@ -51,7 +51,7 @@ function NavGroup({
               <Icon className="w-5 h-5" />
               {item.showBadge && (
                 <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-400 text-blue-950 rounded-full flex items-center justify-center">
-                  <Bell className="w-2.5 h-2.5" />
+                  {item.badge ? <span className="text-[9px] font-black">{item.badge > 99 ? "99+" : item.badge}</span> : <Bell className="w-2.5 h-2.5" />}
                 </span>
               )}
             </Link>
@@ -88,7 +88,7 @@ function NavGroup({
                 <span className="flex-1 truncate">{item.label}</span>
                 {item.showBadge && (
                   <span className="w-4 h-4 bg-amber-400 text-blue-950 rounded-full flex items-center justify-center shrink-0">
-                    <Bell className="w-2.5 h-2.5" />
+                    {item.badge ? <span className="text-[9px] font-black">{item.badge > 99 ? "99+" : item.badge}</span> : <Bell className="w-2.5 h-2.5" />}
                   </span>
                 )}
               </>
@@ -113,6 +113,24 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<{ full_name: string; role: string; line_picture_url?: string } | null>(null);
   const [pendingEvals, setPendingEvals] = useState(0);
+  const [fuelAlerts, setFuelAlerts] = useState({ pending: 0, edits: 0 });
+  const canManageFuel = canVisit("/admin/fuel");
+  useEffect(() => {
+    if (!canManageFuel) { setFuelAlerts({ pending: 0, edits: 0 }); return; }
+    let active = true;
+    const refresh = async () => {
+      const [pending, edits] = await Promise.all([
+        supabase.from("fuel_requests").select("id", { count: "exact", head: true }).eq("status", "PENDING"),
+        supabase.from("fuel_requests").select("id", { count: "exact", head: true }).not("pending_edit", "is", null),
+      ]);
+      if (active && !pending.error && !edits.error) setFuelAlerts({ pending: pending.count || 0, edits: edits.count || 0 });
+    };
+    void refresh();
+    const timer = window.setInterval(refresh, 30000);
+    window.addEventListener("focus", refresh);
+    const channel = supabase.channel("user-fuel-alerts").on("postgres_changes", { event: "*", schema: "public", table: "fuel_requests" }, refresh).subscribe();
+    return () => { active = false; window.clearInterval(timer); window.removeEventListener("focus", refresh); void supabase.removeChannel(channel); };
+  }, [canManageFuel]);
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
@@ -216,7 +234,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
     {
       id: "admin-operations", label: "ระบบงาน (จัดการ)", icon: Wrench,
       items: [
-        { href: "/admin/fuel", label: "จัดการเบิกน้ำมัน", icon: Fuel },
+        { href: "/admin/fuel", label: "จัดการเบิกน้ำมัน", icon: Fuel, showBadge: fuelAlerts.pending + fuelAlerts.edits > 0, badge: fuelAlerts.pending + fuelAlerts.edits },
         { href: "/admin/maintenance", label: "แจ้งปัญหา/ซ่อมบำรุง", icon: Wrench },
         { href: "/admin/inspections", label: "แบบรายงานสภาพรถ", icon: ClipboardCheck },
         { href: "/admin/inspections/config", label: "ตั้งค่าหัวข้อตรวจสภาพ", icon: Settings },
@@ -285,7 +303,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
                   <Icon className="w-5 h-5" />
                   {item.showBadge && (
                     <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-400 text-blue-950 rounded-full flex items-center justify-center">
-                      <Bell className="w-2.5 h-2.5" />
+                      {item.badge ? <span className="text-[9px] font-black">{item.badge > 99 ? "99+" : item.badge}</span> : <Bell className="w-2.5 h-2.5" />}
                     </span>
                   )}
                 </Link>
@@ -370,8 +388,9 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
       {/* ===== MOBILE HEADER ===== */}
       <header className="md:hidden w-full bg-[#1e40af] border-b border-blue-800 h-[60px] flex items-center justify-between px-4 z-50 shadow-md shrink-0">
         <button onClick={() => setMobileMenuOpen(true)}
-          className="p-2 text-white hover:bg-white/10 rounded-xl transition-colors border border-white/20">
+          className="relative p-2 text-white hover:bg-white/10 rounded-xl transition-colors border border-white/20">
           <Menu className="w-5 h-5" />
+          {canManageFuel && fuelAlerts.pending + fuelAlerts.edits > 0 && <span aria-label="มีรายการน้ำมันรอดำเนินการ" className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-amber-400"/>}
         </button>
         <h1 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
           <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
@@ -429,7 +448,14 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
 
       {/* ===== CONTENT AREA ===== */}
       <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${collapsed ? "md:pl-[72px]" : "md:pl-[240px]"}`}>
-        <main className="flex-1 w-full bg-gray-50/50">{children}</main>
+        <main className="flex-1 w-full bg-gray-50/50">
+          {canManageFuel && fuelAlerts.pending + fuelAlerts.edits > 0 && <div role="status" className="flex flex-wrap items-center gap-3 border-b border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <Bell className="h-4 w-4 shrink-0"/><span className="font-bold">น้ำมันรอดำเนินการ</span>
+            {fuelAlerts.pending > 0 && <Link href="/admin/fuel" className="rounded-lg border border-amber-300 px-3 py-2 font-semibold">เบิกน้ำมันรออนุมัติ {fuelAlerts.pending} รายการ →</Link>}
+            {fuelAlerts.edits > 0 && <Link href="/admin/fuel?review=1" className="rounded-lg border border-amber-300 px-3 py-2 font-semibold">คำขอแก้ไขรอยืนยัน {fuelAlerts.edits} รายการ →</Link>}
+          </div>}
+          {children}
+        </main>
       </div>
     </div>
   );
