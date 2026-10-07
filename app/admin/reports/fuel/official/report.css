@@ -210,3 +210,36 @@ html .official-fuel .paper .sheet-vehicle .sheet-title-row:first-child th { font
 @media print { html .official-fuel .paper .sheet-vehicle :is(th,td) { font-size:10px; padding:4px; } }
 
 html .official-fuel .paper .sheet-vehicle .mileage-range { white-space:nowrap; font-variant-numeric:tabular-nums; text-align:center; }
+.official-fuel .period-panel { flex-wrap:wrap; }
+.official-fuel .range-fields { flex:1 1 420px; }
+.official-fuel .report-pages { display:grid; gap:24px; }
+@media print { .official-fuel .paper + .paper { break-before:page; } .official-fuel .report-pages { display:block; } }
+/* Period selection: settings first, followed by the month range. */
+.official-fuel .period-panel { display:flex; flex-direction:column; align-items:stretch; gap:20px; padding:22px; }
+.official-fuel .period-title { display:flex; align-items:center; gap:10px; color:var(--rf-accent); }
+.official-fuel .period-title h2 { color:var(--rf-text); font-size:14px; font-weight:700; }
+.official-fuel .period-title p { color:var(--rf-muted); font-size:12px; margin-top:3px; }
+.official-fuel .period-length { margin-left:auto; padding:5px 10px; border-radius:7px; background:var(--rf-selected); font-size:12px; font-weight:600; }
+.official-fuel .period-basics { display:grid; grid-template-columns:160px 250px minmax(180px,300px); gap:18px; align-items:start; }
+.official-fuel .period-basics.range { grid-template-columns:160px 250px; }
+.official-fuel .period-mode { display:flex; flex-direction:column; gap:7px; min-width:0; }
+.official-fuel .period-mode > span { color:var(--rf-muted); font-size:12px; font-weight:600; line-height:18px; }
+.official-fuel .period-panel label > span { line-height:18px; }
+.official-fuel .period-panel :is(input,select) { height:44px; }
+.official-fuel .period-segments { display:flex; height:44px; padding:3px; gap:3px; background:var(--rf-soft); border:1px solid var(--rf-border); border-radius:9px; box-sizing:border-box; }
+.official-fuel .period-segments button { flex:1; padding:0 12px; border-radius:6px; color:var(--rf-muted); font-size:13px; font-weight:600; white-space:nowrap; }
+.official-fuel .period-segments button.selected { color:var(--rf-accent); background:var(--rf-selected); box-shadow:0 1px 3px #00000012; }
+.official-fuel .range-fields { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); flex:none; gap:20px; padding:18px; border:1px solid var(--rf-border); border-radius:12px; background:var(--rf-soft); }
+.official-fuel .range-fields select { background:var(--rf-bg); }
+.official-fuel .period-footer { display:flex; align-items:center; justify-content:space-between; gap:16px; padding-top:18px; border-top:1px solid var(--rf-border); }
+.official-fuel .period-summary { display:flex; flex-direction:column; gap:4px; }
+.official-fuel .period-summary span { font-size:11px; color:var(--rf-muted); }
+.official-fuel .period-summary strong { font-size:13px; color:var(--rf-text); font-weight:600; }
+.official-fuel .period-footer .report-actions { align-items:center; }
+.official-fuel .period-footer .download-type { width:135px; }
+.official-fuel .edit-month-bar { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:18px; }
+.official-fuel .edit-month-bar h2 { color:var(--rf-text); font-size:15px; font-weight:700; }
+.official-fuel .edit-month-bar p { color:var(--rf-muted); font-size:12px; margin-top:4px; }
+.official-fuel .edit-month-bar label { width:240px; }
+@media(max-width:850px) { .official-fuel .period-basics { grid-template-columns:160px minmax(0,1fr); } .official-fuel .period-basics.month > label:last-child { grid-column:1/-1; } .official-fuel .period-footer { align-items:stretch; flex-direction:column; } }
+@media(max-width:550px) { .official-fuel .period-panel { padding:16px; } .official-fuel .period-basics,.official-fuel .period-basics.range,.official-fuel .range-fields { grid-template-columns:1fr; gap:14px; } .official-fuel .period-footer .report-actions { flex-wrap:wrap; } .official-fuel .edit-month-bar { align-items:stretch; flex-direction:column; } .official-fuel .edit-month-bar label { width:100%; } }

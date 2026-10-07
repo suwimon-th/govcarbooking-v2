@@ -3,7 +3,7 @@ import { fiscalDates, fiscalMonths, months, used, type FuelRow, type Snapshot, t
 export type ReportValue = string | number | null;
 export type ReportSheet = {name:string; kind:keyof typeof layouts | 'method'; rows:ReportValue[][]; merges:string[]; widths:number[]; headerRows:number; tableEndRow?:number; formulas:Record<string,{formula:string;result:number|string}>};
 const number = (v:number|null|undefined):ReportValue => v ?? '—';
-const total = (values:(number|null|undefined)[]) => values.length===12&&values.every(v=>v!=null)?values.reduce<number>((a,b)=>a+(b??0),0):null;
+const total = (values:(number|null|undefined)[],expected=12) => values.length===expected&&values.every(v=>v!=null)?values.reduce<number>((a,b)=>a+(b??0),0):null;
 const rowFor = (snapshots:Snapshot[],id:string,m:number) => snapshots.find(s=>s.month===m)?.rows.find(r=>r.id===id);
 const names = new Set<string>();
 function safeName(name:string) { const base=name.replace(/[\\/*?:\[\]]/g,'').slice(0,27)||'รายงาน';let n=base,i=2;while(names.has(n))n=`${base} ${i++}`;names.add(n);return n; }
@@ -22,16 +22,16 @@ function signature(sheet:ReportSheet,settings:ReportSettings) {
  sheet.rows.push(...['ลงชื่อ............................................ผู้รายงาน',`(${settings.chief||'............................................'})`,settings.chiefPosition,settings.department,settings.office].map(text=>Array.from({length:cols},(_,i)=>i===left-1?text:'')));
  for(let r=start;r<start+5;r++)sheet.merges.push(`${col(left)}${r}:${col(cols)}${r}`);
 }
-function vehicleSheet(a:FuelRow,index:number,snapshots:Snapshot[],year:number,settings:ReportSettings){
- const s=baseSheet('vehicle',a.code,year,settings);const first=rowFor(snapshots,a.id,10);
+function vehicleSheet(a:FuelRow,index:number,snapshots:Snapshot[],year:number,settings:ReportSettings,reportMonths:number[]){
+ const s=baseSheet('vehicle',a.code,year,settings);const first=rowFor(snapshots,a.id,reportMonths[0]);
  s.rows.push([index+1,a.name,a.cylinders,a.brand,a.code,number(first?.startMileage),'','',number(first?.quota),number(first?.oilQuota),'—','—','—']);
  s.merges.push('F8:H8');
- fiscalMonths.forEach((m,i)=>{const r=rowFor(snapshots,a.id,m),u=r?used(r):null,row=i+9;
+ reportMonths.forEach((m,i)=>{const r=rowFor(snapshots,a.id,m),u=r?used(r):null,row=i+9;
  s.rows.push(['',`${months[m-1]} ${fiscalDates(year,m).yearBE}`,a.cylinders,a.brand,a.code,number(r?.startMileage),r?.startMileage!=null||r?.endMileage!=null?'–':'',r?.startMileage!=null||r?.endMileage!=null?number(r?.endMileage):'',number(r?.quota),number(r?.oilQuota),number(u),number(r?.oilUsed),'—']);
  if(r&&u!=null&&r.startMileage!=null&&r.endMileage!=null&&r.endMileage>=r.startMileage){const result=u>0?(r.endMileage-r.startMileage)/u:'—';s.formulas[`M${row}`]={formula:`IF(AND(ISNUMBER(F${row}),ISNUMBER(H${row}),ISNUMBER(K${row}),K${row}>0,H${row}>=F${row}),(H${row}-F${row})/K${row},"—")`,result};s.rows[row-1][12]=result;}
  });signature(s,settings);return s;
 }
-export function buildFuelWorkbook(snapshots:Snapshot[],year:number,settings:ReportSettings):ReportSheet[]{
+export function buildFuelWorkbook(snapshots:Snapshot[],year:number,settings:ReportSettings,reportMonths:number[]=fiscalMonths):ReportSheet[]{
  names.clear();
  const assets=Array.from(new Map(snapshots.flatMap(s=>s.rows).map(r=>[r.id,r])).values());
  const vehicles=assets.filter(r=>r.kind==='vehicle'),machines=assets.filter(r=>r.kind==='machine');
@@ -39,21 +39,23 @@ export function buildFuelWorkbook(snapshots:Snapshot[],year:number,settings:Repo
  const monthly=baseSheet('machine','เครื่องพ่นยุง (รายเดือน)',year,settings);
  monthly.rows[3][5]='โควตาที่ได้รับอนุมัติ/เดือน (ลิตร)';monthly.rows[3][7]='จำนวนน้ำมันที่ใช้/เดือน (ลิตร)';monthly.rows[3][10]='เดือน / หมายเหตุ';
  machines.forEach((a,i)=>{
-  const rs=fiscalMonths.map(m=>rowFor(snapshots,a.id,m));
-  annual.rows.push([i+1,a.name,a.brand,a.code,a.fuel,number(total(rs.map(r=>r?.quota))),number(total(rs.map(r=>r?.oilQuota))),number(total(rs.map(r=>r?used(r):null))),number(total(rs.map(r=>r?.oilUsed))),a.condition,a.remark]);
-  fiscalMonths.forEach((m,j)=>{const r=rs[j];monthly.rows.push([j?'':i+1,a.name,a.brand,a.code,a.fuel,number(r?.quota),number(r?.oilQuota),number(r?used(r):null),number(r?.oilUsed),r?.condition||a.condition,`${months[m-1]} ${fiscalDates(year,m).yearBE}${r?.remark?' · '+r.remark:''}`]);});
+  const rs=reportMonths.map(m=>rowFor(snapshots,a.id,m));
+  annual.rows.push([i+1,a.name,a.brand,a.code,a.fuel,number(total(rs.map(r=>r?.quota),reportMonths.length)),number(total(rs.map(r=>r?.oilQuota),reportMonths.length)),number(total(rs.map(r=>r?used(r):null),reportMonths.length)),number(total(rs.map(r=>r?.oilUsed),reportMonths.length)),a.condition,a.remark]);
+  reportMonths.forEach((m,j)=>{const r=rs[j];monthly.rows.push([j?'':i+1,a.name,a.brand,a.code,a.fuel,number(r?.quota),number(r?.oilQuota),number(r?used(r):null),number(r?.oilUsed),r?.condition||a.condition,`${months[m-1]} ${fiscalDates(year,m).yearBE}${r?.remark?' · '+r.remark:''}`]);});
  });signature(annual,settings);signature(monthly,settings);
- const vehicleSheets=vehicles.map((a,i)=>vehicleSheet(a,i,snapshots,year,settings));
+ const vehicleSheets=vehicles.map((a,i)=>vehicleSheet(a,i,snapshots,year,settings,reportMonths));
  const method:ReportSheet={name:safeName('วิธีคิด'),kind:'method',widths:[35,35,25],headerRows:1,merges:['A1:C1','A2:C2','A3:C3','A4:C4','A5:C5'],formulas:{},rows:[['วิธีคิดค่าเฉลี่ยการใช้น้ำมัน'],['ระยะทาง = เลขไมล์ปลายเดือน − เลขไมล์ต้นเดือน'],['กม./ลิตร = ระยะทาง ÷ ปริมาณน้ำมันที่ใช้จริง'],['ค่าเฉลี่ยรายปี = ระยะทางรวม ÷ ปริมาณน้ำมันที่ใช้จริงรวม'],['— หมายถึงข้อมูลยังไม่ครบ หรือปริมาณน้ำมันเป็นศูนย์']]};
  const summary=baseSheet('summary','รายงานรวม',year,settings);
  vehicles.forEach((a,i)=>{
-  const rs=fiscalMonths.map(m=>rowFor(snapshots,a.id,m)),first=rs[0],last=rs[11],u=total(rs.map(r=>r?used(r):null));
-  const km=total(rs.map(r=>r?.startMileage!=null&&r.endMileage!=null&&r.endMileage>=r.startMileage?r.endMileage-r.startMileage:null));
-  summary.rows.push([i+1,a.name,a.cylinders,a.brand,a.code,number(first?.startMileage),number(last?.endMileage),a.fuel.includes('ดีเซล')?'✓':'',a.fuel.includes('เบน')?'✓':'',number(total(rs.map(r=>r?.quota))),'',number(u),'',u&&km!=null?km/u:'—',a.remark]);
+  const rs=reportMonths.map(m=>rowFor(snapshots,a.id,m)),first=rs[0],last=rs[rs.length-1],u=total(rs.map(r=>r?used(r):null),reportMonths.length);
+  const km=total(rs.map(r=>r?.startMileage!=null&&r.endMileage!=null&&r.endMileage>=r.startMileage?r.endMileage-r.startMileage:null),reportMonths.length);
+  summary.rows.push([i+1,a.name,a.cylinders,a.brand,a.code,number(first?.startMileage),number(last?.endMileage),a.fuel.includes('ดีเซล')?'✓':'',a.fuel.includes('เบน')?'✓':'',number(total(rs.map(r=>r?.quota),reportMonths.length)),'',number(u),'',u&&km!=null?km/u:'—',a.remark]);
   const dataRow=summary.rows.length;summary.merges.push(`J${dataRow}:K${dataRow}`,`L${dataRow}:M${dataRow}`);
  });
  while(summary.rows.length<19){const row=summary.rows.length+1;summary.rows.push(Array(15).fill(''));summary.merges.push(`J${row}:K${row}`,`L${row}:M${row}`);}
  summary.tableEndRow=summary.rows.length;signature(summary,settings);
- return [annual,monthly,...vehicleSheets,method,summary];
+ const sheets=[annual,monthly,...vehicleSheets,method,summary];
+ if(reportMonths.length!==12){const period=reportMonths.map(m=>`${months[m-1]} ${fiscalDates(year,m).yearBE}`);for(const sheet of sheets.filter(s=>s.kind!=='method'))sheet.rows[1][0]=`ช่วง ${period[0]} ถึง ${period[period.length-1]}`;}
+ return sheets;
 }
 export function reportLayouts(){return layouts;}
