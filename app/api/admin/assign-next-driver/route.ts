@@ -23,7 +23,7 @@ export async function POST(req: Request) {
       .eq("status", "AVAILABLE")
       .order("queue_order", { ascending: true })
       ;
-    const { data: job } = await supabase.from("bookings").select("start_at,end_at").eq("id", booking_id).single();
+    const { data: job } = await supabase.from("bookings").select("start_at,end_at,driver_id,status,request_code,destination,is_line_notified").eq("id", booking_id).single();
     if (!job) return NextResponse.json({ error: "ไม่พบงาน" }, { status: 404 });
     const onLeave = await unavailableDrivers(job.start_at, job.end_at);
     const driver = candidates?.find(d => !onLeave.has(d.id));
@@ -60,6 +60,8 @@ export async function POST(req: Request) {
         { status: 500 }
       );
     }
+
+
 
     // 3) วนคิว
     const { error: rotateErr } = await supabase.rpc("rotate_driver_queue", {

@@ -46,11 +46,15 @@ export default function DriverTaskPage() {
 
     useEffect(() => {
         if (id) loadBooking();
+        const refresh=()=>loadBooking(true);
+        const timer=window.setInterval(refresh,30000);
+        window.addEventListener("focus",refresh);
+        return ()=>{window.clearInterval(timer);window.removeEventListener("focus",refresh);};
     }, [id]);
 
-    async function loadBooking() {
+    async function loadBooking(silent = false) {
         try {
-            setLoading(true);
+            if (!silent) setLoading(true);
             const res = await fetch(`/api/mileage/get-booking?booking=${id}`);
             const json = await res.json();
 
@@ -59,14 +63,14 @@ export default function DriverTaskPage() {
             } else {
                 setBooking(json.booking);
                 // Pre-fill mileage
-                if (json.booking.start_mileage) {
+                if (!silent && json.booking.start_mileage) {
                     setStartMileage(String(json.booking.start_mileage));
-                } else if (json.last_mileage) {
+                } else if (!silent && json.last_mileage) {
                     // ✅ Auto-fill from last trip if not set
                     setStartMileage(String(json.last_mileage));
                 }
 
-                if (json.booking.end_mileage) setEndMileage(String(json.booking.end_mileage));
+                if (!silent && json.booking.end_mileage) setEndMileage(String(json.booking.end_mileage));
             }
         } catch (err) {
             setError("โหลดข้อมูลไม่สำเร็จ");
@@ -203,6 +207,18 @@ export default function DriverTaskPage() {
             </div>
         );
     }
+
+    const waitingAssignment = !booking.driver_id || ["REQUESTED", "APPROVED"].includes(booking.status);
+    const changedDriver = Boolean(driverIdFromUrl && driverIdFromUrl !== booking.driver_id);
+    if (waitingAssignment || changedDriver) return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-5"><section role="status" className="w-full max-w-md rounded-3xl border border-amber-200 bg-white p-7 text-center shadow-sm">
+            <AlertCircle className="w-14 h-14 text-amber-500 mx-auto mb-5"/>
+            <h1 className="text-xl font-bold text-gray-900">{waitingAssignment ? "งานรอมอบหมายคนขับรถใหม่" : "งานนี้เปลี่ยนคนขับแล้ว"}</h1>
+            <p className="mt-3 text-gray-600">{waitingAssignment ? "แอดมินนำงานกลับไปรอมอบหมาย กรุณารอการมอบหมายอีกครั้ง" : "แอดมินมอบหมายงานให้คนขับคนใหม่แล้ว งานนี้ไม่ได้อยู่ในความรับผิดชอบของคุณ"}</p>
+            <p className="mt-5 rounded-xl bg-gray-50 p-3 text-sm text-gray-600">เลขคำขอ: {booking.request_code}</p>
+            <button onClick={()=>loadBooking()} className="mt-5 rounded-xl bg-blue-600 px-5 py-3 text-white font-bold">ตรวจสอบสถานะอีกครั้ง</button>
+        </section></div>
+    );
 
     // Calculate Duration or Time
     const dateStr = new Date(booking.start_at).toLocaleDateString('th-TH', {

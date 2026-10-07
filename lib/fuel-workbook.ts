@@ -40,7 +40,7 @@ export function buildFuelWorkbook(snapshots:Snapshot[],year:number,settings:Repo
  monthly.rows[3][5]='โควตาที่ได้รับอนุมัติ/เดือน (ลิตร)';monthly.rows[3][7]='จำนวนน้ำมันที่ใช้/เดือน (ลิตร)';monthly.rows[3][10]='เดือน / หมายเหตุ';
  machines.forEach((a,i)=>{
   const rs=reportMonths.map(m=>rowFor(snapshots,a.id,m));
-  annual.rows.push([i+1,a.name,a.brand,a.code,a.fuel,number(total(rs.map(r=>r?.quota),reportMonths.length)),number(total(rs.map(r=>r?.oilQuota),reportMonths.length)),number(total(rs.map(r=>r?used(r):null),reportMonths.length)),number(total(rs.map(r=>r?.oilUsed),reportMonths.length)),a.condition,a.remark]);
+  annual.rows.push([i+1,a.name,a.brand,a.code,a.fuel,number(rs.find(r=>r?.annualQuota!=null)?.annualQuota),number(total(rs.map(r=>r?.oilQuota),reportMonths.length)),number(total(rs.map(r=>r?used(r):null),reportMonths.length)),number(total(rs.map(r=>r?.oilUsed),reportMonths.length)),a.condition,a.remark]);
   reportMonths.forEach((m,j)=>{const r=rs[j];monthly.rows.push([j?'':i+1,a.name,a.brand,a.code,a.fuel,number(r?.quota),number(r?.oilQuota),number(r?used(r):null),number(r?.oilUsed),r?.condition||a.condition,`${months[m-1]} ${fiscalDates(year,m).yearBE}${r?.remark?' · '+r.remark:''}`]);});
  });signature(annual,settings);signature(monthly,settings);
  const vehicleSheets=vehicles.map((a,i)=>vehicleSheet(a,i,snapshots,year,settings,reportMonths));
@@ -49,7 +49,7 @@ export function buildFuelWorkbook(snapshots:Snapshot[],year:number,settings:Repo
  vehicles.forEach((a,i)=>{
   const rs=reportMonths.map(m=>rowFor(snapshots,a.id,m)),first=rs[0],last=rs[rs.length-1],u=total(rs.map(r=>r?used(r):null),reportMonths.length);
   const km=total(rs.map(r=>r?.startMileage!=null&&r.endMileage!=null&&r.endMileage>=r.startMileage?r.endMileage-r.startMileage:null),reportMonths.length);
-  summary.rows.push([i+1,a.name,a.cylinders,a.brand,a.code,number(first?.startMileage),number(last?.endMileage),a.fuel.includes('ดีเซล')?'✓':'',a.fuel.includes('เบน')?'✓':'',number(total(rs.map(r=>r?.quota),reportMonths.length)),'',number(u),'',u&&km!=null?km/u:'—',a.remark]);
+  summary.rows.push([i+1,a.name,a.cylinders,a.brand,a.code,number(first?.startMileage),number(last?.endMileage),a.fuel.includes('ดีเซล')?'✓':'',a.fuel.includes('เบน')?'✓':'',number(rs.find(r=>r?.annualQuota!=null)?.annualQuota),'',number(u),'',u&&km!=null?km/u:'—',a.remark]);
   const dataRow=summary.rows.length;summary.merges.push(`J${dataRow}:K${dataRow}`,`L${dataRow}:M${dataRow}`);
  });
  while(summary.rows.length<19){const row=summary.rows.length+1;summary.rows.push(Array(15).fill(''));summary.merges.push(`J${row}:K${row}`,`L${row}:M${row}`);}

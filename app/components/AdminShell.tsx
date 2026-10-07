@@ -115,6 +115,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const [collapsed, setCollapsed] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [pendingFuelCount, setPendingFuelCount] = useState(0);
+  const [fuelEditCount, setFuelEditCount] = useState(0);
 
   // Persist collapse state
   useEffect(() => {
@@ -149,13 +150,16 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       setPendingCount(bookingCount || 0);
       const { count: fuelCount } = await supabase.from("fuel_requests").select("*", { count: "exact", head: true }).eq("status", "PENDING");
       setPendingFuelCount(fuelCount || 0);
+      const { count: editCount } = await supabase.from("fuel_requests").select("id", { count: "exact", head: true }).not("pending_edit", "is", null);
+      setFuelEditCount(editCount || 0);
     };
     fetchPending();
+    const timer = window.setInterval(fetchPending, 30000);
     const channel = supabase.channel("admin_badge")
       .on("postgres_changes", { event: "*", schema: "public", table: "bookings" }, () => fetchPending())
       .on("postgres_changes", { event: "*", schema: "public", table: "fuel_requests" }, () => fetchPending())
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => { window.clearInterval(timer); supabase.removeChannel(channel); };
   }, []);
 
   // Fetch profile
@@ -191,7 +195,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     {
       id: "operations", label: "ระบบงาน", icon: Wrench,
       items: [
-        { href: "/admin/fuel", label: "เบิกน้ำมัน", icon: Fuel, badge: pendingFuelCount },
+        { href: "/admin/fuel", label: "เบิกน้ำมัน", icon: Fuel, badge: pendingFuelCount + fuelEditCount },
         { href: "/admin/maintenance", label: "แจ้งปัญหา/ซ่อมบำรุง", icon: Wrench },
         { href: "/admin/inspections", label: "แบบรายงานสภาพรถ", icon: ClipboardCheck },
         { href: "/admin/inspections/config", label: "ตั้งค่าหัวข้อตรวจสภาพ", icon: Settings },
@@ -202,7 +206,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     {
       id: "reports", label: "รายงาน", icon: FileText,
       items: [
-        { href: "/admin/reports/fuel/official", label: "รายงานน้ำมันตามแบบราชการ", icon: FileText },
+        { href: "/admin/reports/fuel/official", label: "รายงานการใช้น้ำมัน", icon: FileText },
         { href: "/admin/reports/monthly", label: "รายงานรายเดือน", icon: FileText },
         { href: "/admin/reports/fuel", label: "รายงานน้ำมัน", icon: Fuel },
         { href: "/admin/reports/annual", label: "รายงานรายปี", icon: FileText },
@@ -361,7 +365,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         <button onClick={() => setMobileMenuOpen(true)}
           className="p-2 text-white hover:bg-white/10 rounded-xl transition-colors border border-white/20 relative">
           <Menu className="w-5 h-5" />
-          {(pendingCount > 0 || pendingFuelCount > 0) && (
+          {(pendingCount > 0 || pendingFuelCount > 0 || fuelEditCount > 0) && (
             <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-[#1e40af]" />
           )}
         </button>
@@ -431,6 +435,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
                 คำขอใหม่ ({pendingCount})
               </Link>
             )}
+            {fuelEditCount > 0 && <Link href="/admin/fuel?review=1" className="rounded-full bg-amber-100 text-amber-800 px-3 py-2 text-xs font-bold">แก้ไขน้ำมันรอยืนยัน ({fuelEditCount})</Link>}
             {pendingFuelCount > 0 && (
               <Link href="/admin/fuel" className="flex items-center gap-1.5 bg-rose-50 text-rose-600 border border-rose-100 px-3 py-1.5 rounded-full text-xs font-black hover:bg-rose-100 transition-colors">
                 <Fuel className="w-3.5 h-3.5" />

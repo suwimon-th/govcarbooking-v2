@@ -6,6 +6,7 @@ import { sendLinePush, flexAssignDriver } from "@/lib/line";
 export async function POST(req: Request) {
     try {
         const { booking_ids, driver_id } = await req.json();
+        const warnings: string[] = [];
 
         if (!driver_id) {
             return NextResponse.json({ error: "Driver ID required" }, { status: 400 });
@@ -13,7 +14,7 @@ export async function POST(req: Request) {
 
         // 1. Assign Driver to Bookings (if any selected)
         if (booking_ids && booking_ids.length > 0) {
-            const { data: jobs, error: readError } = await supabase.from("bookings").select("id,start_at,end_at").in("id", booking_ids);
+            const { data: jobs, error: readError } = await supabase.from("bookings").select("id,start_at,end_at,driver_id,status,request_code,destination,is_line_notified").in("id", booking_ids);
             if (readError || jobs?.length !== booking_ids.length) return NextResponse.json({ error: "อ่านงานไม่สำเร็จ" }, { status: 400 });
             for (const job of jobs) {
                 try { await assertDriverAvailable(driver_id, job.start_at, job.end_at); }
@@ -32,6 +33,8 @@ export async function POST(req: Request) {
                 return NextResponse.json({ error: updateErr.message }, { status: 500 });
             }
 
+
+
             // -------------------------------------------------------------
             // NEW: Send LINE Notification to Driver
             // -------------------------------------------------------------
@@ -48,9 +51,9 @@ export async function POST(req: Request) {
             if (bookingsFull) {
                 for (const booking of bookingsFull) {
                     // Check if driver has connected Line
-                    // booking.driver might be an object or array depending on relationship, 
-                    // but usually .single() isn't used here so it's a join. 
-                    // Supabase JS often returns single object for 1:1 or N:1 relation if configured, 
+                    // booking.driver might be an object or array depending on relationship,
+                    // but usually .single() isn't used here so it's a join.
+                    // Supabase JS often returns single object for 1:1 or N:1 relation if configured,
                     // but let's safely cast.
                     const drv = Array.isArray(booking.driver) ? booking.driver[0] : booking.driver;
                     const veh = Array.isArray(booking.vehicle) ? booking.vehicle[0] : booking.vehicle;
@@ -95,7 +98,8 @@ export async function POST(req: Request) {
 
         return NextResponse.json({
             success: true,
-            driver_name: driver?.full_name || "Unknown"
+            driver_name: driver?.full_name || "Unknown",
+            warnings: warnings.length ? warnings : undefined
         });
 
     } catch (err) {

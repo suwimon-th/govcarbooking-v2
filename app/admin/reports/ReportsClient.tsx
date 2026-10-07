@@ -227,7 +227,7 @@ export default function ReportsClient({ viewMode }: { viewMode: 'MONTHLY' | 'FUE
     return (
         <div className="p-6 max-w-[1400px] mx-auto min-h-screen">
             <div className="print:hidden">
-                {viewMode === "FUEL" && <Link href="/admin/reports/fuel/official" className="inline-block mb-4 px-5 py-3 rounded-lg bg-blue-600 text-white font-bold">รายงานน้ำมันตามแบบราชการ (รายเดือน / ปีงบประมาณ)</Link>}
+                {viewMode === "FUEL" && <Link href="/admin/reports/fuel/official" className="inline-block mb-4 px-5 py-3 rounded-lg bg-blue-600 text-white font-bold">รายงานการใช้น้ำมัน (รายเดือน / ปีงบประมาณ)</Link>}
                 <h1 className="text-2xl font-bold text-gray-800 mb-5 flex items-center gap-2">
                     <Printer className="w-8 h-8 text-blue-600" />
                     รายงาน

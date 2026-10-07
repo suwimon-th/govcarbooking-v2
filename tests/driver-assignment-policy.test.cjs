@@ -1,0 +1,10 @@
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const ts=require('typescript');
+require.extensions['.ts']=(module,filename)=>module._compile(ts.transpileModule(fs.readFileSync(filename,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,filename);
+const {assignmentRemoval}=require('../lib/driver-assignment-policy.ts');
+const old={driver_id:'old',status:'ASSIGNED'};
+test('replacing or removing an assigned driver notifies the previous driver',()=>{assert.equal(assignmentRemoval(old,'new','ASSIGNED'),'changed');assert.equal(assignmentRemoval(old,null,'ASSIGNED'),'changed');});
+test('returning assigned and accepted jobs to the queue notifies even if form retains driver',()=>{for(const status of ['REQUESTED','APPROVED'])for(const previous of ['ASSIGNED','ACCEPTED','IN_PROGRESS'])assert.equal(assignmentRemoval({...old,status:previous},'old',status),'waiting');});
+test('ordinary edits and completed or never assigned jobs do not notify previous driver',()=>{assert.equal(assignmentRemoval(old,'old','ASSIGNED'),null);assert.equal(assignmentRemoval(old,undefined,undefined),null);for(const status of ['REQUESTED','APPROVED','COMPLETED'])assert.equal(assignmentRemoval({...old,status},'new','ASSIGNED'),null);assert.equal(assignmentRemoval({status:'ASSIGNED'},'new','ASSIGNED'),null);});

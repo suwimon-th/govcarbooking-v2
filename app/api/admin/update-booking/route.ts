@@ -1,3 +1,4 @@
+import { assignmentRemoval } from "@/lib/driver-assignment-policy";
 import { assertDriverAvailable } from "@/lib/driver-leave-store";
 import { cookies } from "next/headers";
 
@@ -47,12 +48,12 @@ export async function POST(req: Request) {
             } else {
                 const { data: newDriver } = await supabase
                     .from("drivers")
-                    .insert([{ 
-                        full_name: manual_driver_name, 
-                        status: 'AVAILABLE', 
+                    .insert([{
+                        full_name: manual_driver_name,
+                        status: 'AVAILABLE',
                         active: false,
                         is_active: false,
-                        remark: 'คนนอก (ยืมรถ)' 
+                        remark: 'คนนอก (ยืมรถ)'
                     }])
                     .select()
                     .single();
@@ -74,7 +75,7 @@ export async function POST(req: Request) {
         // 1) ดึงข้อมูลเดิมก่อน update (เพื่อเทียบว่า driver / vehicle เปลี่ยนไหม)
         const { data: oldBooking } = await supabase
             .from("bookings")
-            .select("driver_id, status, vehicle_id, request_code, requester_id, start_at, end_at")
+            .select("driver_id, status, vehicle_id, request_code, requester_id, start_at, end_at, destination, is_line_notified")
             .eq("id", id)
             .single();
 
@@ -148,6 +149,8 @@ export async function POST(req: Request) {
         // อื่นๆ: อัปเดตทะเบียนยืมถ้าส่งมา
         if (other_vehicle_plate !== undefined) updateData.other_vehicle_plate = other_vehicle_plate || null;
 
+        const returnedToQueue = oldBooking && assignmentRemoval(oldBooking, finalDriverId, status) === "waiting";
+        if (returnedToQueue) { finalDriverId = null; updateData.driver_id = null; updateData.is_line_notified = false; }
         const effectiveDriver = finalDriverId === undefined ? oldBooking?.driver_id : finalDriverId;
         if (effectiveDriver && (finalDriverId !== undefined || start_at || end_at)) {
             try { await assertDriverAvailable(effectiveDriver, start_at || oldBooking?.start_at, end_at || oldBooking?.end_at); }
@@ -162,6 +165,8 @@ export async function POST(req: Request) {
             console.error("UPDATE ERROR:", error);
             return NextResponse.json({ error: error.message }, { status: 400 });
         }
+
+
 
         // ✅ LOG THE EDIT ACTION
         if (actorId && Object.keys(updateData).length > 0) {
@@ -221,11 +226,11 @@ export async function POST(req: Request) {
         }
 
         // 3) เงื่อนไขการส่งแจ้งเตือน
-        const isDriverChanged = driver_id && driver_id !== oldBooking?.driver_id;
+        const isDriverChanged = finalDriverId && finalDriverId !== oldBooking?.driver_id;
         const isStatusEligibleForNotify = ["REQUESTED", "APPROVED", "ASSIGNED"].includes(status);
         const isCompleted = status === "COMPLETED";
 
-        if (driver_id && (isDriverChanged || isStatusEligibleForNotify) && !isCompleted) {
+        if (finalDriverId && (isDriverChanged || isStatusEligibleForNotify) && !isCompleted) {
             try {
                 console.log(`🔔 [NOTIFY] Starting notifications for booking ${id}...`);
 

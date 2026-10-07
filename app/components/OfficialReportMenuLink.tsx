@@ -8,16 +8,16 @@ export default function OfficialReportMenuLink({ active, onNavigate }: { active:
       href="/admin/reports/fuel/official"
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
-      aria-label="รายงานน้ำมันตามแบบราชการ ทั้ง 8 แบบ"
+      aria-label="รายงานการใช้น้ำมัน ทั้ง 9 แบบ"
       className={`${styles.link} ${active ? styles.active : ""}`}
     >
       <span className={styles.icon}><FileText size={18} aria-hidden="true" /></span>
       <span className={styles.content}>
-        <span className={styles.title}>รายงานน้ำมัน<br />ตามแบบราชการ</span>
-        <span className={styles.description}>รายเดือน · ปีงบประมาณ</span>
+        <span className={styles.title}>รายงานการใช้น้ำมัน</span>
+        <span className={styles.description}>ประจำเดือน · ประจำปี</span>
       </span>
       <span className={styles.trailing}>
-        <span className={styles.badge}>8 แบบ</span>
+        <span className={styles.badge}>9 แบบ</span>
         <ChevronRight size={14} aria-hidden="true" />
       </span>
     </Link>

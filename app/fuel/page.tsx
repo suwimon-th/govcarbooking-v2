@@ -5,6 +5,7 @@ import { Loader2, CheckCircle2, AlertCircle, Fuel, ArrowLeft, Plus, History, Edi
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import Link from "next/link";
+import "./fuel-form.css";
 
 interface FuelRequest {
     id: string;
@@ -18,6 +19,7 @@ interface FuelRequest {
     request_number: string | null;
     actual_amount: number | null;
     remark?: string | null;
+    pending_edit?: Record<string,unknown> | null;
 }
 
 export default function FuelPage() {
@@ -44,6 +46,8 @@ export default function FuelPage() {
 
     const [fuelRequests, setFuelRequests] = useState<FuelRequest[]>([]);
     const [loadingLogbook, setLoadingLogbook] = useState(true);
+    const [remarkDrafts,setRemarkDrafts]=useState<Record<string,string>>({});
+    const [remarkSaving,setRemarkSaving]=useState<Record<string,boolean>>({});
     const [searchQuery, setSearchQuery] = useState("");
 
     const [drivers, setDrivers] = useState<{ id: string; full_name: string }[]>([]);
@@ -51,11 +55,15 @@ export default function FuelPage() {
     const [foggingList, setFoggingList] = useState<{ code: string }[]>([]);
 
     // Form States
+    const [savedNames,setSavedNames]=useState<string[]>([]);
+    const [customName,setCustomName]=useState("");
+    const [refuelDate,setRefuelDate]=useState("");
+    const [submittedRefuelDate,setSubmittedRefuelDate]=useState("");
     const [driverName, setDriverName] = useState("");
     const [plateNumber, setPlateNumber] = useState("");
     const [foggingNumbers, setFoggingNumbers] = useState<string[]>([]);
     const [requesterName, setRequesterName] = useState("");
-    const [requestDate, setRequestDate] = useState(() => new Date().toISOString().split('T')[0]);
+    const [requestDate, setRequestDate] = useState(() => new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Bangkok'}));
     const [systemQuota, setSystemQuota] = useState("");
     const [period, setPeriod] = useState("");
     const [remark, setRemark] = useState("");
@@ -64,6 +72,8 @@ export default function FuelPage() {
     const [errorMsg, setErrorMsg] = useState("");
 
     // Editing States
+    const [editRequest,setEditRequest]=useState<FuelRequest|null>(null);
+    const [editSubmitting,setEditSubmitting]=useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editReqNum, setEditReqNum] = useState("");
     const [editActAmt, setEditActAmt] = useState("");
@@ -84,10 +94,11 @@ export default function FuelPage() {
     const FIXED_REQUESTERS = [
         "นายประพณ โชติกะพุกกะณะ",
         "สุรพล พุทโธ",
-        "นายจักรพล เกี้ยวกลาง",
         "ธีรวัฒน์ พร้อมสุข",
         "ธีระสิทธิ์ ใสสะอาด"
     ];
+
+    const requesterOptions=Array.from(new Set([...FIXED_REQUESTERS,...savedNames])).filter(name=>name.trim()&&!/จักรพล|จักรพง/.test(name)&&name!=="-");
 
     const fetchFuelRequests = useCallback(async () => {
         setLoadingLogbook(true);
@@ -95,7 +106,7 @@ export default function FuelPage() {
             .from("fuel_requests")
             .select("*")
             .order("created_at", { ascending: false })
-            .limit(50);
+            .limit(1000);
 
         if (data) setFuelRequests(data);
         setLoadingLogbook(false);
@@ -106,7 +117,8 @@ export default function FuelPage() {
         return fuelRequests.filter(req => 
             req.driver_name.toLowerCase().includes(searchQuery.toLowerCase()) || 
             req.plate_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (req.request_number && req.request_number.toLowerCase().includes(searchQuery.toLowerCase()))
+            (req.request_number && req.request_number.toLowerCase().includes(searchQuery.toLowerCase())) ||
+            (req.remark||"").toLowerCase().includes(searchQuery.toLowerCase())
         );
     }, [fuelRequests, searchQuery]);
 
@@ -116,6 +128,16 @@ export default function FuelPage() {
         }
     }, [viewMode, fetchFuelRequests]);
 
+    const submitEdit=async(e:React.FormEvent)=>{e.preventDefault();if(!editRequest)return;setEditSubmitting(true);try{const res=await fetch("/api/public/request-fuel",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:editRequest.id,driver_name:editRequest.driver_name,plate_number:editRequest.plate_number,request_date:editRequest.request_date,actual_amount:editRequest.actual_amount,remark:editRequest.remark??""})});const data=await res.json();if(!res.ok)throw new Error(data.error);setFuelRequests(prev=>prev.map(r=>r.id===editRequest.id?data.data[0]:r));setEditRequest(null);showToast("ส่งคำขอแก้ไขให้แอดมินยืนยันแล้ว");}catch(e){showToast(e instanceof Error?e.message:"ส่งไม่สำเร็จ","ERROR");}finally{setEditSubmitting(false);}};
+    const monthKey=(req:FuelRequest)=>req.request_date?.slice(0,7)||new Date(req.created_at).toLocaleDateString("en-CA",{timeZone:"Asia/Bangkok"}).slice(0,7);
+    const currentMonth=new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Bangkok"}).slice(0,7);
+    const requestGroups=Array.from(new Set(filteredRequests.map(monthKey))).sort((a,b)=>a===currentMonth?-1:b===currentMonth?1:b.localeCompare(a)).map(key=>({key,label:new Date(`${key}-01T12:00:00+07:00`).toLocaleDateString("th-TH",{month:"long",year:"numeric"}),rows:filteredRequests.filter(r=>monthKey(r)===key).sort((a,b)=>(b.request_date||b.created_at).localeCompare(a.request_date||a.created_at))}));
+    const saveRemark=async(req:FuelRequest)=>{
+        setRemarkSaving(prev=>({...prev,[req.id]:true}));
+        try{const res=await fetch("/api/public/request-fuel",{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:req.id,remark:remarkDrafts[req.id]??req.remark??""})});const data=await res.json();if(!res.ok||!data.data?.length)throw new Error(data.error||"บันทึกไม่สำเร็จ");setFuelRequests(prev=>prev.map(r=>r.id===req.id?data.data[0]:r));showToast("ส่งหมายเหตุให้แอดมินยืนยันแล้ว");}catch(e){showToast(e instanceof Error?e.message:"บันทึกไม่สำเร็จ","ERROR");}finally{setRemarkSaving(prev=>({...prev,[req.id]:false}));}
+    };
+    const remarkEditor=(req:FuelRequest)=><div className="fuel-remark-editor space-y-2 text-left"><textarea aria-label={`หมายเหตุ ${req.request_number||req.plate_number}`} rows={2} maxLength={2000} placeholder="เพิ่มหมายเหตุ…" disabled={!!req.pending_edit} value={remarkDrafts[req.id]??req.remark??""} onChange={e=>setRemarkDrafts(prev=>({...prev,[req.id]:e.target.value}))} className="w-full min-w-0 rounded-lg border border-gray-200 bg-gray-50 p-2 text-sm text-gray-800"/><button disabled={!!req.pending_edit||remarkSaving[req.id]||(remarkDrafts[req.id]??req.remark??"")===(req.remark??"")} onClick={()=>saveRemark(req)} className="fuel-remark-submit">{remarkSaving[req.id]?"กำลังบันทึก…":"ส่งให้แอดมินยืนยัน"}</button></div>;
+
     // Load Form Data
     useEffect(() => {
         const fetchData = async () => {
@@ -123,6 +145,8 @@ export default function FuelPage() {
             const { data: vData } = await supabase.from("vehicles").select("id, plate_number").eq("status", "ACTIVE").order("plate_number");
             const { data: fData } = await supabase.from("fogging_machines").select("code").eq("status", "ACTIVE").order("code");
 
+            const {data:names}=await supabase.from("fuel_requests").select("driver_name").order("created_at",{ascending:false}).limit(1000);
+            if(names)setSavedNames(Array.from(new Set(names.map(r=>r.driver_name as string).filter(Boolean))));
             if (dData) setDrivers([...dData, { id: 'other', full_name: 'อื่นๆ (ระบุเอง)' }]);
             if (vData) setVehicles([...vData, { id: 'fogging', plate_number: 'เครื่องพ่นหมอกควัน' }]);
             if (fData) setFoggingList(fData as { code: string }[]);
@@ -160,16 +184,12 @@ export default function FuelPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        let finalDriverName = driverName;
-        if (driverName === "อื่นๆ (ระบุเอง)") {
-            const formData = new FormData(e.currentTarget as HTMLFormElement);
-            finalDriverName = formData.get("customDriver") as string;
-        }
-
-        if (!finalDriverName || !plateNumber) return;
+        const chosenName=plateNumber==="เครื่องพ่นหมอกควัน"?requesterName:driverName;
+        const finalDriverName=(chosenName==="อื่นๆ (ระบุเอง)"?customName:chosenName).trim();
+        if (!finalDriverName || !plateNumber || !refuelDate || (plateNumber==="เครื่องพ่นหมอกควัน"&&!foggingNumbers.length)) {setStatus("ERROR");setErrorMsg("กรุณาระบุชื่อ วันที่ไปเติม และรถหรือเครื่องจักรให้ครบ");return;}
         setLoading(true);
         try {
-            const finalName = plateNumber === "เครื่องพ่นหมอกควัน" ? requesterName : finalDriverName;
+            const finalName = finalDriverName;
             if (plateNumber === "เครื่องพ่นหมอกควัน") {
                 // Submit two separate requests (Gasoline/Diesel) PER individual machine
                 for (const machineCode of foggingNumbers) {
@@ -189,6 +209,7 @@ export default function FuelPage() {
                                 request_date: requestDate,
                                 system_quota: mReq.quota,
                                 period: period,
+                                refuel_date: refuelDate,
                                 remark: remark.trim() || null
                             }),
                         });
@@ -206,12 +227,15 @@ export default function FuelPage() {
                         request_date: requestDate,
                         system_quota: systemQuota,
                         period: period,
-                        remark: remark.trim() || null
+                        refuel_date: refuelDate,
+                                remark: remark.trim() || null
                     }),
                 });
                 if (!res.ok) throw new Error("Failed to submit");
             }
 
+            setSavedNames(prev=>Array.from(new Set([...prev,finalName])));
+            setSubmittedRefuelDate(refuelDate);
             setRemark("");
             setStatus("SUCCESS");
         } catch (err: any) {
@@ -248,7 +272,7 @@ export default function FuelPage() {
             if (!res.ok) throw new Error("Update failed");
             setEditingId(null);
             fetchFuelRequests();
-            showToast("บันทึกสำเร็จ", "SUCCESS");
+            showToast("ส่งยอดเติมจริงให้แอดมินยืนยันแล้ว", "SUCCESS");
         } catch (err) {
             showToast("บันทึกไม่สำเร็จ กรุณาลองใหม่", "ERROR");
         }
@@ -274,7 +298,7 @@ export default function FuelPage() {
 
     if (viewMode === 'FORM') {
         return (
-            <div className="min-h-screen bg-gray-50 flex flex-col font-sans animate-in slide-in-from-right-10 duration-300">
+            <div className="fuel-form-page min-h-screen bg-gray-50 flex flex-col font-sans animate-in slide-in-from-right-10 duration-300">
                 <div className="bg-rose-600 px-6 py-4 shadow-md sticky top-0 z-20 flex items-center gap-4">
                     <button onClick={() => setViewMode('LOGBOOK')} className="text-white hover:bg-white/10 p-1 rounded-full transition-colors">
                         <ArrowLeft className="w-6 h-6" />
@@ -284,17 +308,18 @@ export default function FuelPage() {
                     </h1>
                 </div>
 
-                <div className="p-4 max-w-md mx-auto w-full">
+                <div className="fuel-form-container p-4 mx-auto w-full">
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                         {status === "SUCCESS" ? (
                             <div className="flex flex-col items-center justify-center py-10 text-center">
                                 <CheckCircle2 className="w-16 h-16 text-green-500 mb-4" />
                                 <h2 className="text-2xl font-bold text-gray-800">ส่งคำขอยัง Admin แล้ว</h2>
                                 <p className="text-gray-500 mt-2 mb-8">คุณสามารถติดตามสถานะและกรอกเลขน้ำมันได้ที่หน้าสมุดบันทึก</p>
+                                <Link href={`/user/request?date=${submittedRefuelDate}`} className="mb-3 w-full inline-flex justify-center bg-blue-600 text-white font-bold py-3 rounded-xl">ทำใบขอใช้รถไปเติมน้ำมัน</Link>
                                 <button onClick={() => { setStatus("IDLE"); setViewMode('LOGBOOK'); }} className="w-full bg-rose-600 text-white font-bold py-3 rounded-xl">กลับหน้าสมุดบันทึก</button>
                             </div>
                         ) : (
-                            <form onSubmit={handleSubmit} className="space-y-5">
+                            <form onSubmit={handleSubmit} className="fuel-request-form space-y-5"><div className="fuel-form-intro"><span><Fuel size={22}/></span><div><h2>ขอเบิกน้ำมันเชื้อเพลิง</h2><p>ระบุรถ ผู้เบิก และวันที่จะไปเติมน้ำมัน</p></div></div>
                                 {status === "ERROR" && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm flex items-center gap-2"><AlertCircle className="w-4 h-4" /> {errorMsg}</div>}
 
                                 <div className="grid grid-cols-2 gap-4">
@@ -322,7 +347,7 @@ export default function FuelPage() {
                                             <label className="block text-xs font-bold text-gray-500 uppercase mb-1">ชื่อผู้เบิก</label>
                                             <select required value={requesterName} onChange={(e) => setRequesterName(e.target.value)} className="w-full h-11 px-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none text-sm bg-white">
                                                 <option value="">-- เลือกผู้เบิก --</option>
-                                                {FIXED_REQUESTERS.map((n, i) => <option key={i} value={n}>{n}</option>)}
+                                                {requesterOptions.map(n => <option key={n} value={n}>{n}</option>)}<option value="อื่นๆ (ระบุเอง)">อื่น ๆ — ระบุชื่อใหม่</option>
                                             </select>
                                         </div>
                                         <div className="bg-orange-50 p-4 border border-orange-100 rounded-xl">
@@ -345,11 +370,13 @@ export default function FuelPage() {
                                         <label className="block text-xs font-bold text-gray-500 uppercase mb-1">ชื่อพนักงานขับรถ</label>
                                         <select required value={driverName} onChange={(e) => setDriverName(e.target.value)} className="w-full h-11 px-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none text-sm bg-white">
                                             <option value="">-- เลือกคนขับ --</option>
-                                            {FIXED_REQUESTERS.map((n, i) => <option key={i} value={n}>{n}</option>)}
+                                            {requesterOptions.map(n => <option key={n} value={n}>{n}</option>)}<option value="อื่นๆ (ระบุเอง)">อื่น ๆ — ระบุชื่อใหม่</option>
                                         </select>
                                     </div>
                                 )}
 
+                                {(driverName==="อื่นๆ (ระบุเอง)"&&plateNumber!=="เครื่องพ่นหมอกควัน"||requesterName==="อื่นๆ (ระบุเอง)"&&plateNumber==="เครื่องพ่นหมอกควัน")&&<div><label className="block text-xs font-bold text-gray-500 mb-1">ชื่อผู้เบิก / พนักงานขับรถ</label><input required maxLength={150} value={customName} onChange={e=>setCustomName(e.target.value)} placeholder="ระบุชื่อ–นามสกุล" className="w-full h-11 px-3 border border-gray-200 rounded-xl"/><p className="mt-2 text-xs text-gray-500">เมื่อบันทึกคำขอ ชื่อนี้จะอยู่ในรายการให้เลือกครั้งถัดไป</p></div>}
+                                <div className="refuel-date-field"><label className="block text-xs font-bold text-gray-500 mb-1">วันที่จะไปเติมน้ำมัน</label><input type="date" required value={refuelDate} onChange={e=>setRefuelDate(e.target.value)} className="w-full h-11 px-3 border border-gray-200 rounded-xl"/><p className="mt-2 text-xs text-gray-500">ใช้วันที่นี้ในการจัดทำใบขอใช้รถไปเติมน้ำมัน</p></div>
                                 {plateNumber && (
                                     <div className="bg-rose-50 p-3 rounded-xl border border-rose-100">
                                         <span className="text-[10px] font-bold text-rose-800 uppercase block mb-1">โควตาระบบ</span>
@@ -393,18 +420,18 @@ export default function FuelPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
-            <div className="bg-white px-6 py-4 shadow-sm sticky top-0 z-20 flex items-center justify-between border-b border-gray-100 leading-tight">
-                <div className="flex items-center gap-3">
+        <div className="fuel-logbook-page min-h-screen bg-gray-50 flex flex-col font-sans">
+            <div className="fuel-logbook-header bg-white px-6 py-4 sticky top-0 z-20 border-b border-gray-100">
+                <div className="fuel-logbook-header-inner"><div className="flex items-center gap-3">
                     <Link href={backUrl} className="text-gray-400 hover:text-gray-600 p-1 rounded-full"><ArrowLeft className="w-6 h-6" /></Link>
                     <div>
                         <h1 className="text-lg font-bold text-gray-800">บันทึกการเบิกน้ำมัน</h1>
-                        <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">Fuel Logbook & History</p>
+                        <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">ค้นหา ติดตามสถานะ และจัดการคำขอเบิกน้ำมัน</p>
                     </div>
                 </div>
-                <button onClick={() => { setStatus("IDLE"); setViewMode('FORM'); }} className="bg-rose-600 hover:bg-rose-700 text-white rounded-xl px-4 py-2 text-sm font-bold shadow-md shadow-rose-100 flex items-center gap-2 transition-all active:scale-95">
-                    <Plus className="w-4 h-4" /> เบิกใหม่
-                </button>
+                <button onClick={() => { setStatus("IDLE"); setViewMode('FORM'); }} className="fuel-new-request">
+                    <Plus className="w-5 h-5" /> ขอเบิกน้ำมันใหม่
+                </button></div>
             </div>
 
             <div className="flex-1 p-4 overflow-x-hidden">
@@ -414,7 +441,7 @@ export default function FuelPage() {
                         <span className="text-sm font-medium">กำลังโหลดสมุดบันทึก...</span>
                     </div>
                 ) : (
-                    <div className="space-y-4 max-w-5xl mx-auto">
+                    <div className="fuel-logbook space-y-4 max-w-7xl mx-auto">
                         
                         {/* Search Bar */}
                         <div className="bg-white p-2 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-2 mb-4">
@@ -433,8 +460,9 @@ export default function FuelPage() {
                             )}
                         </div>
 
+                        {requestGroups.map(group=><section key={group.key} className="space-y-3 pt-4"><h2 className="flex flex-wrap items-center gap-2 text-lg font-bold text-gray-800"><Calendar size={20} className="text-blue-500"/>{group.label}{group.key===currentMonth&&<span className="rounded-full bg-blue-50 px-2 py-1 text-xs text-blue-600">เดือนปัจจุบัน</span>}<span className="ml-auto text-sm font-normal text-gray-500">{group.rows.length} รายการ</span></h2>
                         {/* Legend Header (Desktop Only) */}
-                        <div className="hidden md:grid grid-cols-15 gap-2 bg-gray-200 p-3 rounded-xl mb-2 text-[10px] font-black text-gray-600 uppercase tracking-widest text-center shadow-inner">
+                        <div className="fuel-column-head hidden md:grid grid-cols-17 gap-2 bg-gray-200 p-3 rounded-xl mb-2 text-[10px] font-black text-gray-600 uppercase tracking-widest text-center shadow-inner">
                             <div className="col-span-1">ลำดับ</div>
                             <div className="col-span-2">วันที่เบิก / งวด</div>
                             <div className="col-span-2">ผู้เบิก</div>
@@ -443,13 +471,15 @@ export default function FuelPage() {
                             <div className="col-span-2">เลขที่ใบเบิก</div>
                             <div className="col-span-2">โควตามระบบ</div>
                             <div className="col-span-2">จำนวนเติมจริง</div>
+                            <div className="col-span-2">หมายเหตุ</div>
                         </div>
 
-                        {filteredRequests.map((req, idx) => (
-                            <div key={req.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300">
+                        {group.rows.map((req, idx) => (
+                            <div key={req.id} className="fuel-entry bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                <div className="fuel-entry-actions flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-2"><span className="text-xs text-amber-600">{req.pending_edit?"รอแอดมินยืนยันการแก้ไข · ข้อมูลเดิมยังมีผล":""}</span><button disabled={!!req.pending_edit} onClick={()=>setEditRequest({...req})} className="inline-flex min-h-10 items-center gap-2 text-xs font-bold text-blue-600 disabled:opacity-40"><Edit2 size={15}/>แก้ไขรายการ</button></div>
                                 {/* Mobile View Card */}
                                 <div className="md:hidden p-4 flex flex-col gap-4 relative">
-                                    <div className="absolute top-4 right-4 text-[10px] font-black text-gray-300">#{filteredRequests.length - idx}</div>
+                                    <div className="absolute top-4 right-4 text-[10px] font-black text-gray-300">#{group.rows.length - idx}</div>
                                     <div className="flex justify-between items-start pr-8">
                                         <div className="flex items-center gap-3">
                                             <div className="bg-gray-50 p-2.5 rounded-xl border border-gray-100">
@@ -531,9 +561,10 @@ export default function FuelPage() {
                                     )}
                                 </div>
 
+                                <div className="md:hidden border-t border-gray-100 px-4 pb-4 pt-3"><p className="mb-2 text-xs text-gray-500">หมายเหตุ</p>{remarkEditor(req)}</div>
                                 {/* Desktop View Grid */}
-                                <div className="hidden md:grid grid-cols-15 gap-2 p-3 items-center text-center">
-                                    <div className="col-span-1 text-sm font-bold text-gray-400">{filteredRequests.length - idx}</div>
+                                <div className="fuel-entry-grid hidden md:grid grid-cols-17 gap-2 p-3 items-center text-center">
+                                    <div className="col-span-1 text-sm font-bold text-gray-400">{group.rows.length - idx}</div>
                                     <div className="col-span-2 flex flex-col items-center">
                                         <span className="text-xs font-bold text-gray-700">{new Date(req.request_date).toLocaleDateString("th-TH")}</span>
                                         <span className="text-[9px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded font-black uppercase mt-1">{req.period}</span>
@@ -592,9 +623,11 @@ export default function FuelPage() {
                                             </div>
                                         )}
                                     </div>
+                                    <div className="col-span-2">{remarkEditor(req)}</div>
                                 </div>
                             </div>
                         ))}
+                        </section>)}
 
                         {filteredRequests.length === 0 && (
                             <div className="text-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm">
@@ -611,6 +644,7 @@ export default function FuelPage() {
             <div className="h-6 md:hidden"></div>
 
             {/* Modern Toast Notification */}
+            {editRequest&&<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"><form onSubmit={submitEdit} role="dialog" aria-modal="true" aria-labelledby="fuel-edit-title" className="w-full max-w-lg max-h-[90dvh] overflow-y-auto rounded-2xl bg-white p-5 shadow-xl"><h2 id="fuel-edit-title" className="text-lg font-bold text-gray-800">ขอแก้ไขรายการเบิกน้ำมัน</h2><p className="mb-4 mt-1 text-sm text-gray-500">ข้อมูลใหม่จะมีผลเมื่อแอดมินยืนยัน</p><div className="space-y-3">{[["driver_name","ชื่อผู้เบิก","text"],["plate_number","ทะเบียน / เครื่องจักร","text"],["request_date","วันที่เบิก","date"],["actual_amount","เติมจริง (ลิตร)","number"]].map(([key,label,type])=><label key={key} className="block text-sm text-gray-600">{label}<input required={key!=="actual_amount"} type={type} min={type==="number"?0:undefined} step={type==="number"?"any":undefined} value={String(editRequest[key as keyof FuelRequest]??"")} onChange={e=>setEditRequest({...editRequest,[key]:type==="number"?(e.target.value===""?null:Number(e.target.value)):e.target.value})} className="mt-1 h-12 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 text-base text-gray-800"/></label>)}<label className="block text-sm text-gray-600">หมายเหตุ<textarea rows={3} maxLength={2000} value={editRequest.remark??""} onChange={e=>setEditRequest({...editRequest,remark:e.target.value})} className="mt-1 w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-base text-gray-800"/></label></div><div className="mt-5 flex gap-3"><button type="button" disabled={editSubmitting} onClick={()=>setEditRequest(null)} className="min-h-12 flex-1 rounded-xl border border-gray-200 text-gray-600">ยกเลิก</button><button disabled={editSubmitting} className="min-h-12 flex-1 rounded-xl bg-blue-600 text-white font-bold">{editSubmitting?"กำลังส่ง…":"ส่งให้แอดมินยืนยัน"}</button></div></form></div>}
             {toast && (
                 <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-5 fade-in duration-300">
                     <div className={`px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border ${toast.type === 'SUCCESS'

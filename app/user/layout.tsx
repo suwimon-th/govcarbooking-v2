@@ -227,7 +227,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
     {
       id: "admin-reports", label: "รายงาน", icon: FileText,
       items: [
-        { href: "/admin/reports/fuel/official", label: "รายงานน้ำมันตามแบบราชการ", icon: FileText },
+        { href: "/admin/reports/fuel/official", label: "รายงานการใช้น้ำมัน", icon: FileText },
         { href: "/admin/reports/monthly", label: "รายงานรายเดือน", icon: FileText },
         { href: "/admin/reports/fuel", label: "รายงานน้ำมัน", icon: Fuel },
         { href: "/admin/reports/annual", label: "รายงานรายปี", icon: FileText },

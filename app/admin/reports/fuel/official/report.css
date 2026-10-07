@@ -243,3 +243,4 @@ html .official-fuel .paper .sheet-vehicle .mileage-range { white-space:nowrap; f
 .official-fuel .edit-month-bar label { width:240px; }
 @media(max-width:850px) { .official-fuel .period-basics { grid-template-columns:160px minmax(0,1fr); } .official-fuel .period-basics.month > label:last-child { grid-column:1/-1; } .official-fuel .period-footer { align-items:stretch; flex-direction:column; } }
 @media(max-width:550px) { .official-fuel .period-panel { padding:16px; } .official-fuel .period-basics,.official-fuel .period-basics.range,.official-fuel .range-fields { grid-template-columns:1fr; gap:14px; } .official-fuel .period-footer .report-actions { flex-wrap:wrap; } .official-fuel .edit-month-bar { align-items:stretch; flex-direction:column; } .official-fuel .edit-month-bar label { width:100%; } }
+.official-fuel .period-mode[hidden] { display:none; }
